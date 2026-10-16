@@ -49,3 +49,7 @@ No se declara listo para producción ni se ha publicado. El análisis original e
 - `install_script` y `start_skill` guardados en el borrador de configuración cloud. Pendientes de revisión, guardado y publicación por el usuario; no se verificó restauración en una tarea nueva.
 
 Durante la comprobación de instalación se detectó caché obsoleta de un Vite que seguía abierto mientras se reinstalaban dependencias. Reiniciar esa instancia corrigió las respuestas 504 de módulos optimizados. Las 16 pruebas posteriores al reinicio pasaron. También se corrigió el foco del menú móvil antes de comprobar la compilación servida.
+
+## Actualización · 16 de octubre de 2026
+
+Con autorización del usuario se subieron el código a `master` y la compilación estática a `gh-pages` de `danleonc/web`. La aplicación se verificó también con servidor estático bajo `/web/`; usa rutas relativas para sus recursos. Se añadió `npm run deploy:pages` para repetir la publicación sin cambiar el checkout ni forzar la rama remota. La activación y disponibilidad pública de GitHub Pages siguen pendientes de comprobación; consultar `docs/DEPLOYMENT.md`. Las afirmaciones anteriores de «no enviado a GitHub» corresponden al estado histórico previo.
