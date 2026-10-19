@@ -15,7 +15,7 @@ Recomendación: probar una propuesta centrada en **pequeños grupos con continui
 - Revisado: `src/pages/Discover.tsx`, `Room.tsx`, `Connections.tsx`, datos de ejemplo, estado del producto, plan maestro y captura preparada del prototipo. No se realizó una prueba con usuarios nuevos.
 - No verificado: funciones, precios, usuarios, ciudades, resultados o estado operativo actual de competidores. Las solicitudes a sus sitios oficiales fallaron por la política de red (403 de túnel), antes de obtener contenido. El bloqueo no prueba que los sitios estén caídos.
 - Se guardaron destinos adicionales de investigación en el borrador de configuración; eso no aplica permisos en la instancia ni equivale a haber consultado las fuentes.
-- La plataforma mencionada por el usuario no está identificada. Timeleft es una posibilidad, no una identificación confirmada.
+- Referente identificado por el usuario: **Inner Circle**, confirmado por una captura de su ficha «Inner Circle Comunidad y Citas» en Google Play. La captura es evidencia de comunicación visible, no una prueba de su algoritmo, calidad o funcionamiento interno. Timeleft se conserva como referente adicional, no como el producto que el usuario tenía en mente.
 
 Los cuadros de mercado siguientes son un **mapa preliminar basado en posicionamientos conocidos**, no un estudio de mercado actualizado. La falta de una función en este cuadro no significa que un competidor carezca de ella. No declarar exclusividad, superioridad o crecimiento comercial a partir de esta revisión.
 
@@ -35,6 +35,7 @@ Recomiendo explorar el tercero como foco inicial, conservando la libertad de que
 
 | Referente | Posicionamiento de referencia, pendiente de verificación actual | Qué nos obliga a resolver | Evidencia a buscar antes de concluir |
 |---|---|---|---|
+| Inner Circle | La captura aportada presenta «Comunidad y Citas», «calidad antes que cantidad», «conecta con quienes comparten tu estilo de vida» y «match por estilo de vida, no solo por apariencia» | La afinidad, la comunidad y la preferencia por calidad ya se comunican explícitamente; necesitamos distinguir el proceso y el resultado humano que facilitamos | Funcionamiento real, criterios de admisión, formatos de encuentro, seguimiento, seguridad, costos y acceso regional; no deducirlos de sus anuncios. |
 | Timeleft | Organización de encuentros presenciales entre desconocidos, asociada a cenas | Un plan concreto reduce fricción; «conocer personas con intereses» no basta como identidad | Modalidades actuales, composición de grupos, juego/facilitación, contactos posteriores, recurrencia, ciudades y modelo de cobro. |
 | Meetup | Grupos, comunidades y eventos por intereses | La recurrencia y la pertenencia ya son propuestas conocidas; no podemos apropiarnos de ellas como novedad | Herramientas de organizadores, onboarding del nuevo integrante, formatos online, continuidad, seguridad y diferencias por comunidad. |
 | Bumble For Friends / BFF | Conocer personas con una finalidad de amistad | «No somos solo citas» ya tiene alternativas | Producto y marca vigentes, grupos, compatibilidad, modos de conexión, disponibilidad regional y transición a encuentros. |
@@ -206,4 +207,55 @@ Destinos oficiales solicitados el 19/10/2026, sin acceso al contenido por error 
 
 Estos enlaces son destinos de investigación, no citas que respalden una observación ya verificada. Una vez aplicado el acceso, registrar por producto URL final, fecha, descripción textual, flujo, canales, recurrencia, seguridad visible, datos requeridos, precio consultado con moneda/mercado y límites del acceso. Una landing oficial no prueba calidad del servicio ni tracción. No registrarse, contactar personas o pagar sin necesidad/autorización específica.
 
-Queda pendiente verificar la vigencia de cada producto y la identidad del referente que tenía en mente el usuario. Si este no responde, continuar con el grupo de comparación identificado sin atribuírselo.
+El referente del usuario ya está identificado: Inner Circle. Su captura permite examinar mensajes y estilo visual. Sigue pendiente consultar fuentes oficiales accesibles para verificar funciones, disponibilidad y estado actual; se intentó acceder a https://www.theinnercircle.co/ el 19/10/2026 y la política de red devolvió 403 antes de obtener contenido.
+
+
+## 11. Actualización con la captura de Inner Circle aportada por el usuario
+
+### Evidencia visible y límites de interpretación
+
+La imagen muestra una ficha titulada **«Inner Circle Comunidad y Citas»**, editor **Circle Imperium B.V.**, y una serie de piezas promocionales. No disponemos de enlace de la ficha ni contexto regional/temporal verificado. La fecha de incorporación al análisis es 19/10/2026, no una fecha acreditada de actualización de la app.
+
+| Observación de la captura | Interpretación de comunicación | Lo que no demuestra |
+|---|---|---|
+| «Calidad antes que cantidad» | Prioriza una experiencia selectiva y una promesa de relevancia | Calidad objetiva de sus usuarios, resultados o recomendaciones. |
+| «Conecta con quienes comparten tu estilo de vida» | Afinidad como criterio central de elección | Cuáles son sus señales reales ni cómo se ponderan. |
+| «Match por estilo de vida, no solo por apariencia» | Ya ocupa el territorio verbal de afinidad más allá de fotos | Que la apariencia no influya, ni una eficacia medida del algoritmo. |
+| «Comunidad y Citas» | Combina comunidad con finalidad romántica explícita | Que todas las relaciones sean románticas o que no permita amistad. |
+| «Tu solicitud fue aprobada» en una pieza | Representa acceso/aprobación como parte de pertenecer | Criterios de admisión, verificación de identidad, seguridad o ausencia de discriminación. |
+| Personas fotografiadas, azul intenso, negro y tipografía de alto impacto | Identidad enérgica, aspiracional y reconocible | Que esa estética convierta mejor, ni que debamos copiarla. |
+| Valoraciones y descargas de tienda visibles | Hay indicadores agregados presentados en la ficha capturada | Usuarios activos, masa crítica en Chile, relaciones logradas, retención o rentabilidad. |
+
+Esto modifica el punto de partida de la comparación: Inner Circle no debe reducirse a «portal de eventos presenciales». A partir de lo visible, también vende afinidad y pertenencia. Nuestra propuesta necesita una diferencia más específica que «intereses, calidad, comunidad y algo más que apariencia».
+
+### Diferencia que podemos intentar construir y probar
+
+Hipótesis de enfoque: **hacer fácil compartir una primera experiencia y repetirla de manera recíproca**, con personas que no necesitan declarar un destino relacional. En el piloto, la afinidad sirve para preparar una experiencia manejable; no se presenta como diagnóstico de qué persona sería una pareja adecuada.
+
+Tres pilares propuestos:
+
+1. **Descubrimiento sin destino predeterminado.** Comunicar de forma positiva la libertad de explorar, manteniendo límites claros. No prometer que Inner Circle prohíba otros vínculos: ese extremo no está verificado.
+2. **Afinidad que se descubre participando.** Una dinámica compartida completa debe mostrar cómo resulta conversar y colaborar; no depender únicamente de fotografías, etiquetas o perfiles supuestamente compatibles. Hay que contrastar si Inner Circle y otras alternativas ya ofrecen mecanismos similares antes de afirmar exclusividad.
+3. **Continuidad con control.** Facilitar un próximo encuentro individual o grupal cuando exista interés recíproco, con salida sencilla. No basta un botón de «quiero repetir», ni es una capacidad ya implementada en la demo.
+
+Cada pilar aislado es copiable y puede existir en otros productos. La posible ventaja sería una ejecución consistente para un segmento concreto y resultados observados de comodidad, reciprocidad y repetición. La combinación todavía no constituye superioridad probada ni una barrera competitiva.
+
+### Identidad: qué aprender y qué evitar
+
+La captura presenta una promesa en frases breves, fuertes y visualmente consistentes. Nuestra portada puede aprender de esa precisión y del protagonismo de personas participando. Conviene mantener calidez y accesibilidad, dar más energía a la composición y mostrar una escena o actividad propia reconocible.
+
+No recomiendo adoptar un discurso de «personas que valen la pena», superioridad personal o aprobación elitista. Podemos seleccionar por contexto, disponibilidad, consentimiento y necesidades de la actividad sin asignar valor humano. La seguridad exige controles y operación; no se deduce de pertenecer a una comunidad seleccionada.
+
+Dirección candidata de identidad:
+
+> **Conoce gente con la que quieras volver a compartir.**
+>
+> Empieza con una experiencia en un grupo pequeño. Descubre con quién conectas y decide qué viene después.
+
+Debajo, una explicación concreta de la actividad y del siguiente paso. Mantener el principio de no tener que definir qué vínculo se busca. Evitar añadir a la promesa resultados románticos, amistades garantizadas o propiedades de IA sin evidencia.
+
+### Prueba de diferenciación específica
+
+Mostrar, con orden alternado, la captura promocional de Inner Circle, nuestra maqueta actual y un concepto alternativo del mismo nivel de fidelidad. Preguntar qué espera que ocurra, qué diferencia entiende, cuál elegiría para una situación real y qué le haría desconfiar. Este ejercicio compara comunicación; no permite concluir que nuestro servicio funciona mejor. La eficacia requiere después un piloto y resultados conductuales.
+
+Los sitios www.theinnercircle.co, theinnercircle.co y play.google.com se añadieron a los destinos solicitados en el borrador de red, preservando los anteriores. No se consultó su contenido online ni se cambiaron funciones de la aplicación como resultado de esta captura.
