@@ -1,5 +1,7 @@
 # Salas compartidas · laboratorio de desarrollo
 
+Actualización: se conserva este laboratorio efímero. El nuevo modo separado con cuentas, reservas e historial persistente se documenta en [CUENTAS_Y_DESPLIEGUE.md](CUENTAS_Y_DESPLIEGUE.md).
+
 Esta iteración prueba las reglas de Entre con conexiones de navegador reales. Está separada de la maqueta estática y no habilita un servicio público, cuentas verificadas ni una IA generativa.
 
 ## Arranque

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { LockKeyhole, Radio, Users } from "lucide-react";
 import { featuredActivities } from "../data";
 import type { Profile } from "../store";
@@ -8,6 +8,9 @@ import { ChatMessageBubble } from "../chat/ChatMessage";
 import { useSharedRoom } from "../shared/useSharedRoom";
 import { canChat, formatTime, presentPeople } from "../room/engine";
 import { GuidePanel, responseLabels } from "../room/SessionPanels";
+import { accountsEnabled } from "../shared/mode";
+import { useAccount } from "../shared/accounts";
+import { AccountPanel } from "../shared/AccountPanel";
 
 export function SharedRoom({
   profile,
@@ -17,32 +20,60 @@ export function SharedRoom({
   const [activityId, setActivityId] = useState("cafe");
   const [active, setActive] = useState(false);
   const [aware, setAware] = useState(false);
+  const account = useAccount();
+  useEffect(() => {
+    setActive(false);
+  }, [account.account?.id]);
   const activity = featuredActivities.find((a) => a.id === activityId)!;
   const shared = useSharedRoom(
     activityId,
-    profile?.alias || "Participante",
+    account.account?.alias || profile?.alias || "Participante",
     active,
   );
   const { session, snapshot, status } = shared;
   const connected = status === "connected" && !!session;
   return (
     <div className="page-content shared-lab">
-      <p className="eyebrow">LABORATORIO LOCAL · CONEXIÓN ENTRE NAVEGADORES</p>
+      <p className="eyebrow">
+        {accountsEnabled
+          ? "PILOTO · CUENTA Y ENCUENTROS"
+          : "LABORATORIO LOCAL · CONEXIÓN ENTRE NAVEGADORES"}
+      </p>
       <h1>Un mismo encuentro, un estado compartido.</h1>
       <p className="page-description">
-        Esta prueba usa conexiones reales con tu servidor local. No es el
-        servicio público ni una cuenta con identidad verificada.
+        {accountsEnabled ? (
+          "Tu cuenta conserva reservas, bloqueos y mensajes para volver desde otro dispositivo. Este piloto aún no tiene moderación humana operativa."
+        ) : (
+          <>
+            Esta prueba usa conexiones reales con tu servidor local. No es el
+            servicio público ni una cuenta con identidad verificada.
+          </>
+        )}
       </p>
       <div className="inline-notice">
         <LockKeyhole size={18} />
         <span>
-          Los mensajes se comparten con los navegadores conectados a esta sala.
-          El servidor conserva hasta 50 en memoria; desaparecen al reiniciarlo o
-          limpiar una sala inactiva. Usa solo alias y contenido de prueba. No
-          hay moderación humana operativa.
+          {accountsEnabled ? (
+            "Los mensajes son visibles para tu grupo y se guardan en el servidor. Se conservan los últimos 50 por sala; los historiales archivados se eliminan a los 30 días. No utilices información sensible."
+          ) : (
+            <>
+              Los mensajes se comparten con los navegadores conectados a esta
+              sala. El servidor conserva hasta 50 en memoria; desaparecen al
+              reiniciarlo o limpiar una sala inactiva. Usa solo alias y
+              contenido de prueba. No hay moderación humana operativa.
+            </>
+          )}
         </span>
       </div>
-      {!profile ? (
+      {accountsEnabled && (
+        <AccountPanel
+          state={account}
+          active={active}
+          onLogout={() => setActive(false)}
+        />
+      )}
+      {accountsEnabled && !account.account ? null : !accountsEnabled &&
+        !profile ? (
         <section className="panel shared-connect">
           <h2>Prepara primero un perfil de prueba.</h2>
           <p>
@@ -88,7 +119,16 @@ export function SharedRoom({
             {!active ? (
               <button
                 className="button primary"
-                disabled={!aware}
+                disabled={
+                  !aware ||
+                  (accountsEnabled &&
+                    (!account.activities.find((a) => a.id === activityId)
+                      ?.mine ||
+                      !account.activities.find((a) => a.id === activityId)
+                        ?.accessible ||
+                      !!account.activities.find((a) => a.id === activityId)
+                        ?.ended))
+                }
                 onClick={() => setActive(true)}
               >
                 <Radio size={16} /> Conectar con esta sala
@@ -121,9 +161,15 @@ export function SharedRoom({
             </span>
           </div>
           <p className="small-text muted">
-            Para representar personas distintas, usa perfiles de navegador o
-            contextos separados. Varias pestañas con la misma sesión cuentan
-            como una sola persona.
+            {accountsEnabled ? (
+              "Reserva primero. La recepción abre cinco minutos antes del horario y puede esperar hasta cinco minutos después para reunir el mínimo. Varias pestañas de tu cuenta cuentan como una sola persona."
+            ) : (
+              <>
+                Para representar personas distintas, usa perfiles de navegador o
+                contextos separados. Varias pestañas con la misma sesión cuentan
+                como una sola persona.
+              </>
+            )}
           </p>
         </section>
       )}
@@ -178,8 +224,14 @@ export function SharedRoom({
                   <h2>El encuentro compartido terminó.</h2>
                   <p>{session.notice}</p>
                   <p>
-                    Tu reserva local no cambia. Puedes salir sin aceptar otra
-                    fecha o formato.
+                    {accountsEnabled ? (
+                      "Tu reserva guardada no se reprograma. Puedes salir sin aceptar otra fecha."
+                    ) : (
+                      <>
+                        Tu reserva local no cambia. Puedes salir sin aceptar
+                        otra fecha o formato.
+                      </>
+                    )}
                   </p>
                 </div>
               ) : (
@@ -263,7 +315,9 @@ export function SharedRoom({
           <aside className="panel participants-panel">
             <h3>Personas de esta prueba</h3>
             <p className="small-text muted">
-              Sesiones de desarrollo, sin verificación de identidad.
+              {accountsEnabled
+                ? "Cuentas conectadas. No hay verificación de identidad."
+                : "Sesiones de desarrollo, sin verificación de identidad."}
             </p>
             {snapshot.session.participants.map((p) => (
               <div className="shared-participant" key={p.id}>
@@ -285,10 +339,14 @@ export function SharedRoom({
                     onClick={() => {
                       if (
                         confirm(
-                          "Bloquear registra esta decisión en tu sesión de desarrollo y te saca de la sala. ¿Continuar?",
+                          accountsEnabled
+                            ? "Bloquear guarda esta decisión en tu cuenta y te saca de la sala. ¿Continuar?"
+                            : "Bloquear registra esta decisión en tu sesión de desarrollo y te saca de la sala. ¿Continuar?",
                         )
-                      )
+                      ) {
                         shared.send({ type: "block", participantId: p.id });
+                        account.clearHistory();
+                      }
                     }}
                   >
                     Bloquear y salir

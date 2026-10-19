@@ -1,0 +1,12 @@
+.git
+node_modules
+dist
+dist-pilot
+.data
+backups
+test-results
+playwright-report
+.env
+.env.*
+*.sqlite*
+*.tsbuildinfo

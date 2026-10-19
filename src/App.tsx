@@ -27,6 +27,7 @@ import { Agenda } from "./pages/Agenda";
 import { Connections } from "./pages/Connections";
 import { Room } from "./pages/Room";
 import { SharedRoom } from "./pages/SharedRoom";
+import { accountsEnabled, sharedEnabled } from "./shared/mode";
 import { getSticker } from "./chat/stickers";
 import type { StickerActions } from "./chat/stickers";
 type Page =
@@ -42,7 +43,7 @@ const pages: Page[] = [
   "connections",
   "profile",
   "room",
-  ...(import.meta.env.DEV ? ["shared" as const] : []),
+  ...(sharedEnabled ? ["shared" as const] : []),
 ];
 const getPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
@@ -206,8 +207,16 @@ function App() {
     { page: "agenda", label: "Mi agenda", icon: CalendarDays },
     { page: "connections", label: "Mis conexiones", icon: Users },
     { page: "profile", label: "Mi perfil", icon: Settings2 },
-    ...(import.meta.env.DEV
-      ? [{ page: "shared" as const, label: "Laboratorio local", icon: Users }]
+    ...(sharedEnabled
+      ? [
+          {
+            page: "shared" as const,
+            label: accountsEnabled
+              ? "Mi cuenta y encuentros"
+              : "Laboratorio local",
+            icon: Users,
+          },
+        ]
       : []),
   ];
   return (
@@ -358,7 +367,9 @@ function App() {
           <Sparkles size={14} />
           <span>
             {page === "shared"
-              ? "Laboratorio local: los mensajes se comparten con los navegadores que entren a la sala."
+              ? accountsEnabled
+                ? "Piloto: tus reservas y mensajes se guardan en el servidor."
+                : "Laboratorio local: los mensajes se comparten con los navegadores que entren a la sala."
               : "Un espacio de prueba: todos los encuentros y participantes son ficticios."}
           </span>
           <button onClick={() => setShowPrivacy(true)}>
@@ -372,7 +383,7 @@ function App() {
           </p>
         )}
         <main id="main-content" ref={mainRef} tabIndex={-1}>
-          {import.meta.env.DEV && page === "shared" && (
+          {sharedEnabled && page === "shared" && (
             <SharedRoom
               {...stickerActions}
               profile={state.profile}
@@ -588,12 +599,18 @@ function App() {
               marca.
             </p>
             <ul className="privacy-list">
-              {import.meta.env.DEV && (
+              {sharedEnabled && (
                 <li>
-                  El laboratorio local de desarrollo es una prueba separada:
-                  comparte mensajes con otros navegadores conectados y conserva
-                  hasta 50 en memoria del servidor. No utilices datos personales
-                  reales.
+                  {accountsEnabled
+                    ? "La sección Mi cuenta y encuentros guarda tu cuenta, reservas, bloqueos y los últimos 50 mensajes de cada sala en el servidor. Cerrar sesión o borrar los datos locales no elimina esos registros. El historial de salas archivadas se elimina a los 30 días."
+                    : "El laboratorio local de desarrollo es una prueba separada:"}
+                  {!accountsEnabled && (
+                    <>
+                      comparte mensajes con otros navegadores conectados y
+                      conserva hasta 50 en memoria del servidor. No utilices
+                      datos personales reales.
+                    </>
+                  )}
                 </li>
               )}
               <li>

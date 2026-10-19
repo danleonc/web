@@ -26,3 +26,9 @@ El propietario puede completar la activación en `https://github.com/danleonc/we
 ## Laboratorio compartido · 19 de octubre de 2026
 
 El código fuente incluye una API local y una vista de desarrollo para probar presencia, texto, stickers y quórum entre navegadores. `npm run deploy:pages` sigue publicando solo la maqueta estática: no sube el servidor ni habilita usuarios conectados. La vista compartida se excluye del build público. Para probarla en desarrollo, consultar `docs/SALAS_COMPARTIDAS.md`; su despliegue como servicio requiere una etapa posterior.
+
+## Cuentas y persistencia · preparación para HostGator
+
+Se añade un build separado `npm run build:pilot` y un servidor `npm start` que sirve web/API con SQLite persistente. Se preparan Docker, Compose, una referencia de proxy y copias consistentes. El soporte de HostGator confirmó al usuario que el Plan Personal compartido no es adecuado para Node.js 24, procesos permanentes y WebSocket. Se necesita un VPS u otro alojamiento compatible. No se han contratado servicios, accedido al hosting ni cambiado archivos del sitio, DNS, SSL o correo de `polysdeals.com`.
+
+El destino provisional propuesto es `entre.polysdeals.com`, pendiente de confirmar y crear. GitHub Pages continúa sirviendo exclusivamente la maqueta; publicar `gh-pages` no habilita las cuentas. La ejecución en un contenedor local no demuestra publicación en HostGator. Ver `docs/CUENTAS_Y_DESPLIEGUE.md` para requisitos y pasos.

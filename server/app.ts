@@ -2,6 +2,10 @@ import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
+import { resolve, extname } from "node:path";
+import { Storage, digest } from "./storage.ts";
+import { Auth, accountCookie, readToken } from "./auth.ts";
 import { WebSocket, WebSocketServer } from "ws";
 import { featuredActivities } from "../src/data.ts";
 import { canChat, createSession, sessionReducer } from "../src/room/engine.ts";
@@ -31,8 +35,18 @@ type Connection = {
   alive: boolean;
   events: number;
   resetAt: number;
+  tokenHash: string | null;
+  expires: number;
 };
-type Options = { allowedOrigins?: string[]; now?: () => number };
+type Options = {
+  allowedOrigins?: string[];
+  now?: () => number;
+  databasePath?: string;
+  staticRoot?: string;
+  secureCookies?: boolean;
+  startAt?: number;
+  enforceSchedule?: boolean;
+};
 const cookieName = "entre_dev_session";
 const packs = JSON.parse(
   readFileSync(
@@ -50,6 +64,13 @@ function record(v: unknown): v is Record<string, unknown> {
 }
 export function createRoomServer(options: Options = {}) {
   const now = options.now || Date.now;
+  const storage = options.databasePath
+    ? new Storage(options.databasePath)
+    : null;
+  const auth = storage
+    ? new Auth(storage, options.secureCookies ?? false, now)
+    : null;
+  const enforceSchedule = options.enforceSchedule ?? !!storage;
   const allowed = new Set(
     options.allowedOrigins || [
       "http://localhost:4173",
@@ -62,7 +83,60 @@ export function createRoomServer(options: Options = {}) {
   const rooms = new Map<string, Room>();
   const connections = new Set<Connection>();
   const creationLimits = new Map<string, { count: number; until: number }>();
+  if (storage) {
+    storage.prune(now());
+    for (const a of featuredActivities)
+      storage.offering(a.id, options.startAt ?? Date.parse(a.startsAt));
+    for (const a of storage.publicAccounts())
+      identities.set(a.id, {
+        ...a,
+        expires: Infinity,
+        room: null,
+        blocks: storage.blocks(a.id),
+      });
+    for (const room of storage.loadRooms()) {
+      room.session = {
+        ...room.session,
+        participants: room.session.participants.map((p) => ({
+          ...p,
+          present: false,
+          typingUntil: 0,
+        })),
+        votes: [],
+      };
+      room.session = sessionReducer(room.session, { type: "tick", now: now() });
+      room.idleAt = now();
+      room.revision++;
+      storage.saveRoom(room);
+      rooms.set(room.activityId, room);
+      for (const p of room.session.participants) {
+        const i = identities.get(p.id);
+        if (i) i.room = room.activityId;
+      }
+    }
+  }
+  const tokenHash = (req: IncomingMessage) => {
+    const token = readToken(req, accountCookie);
+    return token && /^[a-f0-9]{64}$/.test(token) ? digest(token) : null;
+  };
   const authenticated = (req: IncomingMessage) => {
+    if (storage) {
+      const hash = tokenHash(req);
+      const account = hash ? storage.session(hash, now()) : undefined;
+      if (!account) return null;
+      let identity = identities.get(account.id);
+      if (!identity) {
+        identity = {
+          id: account.id,
+          alias: account.alias,
+          expires: Infinity,
+          room: null,
+          blocks: storage.blocks(account.id),
+        };
+        identities.set(identity.id, identity);
+      }
+      return identity;
+    }
     const token = (req.headers.cookie || "")
       .split(";")
       .map((x) => x.trim())
@@ -85,10 +159,153 @@ export function createRoomServer(options: Options = {}) {
   const server = createServer(async (req, res) => {
     const path = new URL(req.url || "/", "http://localhost").pathname;
     if (path === "/api/health" && req.method === "GET") {
-      json(res, 200, { service: "entre-shared-development", version: 1 });
+      json(res, 200, {
+        service: storage ? "entre-accounts" : "entre-shared-development",
+        version: 2,
+      });
       return;
     }
-    if (path !== "/api/session") {
+    if (
+      options.staticRoot &&
+      !path.startsWith("/api/") &&
+      (req.method === "GET" || req.method === "HEAD")
+    ) {
+      const root = resolve(options.staticRoot);
+      try {
+        const relative =
+          decodeURIComponent(path).replace(/^\/+/, "") || "index.html";
+        const file = resolve(root, relative);
+        if (!file.startsWith(root + "/")) throw new Error("invalid_path");
+        const body = await readFile(file);
+        const type: Record<string, string> = {
+          ".html": "text/html; charset=utf-8",
+          ".js": "text/javascript",
+          ".css": "text/css",
+          ".svg": "image/svg+xml",
+          ".json": "application/json",
+        };
+        res.writeHead(200, {
+          "Content-Type": type[extname(file)] || "application/octet-stream",
+          "X-Content-Type-Options": "nosniff",
+          "Referrer-Policy": "same-origin",
+          "Cache-Control": relative.startsWith("assets/")
+            ? "public, max-age=31536000, immutable"
+            : "no-cache",
+          "Content-Security-Policy":
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+        });
+        res.end(req.method === "HEAD" ? undefined : body);
+      } catch {
+        json(res, 404, { error: "not_found" });
+      }
+      return;
+    }
+    const identity = authenticated(req);
+    if (storage && req.method === "GET" && path === "/api/activities") {
+      if (!identity) {
+        json(res, 401, { error: "session_required" });
+        return;
+      }
+      json(res, 200, {
+        activities: featuredActivities.map((a) => ({
+          id: a.id,
+          title: a.title,
+          startsAt: new Date(storage.startsAt(a.id)).toISOString(),
+          minimum: a.minimum,
+          maximum: a.capacity,
+          reserved: storage.countReservations(a.id),
+          mine: storage.reserved(identity.id, a.id),
+          accessible:
+            !enforceSchedule ||
+            (now() >= storage.startsAt(a.id) - 300_000 &&
+              now() < storage.startsAt(a.id) + 300_000),
+          bookingOpen: now() < storage.startsAt(a.id),
+          ended:
+            rooms.get(a.id)?.session.phase === "closed" ||
+            rooms.get(a.id)?.session.phase === "insufficient" ||
+            (enforceSchedule && now() >= storage.startsAt(a.id) + 300_000),
+        })),
+      });
+      return;
+    }
+    if (
+      storage &&
+      req.method === "GET" &&
+      (path === "/api/history" || /^\/api\/history\/[a-f0-9-]+$/.test(path))
+    ) {
+      if (!identity) {
+        json(res, 401, { error: "session_required" });
+        return;
+      }
+      if (path === "/api/history") {
+        json(res, 200, { rooms: storage.history(identity.id) });
+        return;
+      }
+      const id = path.split("/").at(-1)!;
+      if (!storage.member(identity.id, id)) {
+        json(res, 404, { error: "not_found" });
+        return;
+      }
+      json(res, 200, {
+        messages: storage
+          .messages(id)
+          .filter(
+            (m) =>
+              !identity.blocks.has(m.senderId) &&
+              !identitiesById(m.senderId)?.blocks.has(identity.id),
+          ),
+      });
+      return;
+    }
+    const reservation =
+      storage && path.match(/^\/api\/reservations\/([a-z]+)$/);
+    if (reservation && (req.method === "POST" || req.method === "DELETE")) {
+      if (!validOrigin(req)) {
+        json(res, 403, { error: "origin_rejected" });
+        return;
+      }
+      if (!identity) {
+        json(res, 401, { error: "session_required" });
+        return;
+      }
+      const activity = featuredActivities.find((a) => a.id === reservation[1]);
+      if (!activity) {
+        json(res, 404, { error: "not_found" });
+        return;
+      }
+      req.resume();
+      if (req.method === "DELETE") {
+        if (
+          roomConnections(rooms.get(activity.id)!).some(
+            (c) => c.identity.id === identity.id,
+          )
+        ) {
+          json(res, 409, { error: "leave_room_first" });
+          return;
+        }
+        storage!.cancel(identity.id, activity.id);
+        json(res, 200, { ok: true });
+        return;
+      }
+      const result = storage!.reserve(
+        identity.id,
+        activity.id,
+        activity.capacity,
+        now(),
+      );
+      json(
+        res,
+        result === "ok" ? 200 : 409,
+        result === "ok" ? { ok: true } : { error: `reservation_${result}` },
+      );
+      return;
+    }
+    const authPath = storage && path.match(/^\/api\/auth\/([a-z]+)$/);
+    if (authPath && req.method !== "POST") {
+      json(res, 405, { error: "method_not_allowed" });
+      return;
+    }
+    if (path !== "/api/session" && !authPath) {
       json(res, 404, { error: "not_found" });
       return;
     }
@@ -101,6 +318,10 @@ export function createRoomServer(options: Options = {}) {
           ? { id: identity.id, alias: identity.alias }
           : { error: "session_required" },
       );
+      return;
+    }
+    if (storage && path === "/api/session") {
+      json(res, 405, { error: "login_required" });
       return;
     }
     if (req.method !== "POST") {
@@ -132,6 +353,23 @@ export function createRoomServer(options: Options = {}) {
         chunks.push(chunk);
       }
       const value = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      if (authPath && auth) {
+        if (!record(value)) {
+          json(res, 422, { error: "invalid_fields" });
+          return;
+        }
+        const result = await auth.action(authPath[1], value, req, res);
+        if (result.revoked)
+          for (const c of connections)
+            if (c.tokenHash === result.revoked)
+              c.socket.close(4001, "Sesion cerrada");
+        if (result.recovered)
+          for (const c of connections)
+            if (c.identity.id === result.recovered)
+              c.socket.close(4001, "Sesion renovada");
+        json(res, result.status, result.body);
+        return;
+      }
       if (
         !record(value) ||
         !keys(value, ["alias", "adult"]) ||
@@ -177,8 +415,12 @@ export function createRoomServer(options: Options = {}) {
         `${cookieName}=${token}; HttpOnly; SameSite=Strict; Path=/api; Max-Age=14400`,
       );
       json(res, 201, { id: identity.id, alias: identity.alias });
-    } catch {
-      if (!res.writableEnded) json(res, 400, { error: "invalid_json" });
+    } catch (e) {
+      if (!res.writableEnded)
+        json(res, e instanceof SyntaxError ? 400 : 500, {
+          error:
+            e instanceof SyntaxError ? "invalid_json" : "service_unavailable",
+        });
     }
   });
   const wss = new WebSocketServer({
@@ -221,6 +463,7 @@ export function createRoomServer(options: Options = {}) {
   }
   function broadcast(room: Room) {
     room.revision++;
+    storage?.saveRoom(room);
     for (const c of roomConnections(room)) snapshot(c);
   }
   function advance(room: Room) {
@@ -253,6 +496,26 @@ export function createRoomServer(options: Options = {}) {
       reject(socket, 404);
       return;
     }
+    if (storage) {
+      if (!storage.reserved(identity.id, activity.id)) {
+        reject(socket, 403);
+        return;
+      }
+      if (enforceSchedule && now() < storage.startsAt(activity.id) - 300_000) {
+        reject(socket, 425);
+        return;
+      }
+      if (
+        enforceSchedule &&
+        now() >= storage.startsAt(activity.id) + 300_000 &&
+        !rooms
+          .get(activity.id)
+          ?.session.participants.some((p) => p.id === identity.id)
+      ) {
+        reject(socket, 410);
+        return;
+      }
+    }
     if (identity.room && identity.room !== activity.id) {
       reject(socket, 409);
       return;
@@ -266,7 +529,7 @@ export function createRoomServer(options: Options = {}) {
         activity.capacity,
         activity.duration,
         activity.questions.length,
-        now(),
+        storage && enforceSchedule ? storage.startsAt(activity.id) : now(),
       );
       session.participants = [];
       session.notice =
@@ -347,6 +610,10 @@ export function createRoomServer(options: Options = {}) {
         alive: true,
         events: 0,
         resetAt: now() + 10_000,
+        tokenHash: storage ? tokenHash(req) : null,
+        expires: storage
+          ? storage.session(tokenHash(req)!, now())!.expires
+          : identity.expires,
       };
       connections.add(c);
       broadcast(joined);
@@ -355,7 +622,10 @@ export function createRoomServer(options: Options = {}) {
       });
       ws.on("error", () => {});
       ws.on("message", (raw) => {
-        if (identity.expires <= now()) {
+        if (
+          c.expires <= now() ||
+          (storage && c.tokenHash && !storage.session(c.tokenHash, now()))
+        ) {
           ws.close(4001, "Sesion vencida");
           return;
         }
@@ -409,6 +679,7 @@ export function createRoomServer(options: Options = {}) {
             return;
           }
           identity.blocks.add(value.participantId);
+          storage?.block(identity.id, value.participantId);
           for (const peer of connections)
             if (peer.identity === identity)
               peer.socket.close(4003, "Bloqueo registrado; sales de esta sala");
@@ -480,11 +751,24 @@ export function createRoomServer(options: Options = {}) {
             status: "participated",
             now: now(),
           });
-          send(c, { type: "ack", clientId: value.clientId });
           broadcast(joined);
+          send(c, { type: "ack", clientId: value.clientId });
           return;
         }
         const before = joined.session;
+        if (
+          value.type === "start" &&
+          storage &&
+          enforceSchedule &&
+          now() < storage.startsAt(activity.id)
+        ) {
+          error(
+            c,
+            "too_early",
+            "El encuentro comienza en el horario reservado.",
+          );
+          return;
+        }
         if (value.type === "start" && keys(value, ["type"]))
           joined.session = sessionReducer(before, {
             type: "start",
@@ -568,6 +852,7 @@ export function createRoomServer(options: Options = {}) {
     for (const room of rooms.values()) {
       advance(room);
       if (!roomConnections(room).length && now() - room.idleAt > 5 * 60_000) {
+        storage?.archive(room.key, now());
         rooms.delete(room.activityId);
         for (const i of identities.values())
           if (i.room === room.activityId) i.room = null;
@@ -581,6 +866,12 @@ export function createRoomServer(options: Options = {}) {
       }
     for (const [ip, limit] of creationLimits)
       if (limit.until <= now()) creationLimits.delete(ip);
+    for (const c of connections)
+      if (
+        c.expires <= now() ||
+        (storage && c.tokenHash && !storage.session(c.tokenHash, now()))
+      )
+        c.socket.close(4001, "Sesion vencida");
   }
   const timer = setInterval(tick, 500);
   timer.unref();
@@ -595,13 +886,17 @@ export function createRoomServer(options: Options = {}) {
     }
   }, 10_000);
   heartbeat.unref();
+  const maintenance = setInterval(() => storage?.prune(now()), 60_000);
+  maintenance.unref();
   async function close() {
     clearInterval(timer);
     clearInterval(heartbeat);
+    clearInterval(maintenance);
     for (const c of connections) c.socket.terminate();
     await new Promise<void>((resolve) => wss.close(() => resolve()));
     server.closeAllConnections();
     await new Promise<void>((resolve) => server.close(() => resolve()));
+    storage?.close();
   }
   return { server, tick, close };
 }

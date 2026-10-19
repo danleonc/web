@@ -1,0 +1,21 @@
+services:
+  entre:
+    build: ..
+    restart: unless-stopped
+    init: true
+    environment:
+      ENTRE_PUBLIC_ORIGIN: ${ENTRE_PUBLIC_ORIGIN:?Set the HTTPS origin first}
+    ports:
+      - "127.0.0.1:8788:8788"
+    volumes:
+      - entre-data:/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+    mem_limit: 512m
+volumes:
+  entre-data:

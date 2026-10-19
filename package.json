@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
+    "build:pilot": "tsc -b && vite build --mode pilot",
+    "start": "node server/pilot.ts",
     "preview": "vite preview --host 0.0.0.0",
     "test": "npm run test:rules && npm run test:server && playwright test",
     "typecheck": "tsc -b",
@@ -13,7 +15,8 @@
     "test:rules": "node --test tests/rules/*.test.mjs",
     "dev:api": "node server/main.ts",
     "dev:shared": "node scripts/dev-shared.mjs",
-    "test:server": "node --test tests/server/*.test.mjs"
+    "test:server": "node --test tests/server/*.test.mjs",
+    "test:pilot": "npm run build:pilot && playwright test --config playwright.pilot.config.ts"
   },
   "dependencies": {
     "lucide-react": "1.57.0",

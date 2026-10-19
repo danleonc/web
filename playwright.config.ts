@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
+  testIgnore: "**/pilot*.spec.ts",
   fullyParallel: true,
   reporter: "list",
   use: {
@@ -18,7 +19,7 @@ export default defineConfig({
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },
     {
       name: "mobile",
-      testIgnore: "**/shared.spec.ts",
+      testIgnore: ["**/shared.spec.ts", "**/pilot*.spec.ts"],
       use: { ...devices["Pixel 7"], defaultBrowserType: "chromium" },
     },
   ],

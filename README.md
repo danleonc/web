@@ -4,7 +4,9 @@ Primer prototipo navegable de la plataforma. **Entre es un nombre de trabajo, si
 
 ## Ejecutar
 
-Requisitos: Node.js 24.19.0 (versión utilizada), npm 11 y, para las pruebas, Chromium. No requiere cuentas de proveedores, claves de IA, variables de entorno, base de datos ni servicios externos.
+**Nuevo: cuentas y persistencia.** `npm run build:pilot` prepara una compilación separada; `ENTRE_PUBLIC_ORIGIN=http://127.0.0.1:8788 npm start` sirve la web y API con SQLite persistente. La sección **Mi cuenta y encuentros** permite registrar/iniciar/recuperar cuenta, reservar y conservar historial. El modo público estático y el laboratorio anterior siguen separados. Instrucciones, límites y preparación para HostGator: [docs/CUENTAS_Y_DESPLIEGUE.md](docs/CUENTAS_Y_DESPLIEGUE.md).
+
+Requisitos: Node.js 24.19.0 (versión utilizada), npm 11 y, para las pruebas, Chromium. La maqueta y el laboratorio no requieren cuentas de proveedores, claves de IA ni servicios externos. El piloto usa SQLite incluido en Node y requiere `ENTRE_PUBLIC_ORIGIN`; ver la guía anterior.
 
 ```sh
 npm ci
@@ -61,6 +63,7 @@ La maqueta pública no utiliza backend. El laboratorio añade una API local con 
 npm run typecheck
 npm run build
 npm test
+npm run test:pilot
 ```
 
 Playwright usa el Chromium disponible en `/usr/bin/chromium` en este entorno. En otra máquina puede definirse `CHROMIUM_PATH` apuntando a su ejecutable. Si no hay navegador de sistema, ejecutar `npx playwright install chromium` y `PLAYWRIGHT_BUNDLED_BROWSER=1 npm test`.

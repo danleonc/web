@@ -4035,3 +4035,109 @@ legend {
   font-size: 11px;
   line-height: 1.8;
 }
+.account-panel {
+  padding: 24px;
+  margin: 24px 0;
+}
+.account-panel > p,
+.account-panel article p,
+.account-history > p,
+.recovery-notice p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #506447;
+}
+.account-panel h2 {
+  margin-top: 0;
+}
+.account-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.account-form {
+  display: grid;
+  gap: 15px;
+  max-width: 500px;
+  margin-top: 20px;
+}
+.account-form > label,
+.recovery-notice label {
+  display: grid;
+  gap: 8px;
+  font-size: 12px;
+  color: #405539;
+}
+.account-form input:not([type="checkbox"]),
+.recovery-notice textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #c9d5bf;
+  background: #fcfcf8;
+  color: #34492d;
+  border-radius: 6px;
+  font-size: 14px;
+}
+.account-form > .checkbox-row {
+  display: flex;
+}
+.account-form > p {
+  margin: 0;
+}
+.account-form > button {
+  justify-self: start;
+}
+.account-offerings {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+  gap: 14px;
+  margin: 20px 0;
+}
+.account-offering {
+  border: 1px solid #dde4d5;
+  border-radius: 7px;
+  padding: 16px;
+}
+.account-offering h4 {
+  margin: 0;
+  font-size: 15px;
+}
+.account-offering .button {
+  font-size: 11px;
+  white-space: normal;
+}
+.account-offering > span {
+  display: block;
+  margin-top: 10px;
+  color: #405c35;
+}
+.recovery-notice {
+  padding: 18px;
+  margin: 22px 0;
+  background: #f6efdc;
+  border: 1px solid #dcd0ab;
+  border-radius: 7px;
+}
+.recovery-notice textarea {
+  min-height: 80px;
+  resize: vertical;
+  overflow-wrap: anywhere;
+  font-family: monospace;
+}
+.account-history {
+  padding-top: 20px;
+  border-top: 1px solid #dde4d5;
+}
+.account-history > summary {
+  cursor: pointer;
+  font-size: 14px;
+}
+.account-history > .button {
+  display: block;
+}
+.account-history .messages {
+  max-height: 400px;
+  overflow: auto;
+}

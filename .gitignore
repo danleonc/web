@@ -1,5 +1,11 @@
 node_modules/
 dist/
+dist-pilot/
+.data/
+backups/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
 *.tsbuildinfo
 test-results/
 playwright-report/

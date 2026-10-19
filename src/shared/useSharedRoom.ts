@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { SharedCommand, SharedEvent, SharedSnapshot } from "./protocol";
 import type { SessionEvent } from "../room/engine";
+import { accountsEnabled } from "./mode";
 type Outgoing = Extract<SharedCommand, { type: "message" }>;
 export function useSharedRoom(
   activityId: string,
@@ -50,17 +51,21 @@ export function useSharedRoom(
       setStatus("connecting");
       try {
         const response = await fetch("/api/session", {
-          method: "POST",
+          method: accountsEnabled ? "GET" : "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ alias, adult: true }),
+          body: accountsEnabled
+            ? undefined
+            : JSON.stringify({ alias, adult: true }),
           signal: controller.signal,
         });
         if (!response.ok)
           throw new Error(
             response.status === 429
               ? "Hay demasiados intentos de acceso. Espera un minuto."
-              : "No se pudo crear la sesión de desarrollo. Comprueba que el servidor local esté iniciado.",
+              : accountsEnabled
+                ? "Tu sesión terminó. Sal del encuentro e inicia sesión otra vez."
+                : "No se pudo crear la sesión de desarrollo. Comprueba que el servidor local esté iniciado.",
           );
         if (cancelled) return;
         ws = new WebSocket(
@@ -113,14 +118,18 @@ export function useSharedRoom(
             setSnapshot(null);
             setPending([]);
             setError(
-              "El bloqueo quedó registrado y saliste de la sala. No podrás coincidir con esa persona durante esta sesión de desarrollo.",
+              accountsEnabled
+                ? "El bloqueo quedó guardado en tu cuenta y saliste de la sala."
+                : "El bloqueo quedó registrado y saliste de la sala. No podrás coincidir con esa persona durante esta sesión de desarrollo.",
             );
             return;
           }
           if (event.code === 4001) {
             setStatus("offline");
             setError(
-              "La sesión de prueba venció. Vuelve a entrar desde una sesión nueva de navegador.",
+              accountsEnabled
+                ? "Tu sesión terminó. Sal del encuentro e inicia sesión otra vez."
+                : "La sesión de prueba venció. Vuelve a entrar desde una sesión nueva de navegador.",
             );
             return;
           }
