@@ -26,6 +26,8 @@ import { ProfileForm } from "./pages/ProfileForm";
 import { Agenda } from "./pages/Agenda";
 import { Connections } from "./pages/Connections";
 import { Room } from "./pages/Room";
+import { getSticker } from "./chat/stickers";
+import type { StickerActions } from "./chat/stickers";
 type Page = "discover" | "agenda" | "connections" | "profile" | "room";
 const pages: Page[] = ["discover", "agenda", "connections", "profile", "room"];
 const getPage = (): Page =>
@@ -160,6 +162,31 @@ function App() {
     link.click();
     URL.revokeObjectURL(url);
   }
+  const stickerActions: StickerActions = {
+    stickerPreferences: {
+      favorites: state.stickerFavorites,
+      recent: state.stickerRecent,
+    },
+    onToggleFavorite: (id) => {
+      if (!getSticker(id)) return;
+      setState((s) => ({
+        ...s,
+        stickerFavorites: s.stickerFavorites.includes(id)
+          ? s.stickerFavorites.filter((x) => x !== id)
+          : [...s.stickerFavorites, id],
+      }));
+    },
+    onStickerUsed: (id) => {
+      if (!getSticker(id)) return;
+      setState((s) => ({
+        ...s,
+        stickerRecent: [id, ...s.stickerRecent.filter((x) => x !== id)].slice(
+          0,
+          24,
+        ),
+      }));
+    },
+  };
   const links: { page: Page; label: string; icon: typeof Compass }[] = [
     { page: "discover", label: "Descubrir", icon: Compass },
     { page: "agenda", label: "Mi agenda", icon: CalendarDays },
@@ -365,6 +392,8 @@ function App() {
           )}
           {page === "connections" && (
             <Connections
+              {...stickerActions}
+              onProfile={() => navigate("profile")}
               state={state}
               onDiscover={() => navigate("discover")}
               onWithdraw={(activityId, name) =>
@@ -385,6 +414,7 @@ function App() {
           {page === "room" &&
             (room && state.reservations.includes(room.id) && state.profile ? (
               <Room
+                {...stickerActions}
                 key={room.id}
                 activity={room}
                 profile={state.profile}
@@ -511,13 +541,13 @@ function App() {
             </p>
             <ul className="privacy-list">
               <li>
-                El perfil, límites, reservas, bloqueos y evaluaciones de prueba
-                se guardan en este navegador.
+                El perfil, límites, reservas, bloqueos, evaluaciones y stickers
+                favoritos y recientes de prueba se guardan en este navegador.
               </li>
               <li>
-                Los mensajes de la sala se mantienen solo en memoria y se
-                pierden al salir. No hay IA ni envío de mensajes, denuncias o
-                invitaciones a terceros.
+                Los mensajes de las salas y de los chats privados de prueba se
+                mantienen solo en memoria y se pierden al salir. No hay IA ni
+                envío de mensajes, denuncias o invitaciones a terceros.
               </li>
               <li>
                 No ingreses información sensible. Cualquier persona con acceso a
@@ -550,9 +580,9 @@ function App() {
         >
           <div className="modal-content">
             <p>
-              Se borrarán el perfil, las reservas, las evaluaciones y los
-              bloqueos de este prototipo en este navegador. No podrás
-              deshacerlo.
+              Se borrarán el perfil, las reservas, las evaluaciones, los
+              stickers favoritos y recientes y los bloqueos de este prototipo en
+              este navegador. No podrás deshacerlo.
             </p>
             <div className="modal-actions">
               <button

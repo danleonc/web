@@ -1,3 +1,4 @@
+import { validStickerIds } from "./chat/stickers";
 export type Profile = {
   alias: string;
   interests: string[];
@@ -16,6 +17,8 @@ export type LocalState = {
   reservations: string[];
   feedback: Feedback[];
   blocked: string[];
+  stickerFavorites: string[];
+  stickerRecent: string[];
 };
 export const storageKey = "entre.prototype.v1";
 export const emptyState: LocalState = {
@@ -23,6 +26,8 @@ export const emptyState: LocalState = {
   reservations: [],
   feedback: [],
   blocked: [],
+  stickerFavorites: [],
+  stickerRecent: [],
 };
 const strings = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every((x) => typeof x === "string");
@@ -65,6 +70,12 @@ export function loadState(): LocalState {
       reservations: v.reservations,
       feedback: v.feedback,
       blocked: v.blocked,
+      stickerFavorites: validStickerIds(
+        strings(v.stickerFavorites) ? v.stickerFavorites : [],
+      ),
+      stickerRecent: validStickerIds(
+        strings(v.stickerRecent) ? v.stickerRecent : [],
+      ).slice(0, 24),
     };
   } catch {
     return emptyState;

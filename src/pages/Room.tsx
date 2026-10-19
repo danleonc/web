@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import type { FormEvent } from "react";
 import {
   ArrowLeft,
   ArrowRight,
@@ -7,13 +6,16 @@ import {
   LogOut,
   MessageCircle,
   Plus,
-  Send,
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
 import type { Activity } from "../data";
 import type { Profile, Feedback } from "../store";
 import { Avatar, Modal } from "../components";
+import { ChatComposer } from "../chat/ChatComposer";
+import { ChatMessageBubble } from "../chat/ChatMessage";
+import type { ChatMessage } from "../chat/ChatMessage";
+import type { StickerActions } from "../chat/stickers";
 
 export function Room({
   activity,
@@ -22,7 +24,8 @@ export function Room({
   onBlock,
   onFinish,
   onLeave,
-}: {
+  ...stickerActions
+}: StickerActions & {
   activity: Activity;
   profile: Profile;
   blocked: string[];
@@ -31,10 +34,7 @@ export function Room({
   onLeave: () => void;
 }) {
   const [facilitator, setFacilitator] = useState(true);
-  const [messages, setMessages] = useState<
-    { name: string; text: string; own: boolean }[]
-  >([]);
-  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [exampleShown, setExampleShown] = useState(false);
   const [stage, setStage] = useState<"room" | "feedback">("room");
   const [safety, setSafety] = useState(false);
@@ -51,21 +51,13 @@ export function Room({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages]);
-  function send(e: FormEvent) {
-    e.preventDefault();
-    if (!draft.trim()) return;
-    setMessages((m) => [
-      ...m,
-      { name: profile.alias, text: draft.trim(), own: true },
-    ]);
-    setDraft("");
-  }
   function showExample() {
     const name = visiblePeople[0];
     if (!name) return;
     setMessages((m) => [
       ...m,
       {
+        type: "text",
         name,
         text: "Una cosa que me alegró fue hacer tiempo para conversar sin apuro. ¿Y a ti? (Respuesta de ejemplo escrita de antemano)",
         own: false,
@@ -221,8 +213,8 @@ export function Room({
               </span>
               <h2>Un espacio para conversar.</h2>
               <p>
-                Escribe un mensaje para probar el chat. Solo tú puedes leerlo;
-                no se envía ni se guarda al salir.
+                Escribe un mensaje o envía un sticker para probar el chat. Solo
+                tú puedes leerlo; no se envía ni se guarda al salir.
               </p>
             </div>
             {facilitator && (
@@ -242,13 +234,7 @@ export function Room({
                 (m) => m.own || !blocked.includes(`${activity.id}:${m.name}`),
               )
               .map((m, i) => (
-                <div className={`message ${m.own ? "own" : ""}`} key={i}>
-                  <Avatar name={m.name} index={m.own ? 4 : 0} small />
-                  <div>
-                    <span>{m.own ? "Tú" : `${m.name} · ficticia`}</span>
-                    <p>{m.text}</p>
-                  </div>
-                </div>
+                <ChatMessageBubble key={i} message={m} />
               ))}
             {!exampleShown && visiblePeople.length > 0 && (
               <button className="example-button" onClick={showExample}>
@@ -257,26 +243,21 @@ export function Room({
             )}
             <div ref={bottomRef} />
           </div>
-          <form className="composer" onSubmit={send}>
-            <label className="sr-only" htmlFor="message">
-              Tu mensaje de prueba
-            </label>
-            <input
-              id="message"
-              maxLength={1000}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              placeholder="Comparte algo, si te apetece…"
-              autoComplete="off"
-            />
-            <button
-              className="send-button"
-              disabled={!draft.trim()}
-              aria-label="Enviar mensaje de prueba"
-            >
-              <Send size={18} />
-            </button>
-          </form>
+          <ChatComposer
+            {...stickerActions}
+            onSendText={(text) =>
+              setMessages((m) => [
+                ...m,
+                { type: "text", text, name: profile.alias, own: true },
+              ])
+            }
+            onSendSticker={(stickerId) =>
+              setMessages((m) => [
+                ...m,
+                { type: "sticker", stickerId, name: profile.alias, own: true },
+              ])
+            }
+          />
           <span className="composer-note">
             <LockKeyhole size={11} /> Solo en esta sala local · No compartas
             datos sensibles

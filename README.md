@@ -26,16 +26,22 @@ Para compilar: `npm run build`. El resultado queda en `dist/`. Para probar la co
 1. Descubrir seis actividades ficticias; filtrar por categoría, buscar sin exigir acentos y filtrar por intereses declarados.
 2. Completar un perfil de prueba en dos pasos. Alias, intereses y límites son opcionales. No se pregunta qué relación buscas. Se exige declaración de mayoría de edad para avanzar; **no es verificación de edad o identidad**.
 3. Reservar un encuentro, revisar la agenda y cancelar una reserva con confirmación.
-4. Entrar a una sala local. Escribir mensajes, mostrar explícitamente una respuesta ficticia y activar o retirar un guion de anfitrión. No hay IA.
+4. Entrar a una sala local. Escribir mensajes, enviar stickers, mostrar explícitamente una respuesta ficticia y activar o retirar un guion de anfitrión. No hay IA.
 5. Probar bloqueo y denuncia simulada. Bloquear oculta mensajes del personaje y lo excluye de posibles reencuentros. La denuncia no se envía ni guarda y no existe equipo de moderación.
 6. Evaluar comodidad y expresar interés por reencontrarse con personajes ficticios. No se fabrican aceptaciones recíprocas. Se puede retirar el interés.
 7. Editar perfil, descargar datos de prueba y borrarlos con confirmación desde «Cómo funciona».
 
 Todo está etiquetado como prototipo. Los cupos y fechas son ilustrativos, y las salas pueden abrirse sin esperar al horario de ejemplo. No existe sincronización entre dispositivos.
 
+## Stickers
+
+Hay **144 stickers propios en 12 colecciones**, con búsqueda, favoritos, recientes y vista previa antes de enviar. En las salas, abrir el botón de stickers junto al mensaje. Para probarlos también en una conversación individual: **Mis conexiones → Probar chat privado** (requiere un perfil de prueba). Este chat no implica que alguien haya aceptado una solicitud ni contacta a otras personas.
+
+Los favoritos y recientes se comparten entre ambas vistas; los mensajes siguen siendo efímeros. Detalles, catálogo, ampliación y requisitos de la mensajería real: [docs/STICKERS.md](docs/STICKERS.md).
+
 ## Datos y privacidad
 
-Perfil, reservas, evaluaciones, bloqueos y solicitudes se guardan en `localStorage` bajo `entre.prototype.v1`. Los mensajes de sala solo viven en memoria y se pierden al abandonar la sala o recargar. No ingresar datos sensibles ni utilizar el prototipo con usuarios reales. La descarga JSON contiene los datos persistidos; la función de borrar reinicia únicamente el estado de este prototipo.
+Perfil, reservas, evaluaciones, bloqueos, solicitudes y stickers favoritos/recientes se guardan en `localStorage` bajo `entre.prototype.v1`. Los mensajes de salas y chats individuales de prueba solo viven en memoria y se pierden al abandonarlos o recargar. No ingresar datos sensibles ni utilizar el prototipo con usuarios reales. La descarga JSON contiene los datos persistidos; la función de borrar reinicia únicamente el estado de este prototipo.
 
 No hay backend, autenticación, autorización de servidor, chat real, IA generativa, notificaciones, pagos ni protección de fotografías implementados. Los límites de perfil son controles de la experiencia de prueba, no una garantía de seguridad contra usuarios reales. Antes de un piloto se necesitan servicios reales, revisión jurídica y controles de seguridad verificables.
 
@@ -56,6 +62,7 @@ Los tests arrancan Vite en el puerto 4173 si no hay una instancia existente. Eje
 - `src/App.tsx`: navegación, estado global y acciones de usuario.
 - `src/pages/`: descubrir, perfil, agenda, conexiones y sala/evaluación.
 - `src/data.ts`: actividades y personajes sintéticos, fechas y catálogos.
+- `src/chat/`: catálogo, selector y compositor común de texto/stickers, mensajes y chat individual de demostración.
 - `src/store.ts`: carga, validación básica y guardado del estado local.
 - `src/components.tsx`: diálogos nativos, avatares y estados vacíos.
 - `src/Illustration.tsx`: ilustraciones SVG propias; no se cargan fotos de terceros.

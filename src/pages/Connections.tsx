@@ -1,17 +1,24 @@
-import { Users, LockKeyhole, Clock3, Leaf } from "lucide-react";
+import { useState } from "react";
+import { Users, LockKeyhole, Clock3, Leaf, MessageCircle } from "lucide-react";
 import { activities } from "../data";
 import type { LocalState } from "../store";
 import { Avatar, Empty } from "../components";
+import { PrivateChatDemo } from "../chat/PrivateChatDemo";
+import type { StickerActions } from "../chat/stickers";
 
 export function Connections({
   state,
   onDiscover,
   onWithdraw,
-}: {
+  onProfile,
+  ...stickerActions
+}: StickerActions & {
   state: LocalState;
+  onProfile: () => void;
   onDiscover: () => void;
   onWithdraw: (activityId: string, name: string) => void;
 }) {
+  const [chatOpen, setChatOpen] = useState(false);
   const requests = state.feedback.flatMap((f) =>
     f.reconnect
       .filter((name) => !state.blocked.includes(`${f.activityId}:${name}`))
@@ -71,6 +78,39 @@ export function Connections({
           text="Después de una sala de prueba podrás elegir con quién te gustaría reencontrarte. No hay prisa ni obligación."
           action="Explorar un encuentro"
           onAction={onDiscover}
+        />
+      )}
+      <section
+        className="private-chat-card panel"
+        aria-labelledby="private-chat-title"
+      >
+        <span className="note-icon">
+          <MessageCircle size={23} />
+        </span>
+        <div>
+          <p className="eyebrow">PRUEBA INDIVIDUAL · PERSONA FICTICIA</p>
+          <h2 id="private-chat-title">
+            También puedes decirlo con un sticker.
+          </h2>
+          <p>
+            Explora texto y 144 stickers en un chat privado de demostración. No
+            habilita contactos ni implica aceptación recíproca.
+          </p>
+        </div>
+        <button
+          className="button secondary"
+          onClick={() => (state.profile ? setChatOpen(true) : onProfile())}
+        >
+          {state.profile
+            ? "Probar chat privado"
+            : "Crear perfil para probar el chat"}
+        </button>
+      </section>
+      {chatOpen && state.profile && (
+        <PrivateChatDemo
+          {...stickerActions}
+          alias={state.profile.alias}
+          onClose={() => setChatOpen(false)}
         />
       )}
       <div className="quiet-note">

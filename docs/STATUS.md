@@ -53,3 +53,9 @@ Durante la comprobación de instalación se detectó caché obsoleta de un Vite 
 ## Actualización · 16 de octubre de 2026
 
 Con autorización del usuario se subieron el código a `master` y la compilación estática a `gh-pages` de `danleonc/web`. La aplicación se verificó también con servidor estático bajo `/web/`; usa rutas relativas para sus recursos. Se añadió `npm run deploy:pages` para repetir la publicación sin cambiar el checkout ni forzar la rama remota. La activación y disponibilidad pública de GitHub Pages siguen pendientes de comprobación; consultar `docs/DEPLOYMENT.md`. Las afirmaciones anteriores de «no enviado a GitHub» corresponden al estado histórico previo.
+
+## Actualización · 19 de octubre de 2026 · Stickers
+
+R33 confirmado por el usuario: stickers en salas y chats privados, con catálogo amplio y variado. Se implementan 144 stickers propios y un selector compartido con categorías, búsqueda, favoritos, recientes y confirmación. Las salas incorporan envío de imágenes de catálogo y se añade un chat individual explícitamente simulado para probar el mismo recorrido. No se crea contacto real ni se interpreta una solicitud de reencuentro como aceptada. Se conservan perfiles antiguos y se amplían exportación y borrado para incluir preferencias de stickers. Ver `docs/STICKERS.md` para alcance, criterios y requisitos de servidor pendientes.
+
+Verificación de R33: compilación correcta y 22 pruebas aprobadas en escritorio/móvil; los 144 assets de stickers se sirven correctamente bajo `/web/`. Se comprobaron envío, vista previa, preferencias compartidas, migración de perfiles, exportación, reinicio, teclado y accesibilidad automática. Las conversaciones continúan sin persistirse.

@@ -2871,3 +2871,426 @@ legend {
   right: 12px;
   top: 12px;
 }
+
+/* Stickers are local static artwork, with previews and accessible labels. */
+.sticker-trigger {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 1px solid #d8e1cf;
+  color: #42634e;
+  background: #edf1e5;
+  flex-shrink: 0;
+}
+.sticker-trigger:hover {
+  background: #dfe9d5;
+}
+.sticker-picker {
+  padding: 0 22px 17px;
+}
+.sticker-intro {
+  font-size: 11px;
+  line-height: 1.6;
+  color: #65725d;
+  margin: 17px 0 14px;
+}
+.sticker-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 11px;
+  background: #f4f5ec;
+  border: 1px solid #d9e1ce;
+  border-radius: 8px;
+  color: #607457;
+  min-height: 44px;
+}
+.sticker-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  background: none;
+  font-size: 12px;
+  padding: 9px 0;
+  outline: none;
+}
+.sticker-search:focus-within {
+  outline: 3px solid #a46743;
+  outline-offset: 2px;
+}
+.sticker-search input:focus-visible {
+  outline: none;
+}
+.sticker-search input::placeholder {
+  color: #69755f;
+}
+.sticker-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 15px 0 9px;
+}
+.sticker-categories button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid #dce3d1;
+  border-radius: 20px;
+  padding: 8px 10px;
+  min-height: 34px;
+  font-size: 10px;
+  color: #52684a;
+  background: #f8f9f1;
+}
+.sticker-categories button.chosen {
+  background: #285d4c;
+  color: #fff;
+  border-color: #285d4c;
+}
+.sticker-categories button:hover:not(.chosen) {
+  background: #e6edda;
+}
+.sticker-count {
+  font-size: 10px;
+  color: #65755a;
+  margin: 5px 0 10px;
+}
+.sticker-results {
+  max-height: 300px;
+  min-height: 180px;
+  overflow-y: auto;
+  padding: 4px 5px 8px;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.sticker-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 9px;
+}
+.sticker-tile {
+  position: relative;
+  border: 1px solid #e0e4d7;
+  background: #f4f3e9;
+  border-radius: 10px;
+  min-width: 0;
+}
+.sticker-tile.selected {
+  border: 2px solid #427553;
+  background: #e6eedc;
+}
+.sticker-choice {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-radius: 9px;
+  padding: 7px 4px 10px;
+  min-width: 0;
+}
+.sticker-choice img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 180/172;
+  max-height: 105px;
+  object-fit: contain;
+}
+.sticker-choice > span {
+  display: block;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #4d6246;
+  min-height: 30px;
+  align-content: center;
+}
+.sticker-favorite {
+  position: absolute;
+  right: 3px;
+  top: 3px;
+  border: 1px solid #e0e5d5;
+  background: #fffdf6e8;
+  color: #657856;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+}
+.sticker-favorite:hover {
+  background: #e7eddb;
+}
+.sticker-favorite.saved {
+  color: #7e561d;
+  background: #f6e7bc;
+  border-color: #c4ad72;
+}
+.sticker-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid #dce3d0;
+  padding-top: 12px;
+  margin-top: 10px;
+  min-height: 83px;
+}
+.sticker-preview > img {
+  flex-shrink: 0;
+}
+.sticker-preview > div {
+  flex: 1;
+  min-width: 0;
+}
+.sticker-preview strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.sticker-preview > div > span {
+  display: block;
+  font-size: 10px;
+  color: #637257;
+  margin-top: 5px;
+}
+.sticker-preview > p {
+  font-size: 11px;
+  color: #607252;
+  line-height: 1.7;
+  margin: 0;
+}
+.sticker-preview .button {
+  font-size: 11px;
+  padding: 11px 14px;
+  flex-shrink: 0;
+}
+.sticker-empty {
+  text-align: center;
+  padding: 20px 15px;
+  color: #607652;
+}
+.sticker-empty h3 {
+  font-family: var(--serif);
+  font-size: 22px;
+  margin: 13px 0 10px;
+}
+.sticker-empty p {
+  font-size: 11px;
+  margin-bottom: 13px;
+}
+.sent-sticker {
+  display: block;
+  object-fit: contain;
+  max-width: 100%;
+  height: auto;
+  margin: 3px 0 7px;
+}
+.message.sticker-message > div {
+  width: 150px;
+}
+.sticker-message.own > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+.sticker-message.own > div > span {
+  align-self: stretch;
+}
+.private-chat-card {
+  display: flex;
+  align-items: center;
+  gap: 17px;
+  margin: 26px 0;
+  padding: 24px;
+}
+.private-chat-card > .note-icon {
+  flex-shrink: 0;
+  margin: 0;
+}
+.private-chat-card > div {
+  flex: 1;
+}
+.private-chat-card h2 {
+  font-size: 24px;
+  margin-bottom: 9px;
+}
+.private-chat-card p:not(.eyebrow) {
+  font-size: 11px;
+  color: #617058;
+  margin: 0;
+  max-width: 490px;
+}
+.private-chat-card .eyebrow {
+  font-size: 9px;
+  margin-bottom: 8px;
+}
+.private-chat-card > .button {
+  flex-shrink: 0;
+}
+.private-demo .inline-notice {
+  margin: 18px 20px 0;
+  font-size: 11px;
+}
+.private-messages {
+  height: 280px;
+  min-height: 140px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px 23px;
+}
+.private-messages .welcome-message {
+  margin: 28px auto;
+}
+.private-messages .welcome-message h3 {
+  font-family: var(--serif);
+  font-size: 23px;
+  color: #456047;
+  line-height: 1.4;
+}
+.private-messages .welcome-message p {
+  color: #607355;
+}
+.private-demo .composer {
+  padding-top: 14px;
+}
+.private-demo .composer-note {
+  font-size: 10px;
+  color: #617058;
+  line-height: 1.7;
+  padding: 8px 20px 19px;
+}
+.composer {
+  gap: 10px;
+}
+.composer input::placeholder {
+  color: #68775f;
+}
+.composer-note {
+  color: #617058;
+}
+@media (max-width: 980px) {
+  .private-chat-card {
+    flex-wrap: wrap;
+  }
+  .private-chat-card > .button {
+    margin-left: 52px;
+  }
+  .sticker-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .sticker-picker {
+    padding: 0 14px 13px;
+  }
+  .sticker-intro {
+    font-size: 10px;
+    margin-top: 12px;
+  }
+  .sticker-search input {
+    font-size: 11px;
+  }
+  .sticker-categories {
+    gap: 5px;
+    padding-top: 12px;
+    max-height: 112px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .sticker-categories button {
+    font-size: 10px;
+    padding: 7px 9px;
+  }
+  .sticker-results {
+    max-height: 30dvh;
+    min-height: 130px;
+  }
+  .sticker-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 7px;
+  }
+  .sticker-choice img {
+    max-height: 82px;
+  }
+  .sticker-choice > span {
+    font-size: 10px;
+  }
+  .sticker-choice {
+    padding-top: 9px;
+  }
+  .sticker-favorite {
+    width: 28px;
+    height: 28px;
+    top: 2px;
+    right: 2px;
+  }
+  .sticker-preview {
+    gap: 8px;
+    min-height: 77px;
+  }
+  .sticker-preview > img {
+    width: 45px;
+    height: 43px;
+  }
+  .sticker-preview strong {
+    font-size: 10px;
+  }
+  .sticker-preview .button {
+    font-size: 10px;
+    gap: 7px;
+    padding: 10px;
+  }
+  .sticker-preview > div > span {
+    font-size: 10px;
+  }
+  .private-chat-card {
+    gap: 12px;
+    padding: 20px;
+  }
+  .private-chat-card > .note-icon {
+    display: none;
+  }
+  .private-chat-card > div {
+    flex-basis: 100%;
+  }
+  .private-chat-card h2 {
+    font-size: 24px;
+    line-height: 1.3;
+  }
+  .private-chat-card > .button {
+    margin-left: 0;
+    width: 100%;
+  }
+  .private-demo .inline-notice {
+    margin: 15px 16px 0;
+    font-size: 10px;
+  }
+  .private-messages {
+    height: 32dvh;
+    padding: 16px;
+  }
+  .private-demo .composer-note {
+    font-size: 10px;
+    padding: 6px 16px 16px;
+  }
+  .composer {
+    gap: 7px;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .composer input {
+    font-size: 11px;
+  }
+  .sticker-trigger {
+    width: 37px;
+    height: 37px;
+  }
+  .sent-sticker {
+    width: 135px;
+  }
+  .message.sticker-message > div {
+    width: 135px;
+  }
+}
