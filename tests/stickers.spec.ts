@@ -30,6 +30,9 @@ async function enterRoom(page: Page) {
   await page
     .getByRole("button", { name: "Entrar a la sala de prueba", exact: true })
     .click();
+  await page
+    .getByRole("button", { name: "Comenzar encuentro de prueba", exact: true })
+    .click();
 }
 
 test("catalog supports search, categories, preview, favorites and sending without losing draft", async ({

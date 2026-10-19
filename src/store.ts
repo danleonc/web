@@ -11,6 +11,7 @@ export type Feedback = {
   comfort: number;
   reconnect: string[];
   note: string;
+  repeatGroup?: boolean;
 };
 export type LocalState = {
   profile: Profile | null;
@@ -61,7 +62,8 @@ export function loadState(): LocalState {
           f.comfort >= 1 &&
           f.comfort <= 5 &&
           strings(f.reconnect) &&
-          typeof f.note === "string",
+          typeof f.note === "string" &&
+          (f.repeatGroup === undefined || typeof f.repeatGroup === "boolean"),
       )
     )
       return emptyState;

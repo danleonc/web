@@ -16,6 +16,15 @@ import { ChatComposer } from "../chat/ChatComposer";
 import { ChatMessageBubble } from "../chat/ChatMessage";
 import type { ChatMessage } from "../chat/ChatMessage";
 import type { StickerActions } from "../chat/stickers";
+import { useSession } from "../room/useSession";
+import { canChat, formatTime } from "../room/engine";
+import {
+  Lobby,
+  SessionFallback,
+  GuidePanel,
+  Participants,
+  DemoControls,
+} from "../room/SessionPanels";
 
 export function Room({
   activity,
@@ -24,6 +33,8 @@ export function Room({
   onBlock,
   onFinish,
   onLeave,
+  onDiscover,
+  onCancelReservation,
   ...stickerActions
 }: StickerActions & {
   activity: Activity;
@@ -32,8 +43,14 @@ export function Room({
   onBlock: (name: string) => void;
   onFinish: (f: Feedback) => void;
   onLeave: () => void;
+  onDiscover: () => void;
+  onCancelReservation: () => void;
 }) {
-  const [facilitator, setFacilitator] = useState(true);
+  const { session, dispatch, now } = useSession(
+    activity,
+    profile.alias,
+    blocked,
+  );
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [exampleShown, setExampleShown] = useState(false);
   const [stage, setStage] = useState<"room" | "feedback">("room");
@@ -44,16 +61,39 @@ export function Room({
   const [comfort, setComfort] = useState(0);
   const [reconnect, setReconnect] = useState<string[]>([]);
   const [note, setNote] = useState("");
+  const [repeatGroup, setRepeatGroup] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
-  const visiblePeople = activity.people.filter(
-    (n) => !blocked.includes(`${activity.id}:${n}`),
-  );
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const previousPhase = useRef(session.phase);
+  useEffect(() => {
+    if (
+      previousPhase.current !== session.phase &&
+      (previousPhase.current === "lobby" ||
+        ["lobby", "closed", "insufficient"].includes(session.phase))
+    ) {
+      headingRef.current?.focus({ preventScroll: true });
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+    previousPhase.current = session.phase;
+  }, [session.phase]);
+  const visiblePeople = session.participants
+    .filter(
+      (p) =>
+        !p.own && p.present && !blocked.includes(`${activity.id}:${p.name}`),
+    )
+    .map((p) => p.name);
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages]);
   function showExample() {
     const name = visiblePeople[0];
-    if (!name) return;
+    if (!name || !canChat(session)) return;
+    dispatch({
+      type: "response",
+      id: session.participants.find((p) => p.name === name && !p.own)!.id,
+      status: "participated",
+      now: Date.now(),
+    });
     setMessages((m) => [
       ...m,
       {
@@ -84,6 +124,7 @@ export function Room({
                 comfort,
                 reconnect: reconnect.filter((n) => visiblePeople.includes(n)),
                 note: note.trim(),
+                repeatGroup,
               });
           }}
         >
@@ -142,6 +183,20 @@ export function Room({
               </p>
             )}
           </fieldset>
+          <label className="checkbox-row group-interest">
+            <input
+              type="checkbox"
+              checked={repeatGroup}
+              onChange={(e) => setRepeatGroup(e.target.checked)}
+            />
+            <span>
+              Me gustaría repetir una experiencia con este grupo.
+              <small>
+                Solo guardamos tu interés de prueba. No se agenda nada ni se
+                interpreta como aceptación de los demás.
+              </small>
+            </span>
+          </label>
           <label className="field-label" htmlFor="feedback-note">
             ¿Algo que quieras recordar? <span>(opcional)</span>
           </label>
@@ -175,152 +230,194 @@ export function Room({
           <p className="eyebrow">
             SALA DE PRUEBA · SIN CONEXIÓN CON OTRAS PERSONAS
           </p>
-          <h1>{activity.title}</h1>
+          <h1 ref={headingRef} tabIndex={-1}>
+            {activity.title}
+          </h1>
           <p className="muted">
             Puedes escuchar, compartir o terminar cuando quieras.
           </p>
         </div>
-        <button
-          className="button secondary"
-          onClick={() => setStage("feedback")}
-        >
-          <LogOut size={16} /> Finalizar encuentro
-        </button>
+        {session.sessionUntil > 0 && (
+          <button
+            className="button secondary"
+            onClick={() => {
+              dispatch({ type: "close", now: Date.now() });
+              setStage("feedback");
+            }}
+          >
+            <LogOut size={16} /> Finalizar encuentro
+          </button>
+        )}
       </div>
-      <div className="room-layout">
-        <section
-          className="conversation panel"
-          aria-label="Conversación de prueba"
-        >
-          <div className="room-top">
-            <span>
-              <span className="status-dot" /> Simulación local
-            </span>
-            <button
-              className="button text"
-              onClick={() => {
-                setSafety(true);
-                setSafetyResult("");
-              }}
-            >
-              <ShieldCheck size={16} /> Seguridad
-            </button>
-          </div>
-          <div className="messages">
-            <div className="welcome-message">
-              <span className="welcome-icon">
-                <MessageCircle size={26} />
+      {session.phase === "lobby" ? (
+        <Lobby
+          session={session}
+          dispatch={dispatch}
+          now={now}
+          activity={activity}
+          onLeave={onLeave}
+          onDiscover={onDiscover}
+          onCancel={onCancelReservation}
+        />
+      ) : session.phase === "insufficient" || session.phase === "closed" ? (
+        <SessionFallback
+          session={session}
+          dispatch={dispatch}
+          now={now}
+          onLeave={onLeave}
+          onDiscover={onDiscover}
+          onCancel={onCancelReservation}
+          onFeedback={() => setStage("feedback")}
+        />
+      ) : (
+        <div className="room-layout">
+          <section
+            className="conversation panel"
+            aria-label="Conversación de prueba"
+          >
+            <div className="room-top">
+              <span>
+                <span className="status-dot" /> Simulación local
               </span>
-              <h2>Un espacio para conversar.</h2>
-              <p>
-                Escribe un mensaje o envía un sticker para probar el chat. Solo
-                tú puedes leerlo; no se envía ni se guarda al salir.
-              </p>
-            </div>
-            {facilitator && (
-              <div className="host-message">
-                <span>
-                  <Sparkles size={16} /> Anfitrión · guion de ejemplo
-                </span>
-                <p>{activity.prompt}</p>
-                <small>
-                  Puedes omitir la pregunta. No hay IA leyendo esta
-                  conversación.
-                </small>
-              </div>
-            )}
-            {messages
-              .filter(
-                (m) => m.own || !blocked.includes(`${activity.id}:${m.name}`),
-              )
-              .map((m, i) => (
-                <ChatMessageBubble key={i} message={m} />
-              ))}
-            {!exampleShown && visiblePeople.length > 0 && (
-              <button className="example-button" onClick={showExample}>
-                <Plus size={14} /> Mostrar una respuesta ficticia de ejemplo
+              <button
+                className="button text"
+                onClick={() => {
+                  setSafety(true);
+                  setSafetyResult("");
+                }}
+              >
+                <ShieldCheck size={16} /> Seguridad
               </button>
-            )}
-            <div ref={bottomRef} />
-          </div>
-          <ChatComposer
-            {...stickerActions}
-            onSendText={(text) =>
-              setMessages((m) => [
-                ...m,
-                { type: "text", text, name: profile.alias, own: true },
-              ])
-            }
-            onSendSticker={(stickerId) =>
-              setMessages((m) => [
-                ...m,
-                { type: "sticker", stickerId, name: profile.alias, own: true },
-              ])
-            }
-          />
-          <span className="composer-note">
-            <LockKeyhole size={11} /> Solo en esta sala local · No compartas
-            datos sensibles
-          </span>
-        </section>
-        <aside className="room-aside">
-          <div className="panel participants-panel">
-            <h3>En este encuentro</h3>
-            <p className="small-text muted">Todos son personajes ficticios.</p>
-            <div className="participant">
-              <Avatar name={profile.alias} index={4} />
-              <span>
-                {profile.alias}
-                <small>Tú · en este navegador</small>
-              </span>
             </div>
-            {visiblePeople.map((name, i) => (
-              <div className="participant" key={name}>
-                <Avatar name={name} index={i} />
-                <span>
-                  {name}
-                  <small>Participante de ejemplo</small>
+            <GuidePanel
+              session={session}
+              dispatch={dispatch}
+              now={now}
+              activity={activity}
+            />
+            <div className="messages">
+              <div className="welcome-message">
+                <span className="welcome-icon">
+                  <MessageCircle size={26} />
                 </span>
+                <h2>Un espacio para conversar.</h2>
+                <p>
+                  Escribe un mensaje o envía un sticker para probar el chat.
+                  Solo tú puedes leerlo; no se envía ni se guarda al salir.
+                </p>
               </div>
-            ))}
-            {blocked.some((b) => b.startsWith(`${activity.id}:`)) && (
-              <p className="small-text muted">
-                Los participantes bloqueados están ocultos.
-              </p>
-            )}
-          </div>
-          <div className="host-control panel">
-            <span className="note-icon">
-              <Sparkles size={21} />
+              {messages
+                .filter(
+                  (m) => m.own || !blocked.includes(`${activity.id}:${m.name}`),
+                )
+                .map((m, i) => (
+                  <ChatMessageBubble key={i} message={m} />
+                ))}
+              {!exampleShown && visiblePeople.length > 0 && (
+                <button className="example-button" onClick={showExample}>
+                  <Plus size={14} /> Mostrar una respuesta ficticia de ejemplo
+                </button>
+              )}
+              <div ref={bottomRef} />
+            </div>
+            <ChatComposer
+              {...stickerActions}
+              disabled={!canChat(session)}
+              onTypingChange={(active) =>
+                dispatch({
+                  type: "typing",
+                  id: "self",
+                  active,
+                  now: Date.now(),
+                })
+              }
+              onSendText={(text) => {
+                if (!canChat(session)) return;
+                setMessages((m) => [
+                  ...m,
+                  { type: "text", text, name: profile.alias, own: true },
+                ]);
+                dispatch({
+                  type: "response",
+                  id: "self",
+                  status: "participated",
+                  now: Date.now(),
+                });
+              }}
+              onSendSticker={(stickerId) => {
+                if (!canChat(session)) return;
+                setMessages((m) => [
+                  ...m,
+                  {
+                    type: "sticker",
+                    stickerId,
+                    name: profile.alias,
+                    own: true,
+                  },
+                ]);
+                dispatch({
+                  type: "response",
+                  id: "self",
+                  status: "participated",
+                  now: Date.now(),
+                });
+              }}
+            />
+            <span className="composer-note">
+              <LockKeyhole size={11} /> Solo en esta sala local · No compartas
+              datos sensibles
             </span>
-            <h3>Un empujoncito, solo si quieres.</h3>
-            <p>
-              El anfitrión propone una pregunta inicial. Tú decides si
-              participa.
+          </section>
+          <aside className="room-aside">
+            <Participants session={session} now={now} />
+            <div className="host-control panel">
+              <span className="note-icon">
+                <Sparkles size={21} />
+              </span>
+              <h3>Un empujoncito, solo si quieres.</h3>
+              <p>
+                Hasta tres preguntas de guion, con tiempos limitados. La guía no
+                lee mensajes ni inventa respuestas. Tiempo del encuentro:{" "}
+                {formatTime(session.sessionUntil - now)}.
+              </p>
+              <button
+                className={`toggle-button ${session.guided ? "on" : ""}`}
+                role="switch"
+                aria-checked={session.guided}
+                onClick={() =>
+                  dispatch({
+                    type: "guide",
+                    enabled: !session.guided,
+                    now: Date.now(),
+                  })
+                }
+              >
+                <span>
+                  {session.guided ? "Guion activado" : "Guion desactivado"}
+                </span>
+                <span className="toggle-track">
+                  <span />
+                </span>
+              </button>
+            </div>
+            <DemoControls
+              session={session}
+              dispatch={dispatch}
+              now={now}
+              unavailable={activity.people.filter((name) =>
+                blocked.includes(`${activity.id}:${name}`),
+              )}
+            />
+            <p className="small-text muted room-boundaries">
+              <ShieldCheck size={15} /> Tus límites:{" "}
+              {profile.boundaries.length
+                ? profile.boundaries.join(". ") + "."
+                : "Puedes editarlos desde tu perfil."}{" "}
+              En esta simulación no hay interacciones reales.
             </p>
-            <button
-              className={`toggle-button ${facilitator ? "on" : ""}`}
-              role="switch"
-              aria-checked={facilitator}
-              onClick={() => setFacilitator(!facilitator)}
-            >
-              <span>
-                {facilitator ? "Guion activado" : "Guion desactivado"}
-              </span>
-              <span className="toggle-track">
-                <span />
-              </span>
-            </button>
-          </div>
-          <p className="small-text muted room-boundaries">
-            <ShieldCheck size={15} /> Tus límites:{" "}
-            {profile.boundaries.length
-              ? profile.boundaries.join(". ") + "."
-              : "Puedes editarlos desde tu perfil."}{" "}
-            En esta simulación no hay interacciones reales.
-          </p>
-        </aside>
-      </div>
+          </aside>
+        </div>
+      )}
       {safety && (
         <Modal title="Tu seguridad va primero" onClose={() => setSafety(false)}>
           <div className="modal-content">

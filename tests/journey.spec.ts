@@ -27,7 +27,7 @@ async function createProfile(page: Page) {
 async function book(page: Page) {
   await page
     .getByRole("button", {
-      name: "Ver encuentro: Un café, mil historias",
+      name: "Ver encuentro: Historias y cultura",
       exact: true,
     })
     .click();
@@ -52,6 +52,9 @@ test("complete journey: profile, reservation, local chat, feedback and private r
   ).toBeVisible();
   await page
     .getByRole("button", { name: "Entrar a la sala de prueba", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Comenzar encuentro de prueba", exact: true })
     .click();
   await expect(
     page.getByText("No hay IA leyendo esta conversación."),
@@ -109,7 +112,7 @@ test("filters and normalized search have meaningful empty and recovery states", 
   await page.getByLabel("Buscar encuentros").fill("cafe");
   await expect(page.locator(".activity-card")).toHaveCount(1);
   await expect(
-    page.getByRole("heading", { name: "Un café, mil historias", exact: true }),
+    page.getByRole("heading", { name: "Historias y cultura", exact: true }),
   ).toBeVisible();
   await page.getByLabel("Buscar encuentros").fill("inexistente");
   await expect(
@@ -120,7 +123,7 @@ test("filters and normalized search have meaningful empty and recovery states", 
   await page
     .getByRole("button", { name: "Ver todos los encuentros", exact: true })
     .click();
-  await expect(page.locator(".activity-card")).toHaveCount(6);
+  await expect(page.locator(".activity-card")).toHaveCount(3);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= innerWidth,
@@ -135,6 +138,9 @@ test("blocking hides messages and excludes participant from reconnection", async
   await book(page);
   await page
     .getByRole("button", { name: "Entrar a la sala de prueba", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Comenzar encuentro de prueba", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Mostrar una respuesta ficticia de ejemplo" })
@@ -202,9 +208,7 @@ test("optional interests and alias can be skipped, adulthood remains required", 
   page,
 }) => {
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Encuentra tu punto de partida" })
-    .click();
+  await page.getByRole("button", { name: "Preparar mi perfil" }).click();
   await page.getByRole("button", { name: "Omitir intereses" }).click();
   await page.getByRole("button", { name: "Guardar mi perfil" }).click();
   await expect(
@@ -244,7 +248,7 @@ test("modal keeps focus and Escape closes it", async ({ page }) => {
   await page.goto("/");
   await page
     .getByRole("button", {
-      name: "Ver encuentro: Un café, mil historias",
+      name: "Ver encuentro: Historias y cultura",
       exact: true,
     })
     .click();
@@ -276,7 +280,7 @@ test("core screens have no automatically detected WCAG A/AA violations", async (
   await audit();
   await page
     .getByRole("button", {
-      name: "Ver encuentro: Un café, mil historias",
+      name: "Ver encuentro: Historias y cultura",
       exact: true,
     })
     .click();
@@ -292,6 +296,9 @@ test("core screens have no automatically detected WCAG A/AA violations", async (
   await audit();
   await page
     .getByRole("button", { name: "Entrar a la sala de prueba", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Comenzar encuentro de prueba", exact: true })
     .click();
   await audit();
   await page.getByRole("button", { name: "Finalizar encuentro" }).click();

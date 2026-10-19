@@ -47,8 +47,8 @@ export function Agenda({
                   {dateLabel(a.startsAt)} · {timeLabel(a.startsAt)} h · Santiago
                 </p>
                 <p>
-                  <Users size={16} /> Hasta {a.capacity} participantes ficticios
-                  · {a.duration} min
+                  <Users size={16} /> Entre {a.minimum} y {a.capacity}{" "}
+                  participantes ficticios · {a.duration} min
                 </p>
                 {state.feedback.some((f) => f.activityId === a.id) && (
                   <span className="completed-label">

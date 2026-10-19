@@ -11,10 +11,12 @@ export function Connections({
   onDiscover,
   onWithdraw,
   onProfile,
+  onWithdrawGroup,
   ...stickerActions
 }: StickerActions & {
   state: LocalState;
   onProfile: () => void;
+  onWithdrawGroup: (activityId: string) => void;
   onDiscover: () => void;
   onWithdraw: (activityId: string, name: string) => void;
 }) {
@@ -27,6 +29,9 @@ export function Connections({
         activity: activities.find((a) => a.id === f.activityId)!,
       })),
   );
+  const groupRequests = state.feedback
+    .filter((f) => f.repeatGroup)
+    .flatMap((f) => activities.find((a) => a.id === f.activityId) || []);
   return (
     <div className="page-content">
       <p className="eyebrow">LAS CONEXIONES PUEDEN CONTINUAR</p>
@@ -40,6 +45,29 @@ export function Connections({
         ejemplo. Nadie recibe solicitudes y no se simulan aceptaciones
         recíprocas.
       </div>
+      {groupRequests.length > 0 && (
+        <section className="group-continuity panel">
+          <p className="eyebrow">VOLVER A COMPARTIR · INTERÉS DE PRUEBA</p>
+          <h2>Un próximo momento, si el grupo también quiere.</h2>
+          {groupRequests.map((a) => (
+            <div className="group-request" key={a.id}>
+              <div>
+                <strong>{a.title}</strong>
+                <p>
+                  Te gustaría repetir con este grupo. Faltan la aceptación de
+                  otras personas y acordar una fecha; no hay reserva nueva.
+                </p>
+              </div>
+              <button
+                className="button secondary"
+                onClick={() => onWithdrawGroup(a.id)}
+              >
+                Retirar interés grupal
+              </button>
+            </div>
+          ))}
+        </section>
+      )}
       {requests.length ? (
         <div className="connections-grid">
           {requests.map(({ name, activity }, i) => (
@@ -71,7 +99,7 @@ export function Connections({
             </article>
           ))}
         </div>
-      ) : (
+      ) : groupRequests.length ? null : (
         <Empty
           icon={<Users />}
           title="Las buenas conexiones llevan su tiempo"

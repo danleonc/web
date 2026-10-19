@@ -63,3 +63,9 @@ Verificación de R33: compilación correcta y 22 pruebas aprobadas en escritorio
 ## Dirección de producto · 19 de octubre de 2026 · Oferta y quórum
 
 El usuario prioriza temas amplios y oferta concentrada para reunir quórum; los intereses específicos se exploran dentro de la conversación. La creación libre de salas por usuarios se difiere en la primera etapa. Se conservan los grupos pequeños y los límites de participación. Rangos, plazos y contingencias son propuestas pendientes de validar e implementar; consultar `docs/producto/Oferta_y_quorum.md`. Este cambio documenta producto y no altera el funcionamiento de la demo.
+
+## Implementación · Oferta concentrada, recepción y ritmo de sala
+
+Se aplican las decisiones de la conversación: tres convocatorias amplias, fecha de ejemplo futura compartida, presentación centrada en experiencia grupal y continuidad, recepción de 3–6 participantes ficticios, espera limitada, falta de quórum sin reprogramación automática, reconexión y guía de preguntas con plazos. Se añaden estados explícitos de participación, indicador efímero de escritura, extensión única, mayoría de presentes para otra pregunta e interés de repetir con el grupo. Los stickers y las preferencias existentes se conservan. La guía sigue siendo un guion local, sin IA generativa ni lectura de conversaciones. Ver `docs/GUIA_SALAS.md` para reglas y límites; los documentos estratégicos anteriores mantienen su carácter histórico.
+
+Validación de esta iteración: compilación y 45 comprobaciones (13 reglas del motor y 32 recorridos de navegador). Comprobación de la compilación servida bajo `/web/` con portada, recepción, guía, stickers y continuidad grupal. Se actualizan únicamente código y demo; no se integra un modelo de IA ni un servidor de presencia/mensajería.

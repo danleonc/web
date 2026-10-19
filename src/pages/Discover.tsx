@@ -14,11 +14,12 @@ import {
   Clock3,
   Check,
 } from "lucide-react";
-import { activities, dateLabel, timeLabel } from "../data";
+import { featuredActivities, dateLabel, timeLabel } from "../data";
 import type { Activity } from "../data";
 import type { Profile } from "../store";
 import { Avatar, Empty } from "../components";
 import { Illustration } from "../Illustration";
+import { GroupIllustration } from "../GroupIllustration";
 
 export function Discover({
   profile,
@@ -34,7 +35,7 @@ export function Discover({
   const [filter, setFilter] = useState("Todos");
   const [search, setSearch] = useState("");
   const [personalized, setPersonalized] = useState(false);
-  const filtered = activities.filter(
+  const filtered = featuredActivities.filter(
     (a) =>
       (filter === "Todos" || a.category === filter) &&
       (!personalized || profile?.interests.some((i) => a.tags.includes(i))) &&
@@ -68,45 +69,63 @@ export function Discover({
           <MapPin size={15} /> Desde donde estés{" "}
         </span>
       </div>
-      <section className="hero">
+      <section className="hero renewed-hero">
         <div className="hero-copy">
           <span className="hero-label">
-            <span className="status-dot" /> CONEXIONES QUE EMPIEZAN CON ALGO
-            SIMPLE
+            <span className="status-dot" /> UN GRUPO PEQUEÑO. ALGO POR
+            COMPARTIR.
           </span>
           <h2>
-            No necesitas saber
-            <br />
-            qué buscas para
-            <br />
-            <em>encontrar con quién.</em>
+            Conoce gente con quien quieras <em>volver a compartir.</em>
           </h2>
           <p>
-            Una conversación, una idea, un interés en común.
-            <br className="desktop-break" /> A veces, eso es todo lo que hace
-            falta para empezar.
+            Una experiencia para empezar, espacio para conversar y la libertad
+            de decidir qué viene después.
           </p>
-          <button
-            className="button primary"
-            onClick={() =>
-              profile
-                ? document
-                    .getElementById("activities")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                : onProfile()
-            }
-          >
-            {profile ? "Explorar encuentros" : "Encuentra tu punto de partida"}
-            <ArrowRight size={17} />
-          </button>
+          <div className="hero-actions">
+            <button
+              className="button primary"
+              onClick={() =>
+                document
+                  .getElementById("activities")
+                  ?.scrollIntoView({ behavior: "smooth" })
+              }
+            >
+              Explorar encuentros <ArrowRight size={17} />
+            </button>
+            <button className="button hero-secondary" onClick={onProfile}>
+              {profile ? "Editar mi perfil de prueba" : "Preparar mi perfil"}
+            </button>
+          </div>
           <span className="hero-footnote">
-            <Users size={14} /> Grupos pequeños. Espacio para ser tú.
+            <Users size={14} /> Entre 3 y 6 personas · guía opcional · a tu
+            ritmo
           </span>
         </div>
-        <Illustration hero />
+        <GroupIllustration />
         <span className="hero-sticker">
-          <Sparkles size={15} /> Las afinidades se descubren
+          <Sparkles size={15} /> La afinidad también se descubre haciendo.
         </span>
+      </section>
+      <section
+        className="experience-method"
+        aria-label="Cómo es la experiencia"
+      >
+        <div>
+          <span>01</span>
+          <h3>Comparte un punto de partida</h3>
+          <p>Una temática abierta y una dinámica para romper el hielo.</p>
+        </div>
+        <div>
+          <span>02</span>
+          <h3>Encuentra tu forma de participar</h3>
+          <p>Conversar, pasar, escuchar o enviar un sticker. Tú eliges.</p>
+        </div>
+        <div>
+          <span>03</span>
+          <h3>Decide si quieres volver</h3>
+          <p>Continuar es opcional y necesita interés recíproco.</p>
+        </div>
       </section>
       <section
         id="activities"
@@ -116,12 +135,13 @@ export function Discover({
         <div className="section-heading">
           <div>
             <div className="section-kicker">
-              <span className="short-line" /> TU PRÓXIMO BUEN MOMENTO
+              <span className="short-line" /> POCAS CONVOCATORIAS. MÁS ESPACIO
+              PARA COINCIDIR.
             </div>
-            <h2 id="activities-title">Un plan, una nueva conexión.</h2>
+            <h2 id="activities-title">Tres maneras de empezar.</h2>
             <p>
-              Experiencias sencillas para compartir con personas que aún no
-              conoces.
+              Temas amplios en una franja compartida de ejemplo. Los intereses
+              específicos aparecen al conversar.
             </p>
           </div>
           <span className="virtual-label">
@@ -292,6 +312,9 @@ function ActivityCard({
           <button onClick={onOpen}>{a.title}</button>
         </h3>
         <p>{a.subtitle}</p>
+        <span className="card-format">
+          Una dinámica breve + conversación libre
+        </span>
         {shared.length > 0 && (
           <span className="affinity">
             <Sparkles size={12} /> Coincide con tu interés en{" "}
@@ -308,7 +331,7 @@ function ActivityCard({
             <span>
               {reserved
                 ? "Tu lugar está reservado"
-                : `${a.capacity - a.occupied} lugares de ejemplo`}
+                : `${a.minimum}–${a.capacity} personas · simulación`}
             </span>
           </div>
           <button

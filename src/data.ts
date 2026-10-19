@@ -7,90 +7,138 @@ export type Activity = {
   startsAt: string;
   duration: number;
   capacity: number;
+  minimum: number;
   occupied: number;
+  archived: boolean;
   color: "peach" | "sage" | "lavender" | "sand" | "blue" | "rose";
   scene: "coffee" | "art" | "walk" | "book" | "music" | "table";
   tags: string[];
   description: string;
   prompt: string;
+  questions: string[];
   people: string[];
 };
+// One shared upcoming example slot. These are illustrative dates, never live availability.
+function nextExampleSlot() {
+  const now = new Date();
+  const days = (4 - now.getUTCDay() + 7) % 7 || 7;
+  return new Date(
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate() + days,
+      22,
+    ),
+  ).toISOString();
+}
+const exampleSlot = nextExampleSlot();
 export const activities: Activity[] = [
   {
     id: "cafe",
-    title: "Un café, mil historias",
-    subtitle: "Las buenas conversaciones empiezan con algo simple.",
+    title: "Historias y cultura",
+    subtitle:
+      "Un café y una historia para compartir. El resto lo descubre el grupo.",
     category: "Conversaciones",
-    startsAt: "2026-10-16T22:00:00Z",
-    duration: 45,
+    startsAt: exampleSlot,
+    duration: 40,
     capacity: 6,
     occupied: 3,
     color: "peach",
-    scene: "coffee",
-    tags: ["Conversar", "Vida cotidiana"],
+    scene: "book",
+    tags: ["Conversar", "Lectura", "Música", "Descubrir"],
     description:
-      "Un encuentro virtual tranquilo para compartir esas pequeñas historias que nos hacen quienes somos. Trae tu bebida favorita y la curiosidad de conocer a alguien nuevo. No hay respuestas correctas ni obligación de hablar.",
-    prompt: "¿Qué pequeña cosa te ha alegrado la semana?",
-    people: ["Antonia", "Nicolás", "Camila"],
+      "Un grupo pequeño para compartir historias, canciones, libros o recuerdos. Empezamos con una pregunta concreta y dejamos que la conversación encuentre sus propios caminos. Puedes escuchar, pasar o responder con un sticker.",
+    prompt: "¿Qué historia, canción o recuerdo te ha acompañado últimamente?",
+    people: ["Antonia", "Nicolás", "Camila", "Javiera", "Diego"],
+    questions: [
+      "¿Qué historia, canción o recuerdo te ha acompañado últimamente?",
+      "¿Qué descubriste al escuchar a alguien de este grupo?",
+      "¿Qué te gustaría volver a compartir en otro encuentro?",
+    ],
+    minimum: 3,
+    archived: false,
   },
   {
     id: "crear",
-    title: "Crear por el gusto de crear",
-    subtitle: "Un papel, un lápiz y un poco de imaginación.",
+    title: "Crear y descubrir",
+    subtitle:
+      "Una historia entre todos, sin necesidad de saber dibujar o escribir.",
     category: "Creatividad",
-    startsAt: "2026-10-17T15:00:00Z",
-    duration: 60,
+    startsAt: exampleSlot,
+    duration: 40,
     capacity: 6,
-    occupied: 4,
+    occupied: 3,
     color: "lavender",
     scene: "art",
-    tags: ["Creatividad", "Descubrir"],
+    tags: ["Creatividad", "Descubrir", "Conversar"],
     description:
-      "Dibujaremos ideas sencillas y compartiremos lo que aparece por el camino. No necesitas saber dibujar: el propósito es disfrutar y conversar. Ten a mano papel y cualquier lápiz.",
-    prompt: "Si tu semana fuera un paisaje, ¿cómo lo dibujarías?",
-    people: ["Valentina", "Tomás", "Daniela", "Felipe"],
+      "Construimos una historia breve entre todos: cada persona puede aportar una frase, un sticker o simplemente escuchar. La dinámica sirve para romper el hielo y luego conversar libremente.",
+    prompt: "Imaginemos un lugar inesperado: ¿dónde empieza nuestra historia?",
+    people: ["Valentina", "Tomás", "Daniela", "Felipe", "Javiera"],
+    questions: [
+      "Imaginemos un lugar inesperado: ¿dónde empieza nuestra historia?",
+      "¿Qué personaje o giro te gustaría sumar? Puedes responder con un sticker.",
+      "¿Qué parte de crear juntos te gustaría repetir?",
+    ],
+    minimum: 3,
+    archived: false,
   },
   {
     id: "pausa",
-    title: "Una pausa para encontrarnos",
-    subtitle: "Bajar el ritmo también puede ser un plan compartido.",
+    title: "Vida cotidiana y pequeños planes",
+    subtitle:
+      "Lo que nos alegra, lo que aprendemos y lo que nos gustaría compartir.",
     category: "Bienestar",
-    startsAt: "2026-10-18T14:00:00Z",
+    startsAt: exampleSlot,
     duration: 40,
-    capacity: 5,
-    occupied: 2,
+    capacity: 6,
+    occupied: 3,
     color: "sage",
     scene: "walk",
-    tags: ["Bienestar", "Vida cotidiana"],
+    tags: ["Bienestar", "Vida cotidiana", "Cocina", "Conversar"],
     description:
-      "Una conversación virtual sobre los pequeños rituales que nos ayudan a hacer una pausa. Puedes escuchar, participar o simplemente estar. Esta actividad social no es terapia ni atención de salud.",
-    prompt: "¿Qué lugar te ayuda a sentir calma?",
-    people: ["Javiera", "Andrés"],
+      "Una conversación ligera sobre lo cotidiano y los pequeños planes. No hace falta contar intimidades: puedes compartir un gusto, una anécdota o una idea. Es un encuentro social, no terapia ni atención de salud.",
+    prompt: "¿Qué pequeña cosa te ha alegrado o dado curiosidad esta semana?",
+    people: ["Javiera", "Andrés", "Diego", "Francisca", "Tomás"],
+    questions: [
+      "¿Qué pequeña cosa te ha alegrado o dado curiosidad esta semana?",
+      "¿Qué actividad sencilla te gustaría compartir con otras personas?",
+      "¿Qué te llevas de esta conversación, si quieres contarlo?",
+    ],
+    minimum: 3,
+    archived: false,
   },
   {
     id: "libros",
     title: "Historias que se quedan",
     subtitle: "Ese libro que siempre terminas recomendando.",
     category: "Conversaciones",
-    startsAt: "2026-10-20T22:30:00Z",
-    duration: 50,
+    startsAt: exampleSlot,
+    duration: 40,
     capacity: 6,
-    occupied: 2,
+    occupied: 3,
     color: "sand",
     scene: "book",
     tags: ["Lectura", "Conversar"],
     description:
       "Comparte un libro, un cuento o una historia que te acompañe. No hay lectura previa ni examen: solo ganas de descubrir nuevas perspectivas.",
     prompt: "¿Qué personaje invitarías a tomar un café y por qué?",
-    people: ["Francisca", "Diego"],
+    people: ["Francisca", "Diego", "Javiera", "Tomás", "Paula"],
+    minimum: 3,
+    archived: true,
+    questions: [
+      "¿Qué personaje invitarías a tomar un café y por qué?",
+      "¿Qué te dio curiosidad de lo que compartimos?",
+      "¿Qué te gustaría conversar la próxima vez?",
+    ],
   },
   {
     id: "musica",
     title: "La banda sonora de tu vida",
     subtitle: "Canciones, recuerdos y algunas coincidencias.",
     category: "Creatividad",
-    startsAt: "2026-10-21T22:00:00Z",
-    duration: 45,
+    startsAt: exampleSlot,
+    duration: 40,
     capacity: 6,
     occupied: 3,
     color: "blue",
@@ -99,26 +147,41 @@ export const activities: Activity[] = [
     description:
       "Hablemos de las canciones que marcan momentos. Basta con recordar una canción: no necesitas suscripción musical, micrófono ni compartir archivos.",
     prompt: "¿Qué canción te transporta a un momento feliz?",
-    people: ["Sofía", "Matías", "Paula"],
+    people: ["Sofía", "Matías", "Paula", "Javiera", "Diego"],
+    minimum: 3,
+    archived: true,
+    questions: [
+      "¿Qué canción te transporta a un momento feliz?",
+      "¿Qué te dio curiosidad de lo que compartimos?",
+      "¿Qué te gustaría conversar la próxima vez?",
+    ],
   },
   {
     id: "mesa",
     title: "Recetas con historia",
     subtitle: "Lo que cocinamos también cuenta de dónde venimos.",
     category: "Conversaciones",
-    startsAt: "2026-10-23T22:00:00Z",
-    duration: 45,
+    startsAt: exampleSlot,
+    duration: 40,
     capacity: 6,
-    occupied: 4,
+    occupied: 3,
     color: "rose",
     scene: "table",
     tags: ["Cocina", "Conversar"],
     description:
       "Una mesa virtual para compartir recuerdos y recetas. No hace falta cocinar ni encender la cámara. Trae la historia de un sabor que te guste.",
     prompt: "¿Qué plato te recuerda a alguien especial?",
-    people: ["María", "Cristóbal", "Isidora", "Pedro"],
+    people: ["María", "Cristóbal", "Isidora", "Pedro", "Javiera"],
+    minimum: 3,
+    archived: true,
+    questions: [
+      "¿Qué plato te recuerda a alguien especial?",
+      "¿Qué te dio curiosidad de lo que compartimos?",
+      "¿Qué te gustaría conversar la próxima vez?",
+    ],
   },
 ];
+export const featuredActivities = activities.filter((a) => !a.archived);
 export const interests = [
   "Conversar",
   "Lectura",

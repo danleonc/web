@@ -396,6 +396,16 @@ function App() {
               onProfile={() => navigate("profile")}
               state={state}
               onDiscover={() => navigate("discover")}
+              onWithdrawGroup={(activityId) =>
+                setState((s) => ({
+                  ...s,
+                  feedback: s.feedback.map((f) =>
+                    f.activityId === activityId
+                      ? { ...f, repeatGroup: false }
+                      : f,
+                  ),
+                }))
+              }
               onWithdraw={(activityId, name) =>
                 setState((s) => ({
                   ...s,
@@ -434,6 +444,18 @@ function App() {
                   }))
                 }
                 onFinish={finish}
+                onDiscover={() => navigate("discover")}
+                onCancelReservation={() => {
+                  setState((s) => ({
+                    ...s,
+                    reservations: s.reservations.filter((id) => id !== room.id),
+                  }));
+                  setRoom(null);
+                  navigate("agenda");
+                  setToast(
+                    "Reserva cancelada por tu decisión. No se ha reprogramado.",
+                  );
+                }}
                 onLeave={() => navigate("agenda")}
               />
             ) : (
@@ -480,7 +502,7 @@ function App() {
               </span>
               <span>
                 <Users size={17} />
-                {detail.capacity} personas como máximo
+                Entre {detail.minimum} y {detail.capacity} personas
               </span>
             </div>
             <p className="muted small-text">
