@@ -21,6 +21,14 @@ Si reinstalas dependencias mientras Vite está ejecutándose, detén esa instanc
 
 Para compilar: `npm run build`. El resultado queda en `dist/`. Para probar la compilación: `npm run preview -- --port 4174 --strictPort`.
 
+Para probar salas compartidas entre navegadores en desarrollo:
+
+```sh
+npm run dev:shared
+```
+
+Inicia Vite (4173) y una API local (8787). En la app, abrir **Laboratorio local**, preparar alias de prueba y conectar desde tres perfiles independientes de navegador. Las pestañas de una misma sesión cuentan una vez. Esta vista comparte mensajes y presencia reales entre esas sesiones; no aparece en la compilación pública. Alcance, privacidad, reglas y límites: [docs/SALAS_COMPARTIDAS.md](docs/SALAS_COMPARTIDAS.md).
+
 ## Recorrido implementado
 
 1. Descubrir tres convocatorias ficticias por temas amplios; filtrar por categoría, buscar sin exigir acentos y filtrar por intereses declarados.
@@ -33,7 +41,7 @@ Para compilar: `npm run build`. El resultado queda en `dist/`. Para probar la co
 
 La recepción, los tiempos y las decisiones de la guía se pueden probar: preguntas de 90 segundos, una extensión de 30 segundos, pasar/escuchar/listo, mayoría para otra pregunta y contingencias por falta de quórum. El banco tiene hasta tres preguntas por temática. Detalles: [docs/GUIA_SALAS.md](docs/GUIA_SALAS.md).
 
-Todo está etiquetado como prototipo. Los cupos y fechas son ilustrativos, y las salas pueden abrirse sin esperar al horario de ejemplo. No existe sincronización entre dispositivos.
+Todo está etiquetado como prototipo. Los cupos y fechas de la maqueta son ilustrativos, y sus salas pueden abrirse sin esperar al horario de ejemplo. La sincronización entre navegadores se prueba únicamente en el laboratorio local separado.
 
 ## Stickers
 
@@ -45,7 +53,7 @@ Los favoritos y recientes se comparten entre ambas vistas; los mensajes siguen s
 
 Perfil, reservas, evaluaciones, bloqueos, solicitudes y stickers favoritos/recientes se guardan en `localStorage` bajo `entre.prototype.v1`. Los mensajes de salas y chats individuales de prueba solo viven en memoria y se pierden al abandonarlos o recargar. No ingresar datos sensibles ni utilizar el prototipo con usuarios reales. La descarga JSON contiene los datos persistidos; la función de borrar reinicia únicamente el estado de este prototipo.
 
-No hay backend, autenticación, autorización de servidor, chat real, IA generativa, notificaciones, pagos ni protección de fotografías implementados. Los límites de perfil son controles de la experiencia de prueba, no una garantía de seguridad contra usuarios reales. Antes de un piloto se necesitan servicios reales, revisión jurídica y controles de seguridad verificables.
+La maqueta pública no utiliza backend. El laboratorio añade una API local con presencia y mensajería compartidas en memoria, sin cuentas de producción ni persistencia. No hay IA generativa, notificaciones, pagos ni protección de fotografías. Los límites de perfil son controles de la experiencia de prueba. Antes de un piloto se necesitan servicios desplegados, revisión jurídica y controles de seguridad verificables.
 
 ## Verificar
 
@@ -57,7 +65,7 @@ npm test
 
 Playwright usa el Chromium disponible en `/usr/bin/chromium` en este entorno. En otra máquina puede definirse `CHROMIUM_PATH` apuntando a su ejecutable. Si no hay navegador de sistema, ejecutar `npx playwright install chromium` y `PLAYWRIGHT_BUNDLED_BROWSER=1 npm test`.
 
-El runner ejecuta primero las pruebas del motor de sala con Node y después los tests de navegador. Los tests de navegador arrancan Vite en el puerto 4173 si no hay una instancia existente. Ejecutan el mismo recorrido en escritorio y móvil: reserva, perfil, chat, guion, evaluación, reencuentro, bloqueo, búsquedas, cancelación, exportación, borrado, almacenamiento inválido, acceso directo a sala y foco de diálogos. También realizan comprobaciones automáticas WCAG A/AA con axe en las pantallas principales. No sustituyen la evaluación manual con tecnologías de asistencia ni acreditan cumplimiento completo de accesibilidad.
+El runner ejecuta primero las pruebas del motor y las pruebas de integración de servidor con Node, y después los tests de navegador. Playwright arranca Vite en 4173 y la API local en 8787 si no hay instancias existentes. La prueba compartida usa tres contextos independientes; los recorridos de maqueta se ejecutan en escritorio y móvil: reserva, perfil, chat, guion, evaluación, reencuentro, bloqueo, búsquedas, cancelación, exportación, borrado, almacenamiento inválido, acceso directo a sala y foco de diálogos. También realizan comprobaciones automáticas WCAG A/AA con axe en las pantallas principales. No sustituyen la evaluación manual con tecnologías de asistencia ni acreditan cumplimiento completo de accesibilidad.
 
 ## Organización
 
@@ -66,6 +74,7 @@ El runner ejecuta primero las pruebas del motor de sala con Node y después los 
 - `src/data.ts`: actividades y personajes sintéticos, fechas y catálogos.
 - `src/room/`: reglas deterministas de sala, hook de reloj y paneles de recepción, guía y participación.
 - `src/chat/`: catálogo, selector y compositor común de texto/stickers, mensajes y chat individual de demostración.
+- `server/`, `src/shared/` y `src/pages/SharedRoom.tsx`: API volátil de desarrollo, protocolo y laboratorio entre navegadores.
 - `src/store.ts`: carga, validación básica y guardado del estado local.
 - `src/components.tsx`: diálogos nativos, avatares y estados vacíos.
 - `src/Illustration.tsx`: ilustraciones SVG propias; no se cargan fotos de terceros.

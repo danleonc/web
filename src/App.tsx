@@ -26,10 +26,24 @@ import { ProfileForm } from "./pages/ProfileForm";
 import { Agenda } from "./pages/Agenda";
 import { Connections } from "./pages/Connections";
 import { Room } from "./pages/Room";
+import { SharedRoom } from "./pages/SharedRoom";
 import { getSticker } from "./chat/stickers";
 import type { StickerActions } from "./chat/stickers";
-type Page = "discover" | "agenda" | "connections" | "profile" | "room";
-const pages: Page[] = ["discover", "agenda", "connections", "profile", "room"];
+type Page =
+  | "discover"
+  | "agenda"
+  | "connections"
+  | "profile"
+  | "room"
+  | "shared";
+const pages: Page[] = [
+  "discover",
+  "agenda",
+  "connections",
+  "profile",
+  "room",
+  ...(import.meta.env.DEV ? ["shared" as const] : []),
+];
 const getPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
@@ -192,6 +206,9 @@ function App() {
     { page: "agenda", label: "Mi agenda", icon: CalendarDays },
     { page: "connections", label: "Mis conexiones", icon: Users },
     { page: "profile", label: "Mi perfil", icon: Settings2 },
+    ...(import.meta.env.DEV
+      ? [{ page: "shared" as const, label: "Laboratorio local", icon: Users }]
+      : []),
   ];
   return (
     <>
@@ -340,8 +357,9 @@ function App() {
         <div className="demo-strip">
           <Sparkles size={14} />
           <span>
-            Un espacio de prueba: todos los encuentros y participantes son
-            ficticios.
+            {page === "shared"
+              ? "Laboratorio local: los mensajes se comparten con los navegadores que entren a la sala."
+              : "Un espacio de prueba: todos los encuentros y participantes son ficticios."}
           </span>
           <button onClick={() => setShowPrivacy(true)}>
             Cómo funciona <ArrowRight size={13} />
@@ -354,6 +372,13 @@ function App() {
           </p>
         )}
         <main id="main-content" ref={mainRef} tabIndex={-1}>
+          {import.meta.env.DEV && page === "shared" && (
+            <SharedRoom
+              {...stickerActions}
+              profile={state.profile}
+              onProfile={() => navigate("profile")}
+            />
+          )}
           {page === "discover" && (
             <Discover
               profile={state.profile}
@@ -558,18 +583,28 @@ function App() {
             </div>
             <p>
               Este es un prototipo local llamado provisionalmente{" "}
-              <strong>Entre</strong>. No crea cuentas ni conecta con personas
-              reales. El nombre no ha sido validado como marca.
+              <strong>Entre</strong>. La maqueta pública no crea cuentas ni
+              conecta con personas reales. El nombre no ha sido validado como
+              marca.
             </p>
             <ul className="privacy-list">
+              {import.meta.env.DEV && (
+                <li>
+                  El laboratorio local de desarrollo es una prueba separada:
+                  comparte mensajes con otros navegadores conectados y conserva
+                  hasta 50 en memoria del servidor. No utilices datos personales
+                  reales.
+                </li>
+              )}
               <li>
                 El perfil, límites, reservas, bloqueos, evaluaciones y stickers
                 favoritos y recientes de prueba se guardan en este navegador.
               </li>
               <li>
-                Los mensajes de las salas y de los chats privados de prueba se
-                mantienen solo en memoria y se pierden al salir. No hay IA ni
-                envío de mensajes, denuncias o invitaciones a terceros.
+                Los mensajes de las salas simuladas y de los chats privados de
+                prueba se mantienen solo en memoria y se pierden al salir. No
+                hay IA ni envío de mensajes, denuncias o invitaciones a
+                terceros.
               </li>
               <li>
                 No ingreses información sensible. Cualquier persona con acceso a
@@ -578,7 +613,7 @@ function App() {
             </ul>
             <p className="small-text muted">
               La descarga incluye los datos locales de prueba. No incluye
-              mensajes de sala, porque no se guardan.
+              mensajes de sala. Borrar estos datos solo reinicia este navegador.
             </p>
             <button className="button secondary full" onClick={exportData}>
               <ArrowDownToLine size={17} /> Descargar mis datos de prueba

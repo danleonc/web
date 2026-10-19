@@ -3934,3 +3934,104 @@ legend {
     pointer-events: none;
   }
 }
+
+.shared-connect {
+  padding: 23px;
+  margin: 25px 0;
+}
+.shared-connect .field-label {
+  margin-top: 0;
+}
+.shared-connect .text-input {
+  max-width: 500px;
+}
+.shared-connect > p {
+  font-size: 11px;
+  color: #526d46;
+  margin: 18px 0 0;
+}
+.connection-state {
+  font-size: 11px;
+  color: #42683a;
+  line-height: 1.7;
+}
+.shared-error {
+  background: #f9e9df;
+  color: #8b4639;
+  border: 1px solid #e5c4b6;
+  padding: 16px;
+  border-radius: 7px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.shared-layout {
+  margin-top: 25px;
+}
+.shared-actions {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.shared-offline {
+  padding: 12px 18px;
+  color: #635737;
+  background: #f6efdc;
+}
+.shared-layout .messages {
+  min-height: 230px;
+  max-height: 410px;
+}
+.shared-layout .guide-panel > p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #506b43;
+}
+.shared-participant {
+  padding: 18px 0;
+  border-top: 1px solid #dfe5d4;
+}
+.shared-participant strong {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.shared-participant > span {
+  display: block;
+  font-size: 11px;
+  color: #4c6940;
+  margin-top: 7px;
+}
+.shared-participant > .button {
+  font-size: 10px;
+  padding: 7px 0;
+  min-height: 30px;
+}
+.shared-layout .composer-note {
+  font-size: 10px;
+  line-height: 1.8;
+  color: #536d46;
+}
+.pending-messages {
+  padding: 15px 18px;
+  background: #f6efdc;
+  border-top: 1px solid #e1d6b7;
+  font-size: 11px;
+  color: #756039;
+}
+.pending-messages > p {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  font-size: 11px;
+}
+.pending-messages .button {
+  font-size: 10px;
+}
+.shared-lab .participants-panel {
+  align-self: start;
+}
+.shared-lab .room-top > span {
+  font-size: 11px;
+  line-height: 1.8;
+}

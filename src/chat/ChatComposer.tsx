@@ -12,10 +12,10 @@ export function ChatComposer({
   onTypingChange,
   disabled = false,
 }: StickerActions & {
-  onSendText: (text: string) => void;
+  onSendText: (text: string) => void | boolean;
   onTypingChange?: (active: boolean) => void;
   disabled?: boolean;
-  onSendSticker: (id: string) => void;
+  onSendSticker: (id: string) => void | boolean;
 }) {
   const [draft, setDraft] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -27,7 +27,7 @@ export function ChatComposer({
         onSubmit={(e) => {
           e.preventDefault();
           if (!disabled && draft.trim()) {
-            onSendText(draft.trim());
+            if (onSendText(draft.trim()) === false) return;
             setDraft("");
             onTypingChange?.(false);
           }
@@ -76,7 +76,7 @@ export function ChatComposer({
           onClose={() => setPickerOpen(false)}
           onSend={(id) => {
             if (!disabled && getSticker(id)) {
-              onSendSticker(id);
+              if (onSendSticker(id) === false) return;
               onStickerUsed(id);
               onTypingChange?.(false);
               setPickerOpen(false);

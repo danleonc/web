@@ -3,7 +3,13 @@ import { getSticker } from "./stickers";
 type Sender = { name: string; own: boolean };
 export type ChatMessage = Sender &
   ({ type: "text"; text: string } | { type: "sticker"; stickerId: string });
-export function ChatMessageBubble({ message }: { message: ChatMessage }) {
+export function ChatMessageBubble({
+  message,
+  simulated = true,
+}: {
+  message: ChatMessage;
+  simulated?: boolean;
+}) {
   const sticker =
     message.type === "sticker" ? getSticker(message.stickerId) : undefined;
   return (
@@ -12,7 +18,13 @@ export function ChatMessageBubble({ message }: { message: ChatMessage }) {
     >
       <Avatar name={message.name} index={message.own ? 4 : 0} small />
       <div>
-        <span>{message.own ? "Tú" : `${message.name} · ficticia`}</span>
+        <span>
+          {message.own
+            ? "Tú"
+            : simulated
+              ? `${message.name} · ficticia`
+              : message.name}
+        </span>
         {message.type === "text" ? (
           <p>{message.text}</p>
         ) : sticker ? (

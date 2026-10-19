@@ -22,3 +22,7 @@ La API de GitHub y la dirección de Pages devolvieron denegación de la polític
 - Pendiente: activar o comprobar GitHub Pages. La solicitud `gh api repos/danleonc/web/pages` sigue devolviendo `Forbidden` desde la política de red del entorno. Esto no demuestra que Pages esté desactivado ni que las credenciales sean inválidas. No se ha confirmado que la URL pública responda.
 
 El propietario puede completar la activación en `https://github.com/danleonc/web/settings/pages` seleccionando **Deploy from a branch → gh-pages → / (root) → Save**. Los requisitos del plan/visibilidad se deben respetar sin hacer público el repositorio automáticamente. Después se debe comprobar la dirección que GitHub muestre y su despliegue antes de dar la demo por disponible.
+
+## Laboratorio compartido · 19 de octubre de 2026
+
+El código fuente incluye una API local y una vista de desarrollo para probar presencia, texto, stickers y quórum entre navegadores. `npm run deploy:pages` sigue publicando solo la maqueta estática: no sube el servidor ni habilita usuarios conectados. La vista compartida se excluye del build público. Para probarla en desarrollo, consultar `docs/SALAS_COMPARTIDAS.md`; su despliegue como servicio requiere una etapa posterior.
