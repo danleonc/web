@@ -8,6 +8,7 @@ import {
   Compass,
   Leaf,
   LockKeyhole,
+  MessageCircle,
   Menu,
   Settings2,
   ShieldCheck,
@@ -30,7 +31,12 @@ import { SharedRoom } from "./pages/SharedRoom";
 import { accountsEnabled, sharedEnabled } from "./shared/mode";
 import { getSticker } from "./chat/stickers";
 import type { StickerActions } from "./chat/stickers";
+import { Plaza, blankDraft } from "./pages/Plaza";
+import { activities } from "./data";
+import { plazaPeople } from "./plaza/data";
+import type { PlazaInvitation } from "./plaza/data";
 type Page =
+  | "plaza"
   | "discover"
   | "agenda"
   | "connections"
@@ -38,6 +44,7 @@ type Page =
   | "room"
   | "shared";
 const pages: Page[] = [
+  "plaza",
   "discover",
   "agenda",
   "connections",
@@ -48,7 +55,7 @@ const pages: Page[] = [
 const getPage = (): Page =>
   pages.includes(location.hash.slice(1) as Page)
     ? (location.hash.slice(1) as Page)
-    : "discover";
+    : "plaza";
 function App() {
   const [state, setState] = useState<LocalState>(loadState);
   const [page, setPage] = useState<Page>(getPage);
@@ -59,6 +66,9 @@ function App() {
   const [resetConfirm, setResetConfirm] = useState(false);
   const [storageWarning, setStorageWarning] = useState(false);
   const [toast, setToast] = useState("");
+  const [profileReturn, setProfileReturn] = useState<Page>("plaza");
+  const [plazaDraft, setPlazaDraft] = useState(blankDraft);
+  const [plazaThread, setPlazaThread] = useState<string | null>(null);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(
     () => matchMedia("(max-width: 700px)").matches,
@@ -104,14 +114,41 @@ function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [page]);
   function navigate(next: Page) {
+    setPlazaThread(null);
     setPage(next);
     location.hash = next;
     setMobileMenu(false);
+  }
+  function prepareProfile(returnTo: Page) {
+    setProfileReturn(returnTo);
+    navigate("profile");
+  }
+  function openPlaza(postId?: string) {
+    navigate("plaza");
+    setPlazaThread(postId || null);
+  }
+  function saveInvitation(invitation: PlazaInvitation) {
+    setState((s) => ({
+      ...s,
+      plaza: {
+        ...s.plaza,
+        invitations: [
+          ...s.plaza.invitations.filter(
+            (i) => i.personId !== invitation.personId,
+          ),
+          invitation,
+        ],
+      },
+    }));
+    setToast(
+      "Invitación de prueba guardada. Nadie la recibe ni acepta automáticamente.",
+    );
   }
   function reserve(activity: Activity) {
     setDetail(null);
     if (!state.profile) {
       setPendingBooking(activity);
+      setProfileReturn(page);
       navigate("profile");
       return;
     }
@@ -135,7 +172,7 @@ function App() {
       navigate("agenda");
       setToast("Perfil y reserva de ejemplo guardados.");
     } else {
-      navigate("discover");
+      navigate(profileReturn);
       setToast(
         "Tu perfil de prueba está listo. Puedes editarlo cuando quieras.",
       );
@@ -203,9 +240,10 @@ function App() {
     },
   };
   const links: { page: Page; label: string; icon: typeof Compass }[] = [
-    { page: "discover", label: "Descubrir", icon: Compass },
-    { page: "agenda", label: "Mi agenda", icon: CalendarDays },
-    { page: "connections", label: "Mis conexiones", icon: Users },
+    { page: "plaza", label: "La Plaza", icon: MessageCircle },
+    { page: "connections", label: "Conexiones", icon: Users },
+    { page: "discover", label: "Encuentros", icon: CalendarDays },
+    { page: "agenda", label: "Mi agenda", icon: CheckCheck },
     { page: "profile", label: "Mi perfil", icon: Settings2 },
     ...(sharedEnabled
       ? [
@@ -272,20 +310,24 @@ function App() {
         )}
         <button
           className="logo-button"
-          aria-label="Entre, ir a descubrir"
-          onClick={() => navigate("discover")}
+          aria-label="Afinia, ir a La Plaza"
+          onClick={() => navigate("plaza")}
         >
           <Logo />
         </button>
-        <p className="brand-caption">Un espacio para conectar</p>
-        <div className="sidebar-label">TU ESPACIO</div>
+        <p className="brand-caption">Algo en común. Algo por descubrir.</p>
+        <div className="sidebar-label">TU LUGAR PARA CONECTAR</div>
         <nav aria-label="Navegación principal">
           {links.map(({ page: target, label, icon: Icon }) => (
             <button
               key={target}
-              className={`nav-item ${page === target ? "active" : ""}`}
+              className={`nav-item ${page === target ? "active" : ""} ${target === "agenda" ? "secondary-start" : ""}`}
               aria-current={page === target ? "page" : undefined}
-              onClick={() => navigate(target)}
+              onClick={() =>
+                target === "profile"
+                  ? prepareProfile("plaza")
+                  : navigate(target)
+              }
             >
               <Icon size={20} />
               <span>{label}</span>
@@ -299,9 +341,14 @@ function App() {
           <span className="note-icon">
             <Leaf size={20} />
           </span>
-          <h3>A tu ritmo, a tu manera.</h3>
+          <h3>
+            Una conversación
+            <br />
+            puede cambiar tu día.
+          </h3>
           <p>
-            No tienes que saber qué buscas para descubrir con quién conectar.
+            Pasa por La Plaza, comparte algo pequeño y descubre qué viene
+            después.
           </p>
           <span className="tiny-spark">✳</span>
         </div>
@@ -312,7 +359,7 @@ function App() {
           </button>
           <button
             className="profile-shortcut"
-            onClick={() => navigate("profile")}
+            onClick={() => prepareProfile("plaza")}
           >
             <Avatar name={state.profile?.alias || "Tú"} />
             <span>
@@ -333,7 +380,7 @@ function App() {
           onClick={closeMenu}
         />
       )}
-      <div className="app-shell" inert={isMobile && mobileMenu}>
+      <div className="app-shell ecosystem-shell" inert={isMobile && mobileMenu}>
         <header className="topbar">
           <div className="mobile-header">
             <button
@@ -347,7 +394,23 @@ function App() {
               <Menu size={22} />
             </button>
             <span className="breadcrumb">
-              Tu próximo encuentro empieza aquí
+              <span>Afinia</span>
+              <span className="breadcrumb-divider">/</span>
+              <strong>
+                {page === "plaza"
+                  ? "La Plaza"
+                  : page === "discover"
+                    ? "Encuentros"
+                    : page === "connections"
+                      ? "Conexiones"
+                      : page === "agenda"
+                        ? "Mi agenda"
+                        : page === "profile"
+                          ? "Mi perfil"
+                          : page === "shared"
+                            ? "Cuenta y pruebas"
+                            : "Encuentro de prueba"}
+              </strong>
             </span>
           </div>
           <div className="topbar-right">
@@ -357,7 +420,7 @@ function App() {
             <button
               className="top-avatar"
               aria-label="Editar mi perfil"
-              onClick={() => navigate("profile")}
+              onClick={() => prepareProfile("plaza")}
             >
               <Avatar name={state.profile?.alias || "T"} />
             </button>
@@ -370,7 +433,7 @@ function App() {
               ? accountsEnabled
                 ? "Piloto: tus reservas y mensajes se guardan en el servidor."
                 : "Laboratorio local: los mensajes se comparten con los navegadores que entren a la sala."
-              : "Un espacio de prueba: todos los encuentros y participantes son ficticios."}
+              : "Maqueta interactiva · Personas y conversaciones de ejemplo. Lo que compartes se guarda solo en este navegador."}
           </span>
           <button onClick={() => setShowPrivacy(true)}>
             Cómo funciona <ArrowRight size={13} />
@@ -383,11 +446,31 @@ function App() {
           </p>
         )}
         <main id="main-content" ref={mainRef} tabIndex={-1}>
+          {page === "plaza" && (
+            <Plaza
+              profile={state.profile}
+              blocked={state.blocked}
+              state={state.plaza}
+              draft={plazaDraft}
+              onDraft={setPlazaDraft}
+              onChange={(plaza) => setState((s) => ({ ...s, plaza }))}
+              onProfile={() => prepareProfile("plaza")}
+              onConnections={() => navigate("connections")}
+              onEncounters={() => navigate("discover")}
+              onMeet={(id) =>
+                setDetail(activities.find((a) => a.id === id) || null)
+              }
+              activePost={plazaThread}
+              onOpenPost={setPlazaThread}
+              onInvite={saveInvitation}
+              onNotice={setToast}
+            />
+          )}
           {sharedEnabled && page === "shared" && (
             <SharedRoom
               {...stickerActions}
               profile={state.profile}
-              onProfile={() => navigate("profile")}
+              onProfile={() => prepareProfile("shared")}
             />
           )}
           {page === "discover" && (
@@ -395,7 +478,8 @@ function App() {
               profile={state.profile}
               reservations={state.reservations}
               onOpen={setDetail}
-              onProfile={() => navigate("profile")}
+              onProfile={() => prepareProfile("discover")}
+              onPlaza={() => navigate("plaza")}
             />
           )}
           {page === "profile" && (
@@ -406,7 +490,7 @@ function App() {
               onSave={saveProfile}
               onCancel={() => {
                 setPendingBooking(null);
-                navigate("discover");
+                navigate(profileReturn);
               }}
               onPrivacy={() => setShowPrivacy(true)}
             />
@@ -429,7 +513,20 @@ function App() {
           {page === "connections" && (
             <Connections
               {...stickerActions}
-              onProfile={() => navigate("profile")}
+              onProfile={() => prepareProfile("connections")}
+              onPlaza={openPlaza}
+              onPlazaInvite={saveInvitation}
+              onWithdrawPlaza={(personId) =>
+                setState((s) => ({
+                  ...s,
+                  plaza: {
+                    ...s.plaza,
+                    invitations: s.plaza.invitations.filter(
+                      (i) => i.personId !== personId,
+                    ),
+                  },
+                }))
+              }
               state={state}
               onDiscover={() => navigate("discover")}
               onWithdrawGroup={(activityId) =>
@@ -469,6 +566,14 @@ function App() {
                   setState((s) => ({
                     ...s,
                     blocked: [...new Set([...s.blocked, `${room.id}:${name}`])],
+                    plaza: {
+                      ...s.plaza,
+                      invitations: s.plaza.invitations.filter(
+                        (i) =>
+                          plazaPeople.find((p) => p.id === i.personId)?.name !==
+                          name,
+                      ),
+                    },
                     feedback: s.feedback.map((f) =>
                       f.activityId === room.id
                         ? {
@@ -512,6 +617,19 @@ function App() {
             Hecho para ir a tu ritmo <span className="footer-flower">✳</span>
           </span>
         </footer>
+        <nav className="mobile-spaces" aria-label="Espacios de Afinia">
+          {links.slice(0, 3).map(({ page: target, label, icon: Icon }) => (
+            <button
+              key={target}
+              aria-current={page === target ? "page" : undefined}
+              className={page === target ? "selected" : ""}
+              onClick={() => navigate(target)}
+            >
+              <Icon size={21} />
+              <span>{label}</span>
+            </button>
+          ))}
+        </nav>
       </div>
       {detail && (
         <Modal
@@ -594,7 +712,7 @@ function App() {
             </div>
             <p>
               Este es un prototipo local llamado provisionalmente{" "}
-              <strong>Entre</strong>. La maqueta pública no crea cuentas ni
+              <strong>Afinia</strong>. La maqueta pública no crea cuentas ni
               conecta con personas reales. El nombre no ha sido validado como
               marca.
             </p>
@@ -616,6 +734,9 @@ function App() {
               <li>
                 El perfil, límites, reservas, bloqueos, evaluaciones y stickers
                 favoritos y recientes de prueba se guardan en este navegador.
+                También las publicaciones, respuestas, conversaciones guardadas
+                e invitaciones de La Plaza. No se publican en una comunidad
+                real.
               </li>
               <li>
                 Los mensajes de las salas simuladas y de los chats privados de
@@ -630,7 +751,8 @@ function App() {
             </ul>
             <p className="small-text muted">
               La descarga incluye los datos locales de prueba. No incluye
-              mensajes de sala. Borrar estos datos solo reinicia este navegador.
+              mensajes de sala ni borradores sin publicar. Borrar estos datos
+              solo reinicia este navegador.
             </p>
             <button className="button secondary full" onClick={exportData}>
               <ArrowDownToLine size={17} /> Descargar mis datos de prueba
@@ -655,8 +777,9 @@ function App() {
           <div className="modal-content">
             <p>
               Se borrarán el perfil, las reservas, las evaluaciones, los
-              stickers favoritos y recientes y los bloqueos de este prototipo en
-              este navegador. No podrás deshacerlo.
+              stickers favoritos y recientes, publicaciones, respuestas e
+              invitaciones de La Plaza y los bloqueos de este prototipo en este
+              navegador. No podrás deshacerlo.
             </p>
             <div className="modal-actions">
               <button
@@ -671,8 +794,9 @@ function App() {
                   setState(emptyState);
                   setRoom(null);
                   setPendingBooking(null);
+                  setPlazaDraft(blankDraft);
                   setResetConfirm(false);
-                  navigate("discover");
+                  navigate("plaza");
                   setToast("Datos locales borrados. Puedes empezar de nuevo.");
                 }}
               >

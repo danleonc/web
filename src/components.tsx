@@ -5,26 +5,13 @@ export function Logo() {
   return (
     <span className="brand">
       <svg viewBox="0 0 40 40" fill="none" aria-hidden="true">
-        <ellipse
-          cx="16"
-          cy="23"
-          rx="10"
-          ry="12"
-          transform="rotate(-28 16 23)"
-          stroke="currentColor"
-          strokeWidth="2.7"
+        <path
+          d="M20 20C3 20 2 4 12 4c7 0 8 9 8 16Zm0 0c0-17 16-18 16-8 0 7-9 8-16 8Zm0 0c17 0 18 16 8 16-7 0-8-9-8-16Zm0 0c0 17-16 18-16 8 0-7 9-8 16-8Z"
+          fill="currentColor"
         />
-        <ellipse
-          cx="25"
-          cy="17"
-          rx="10"
-          ry="12"
-          transform="rotate(-28 25 17)"
-          stroke="currentColor"
-          strokeWidth="2.7"
-        />
+        <circle cx="20" cy="20" r="4" fill="#F7E8D0" />
       </svg>
-      entre<span className="brand-dot">.</span>
+      afinia<span className="brand-dot">.</span>
     </span>
   );
 }
@@ -51,11 +38,13 @@ export function Modal({
   children,
   onClose,
   wide = false,
+  initialFocus,
 }: {
   title: string;
   children: ReactNode;
   onClose: () => void;
   wide?: boolean;
+  initialFocus?: string;
 }) {
   const titleId = useId();
   const ref = useRef<HTMLDialogElement>(null);
@@ -63,6 +52,10 @@ export function Modal({
     const dialog = ref.current!;
     const previousFocus = document.activeElement;
     dialog.showModal();
+    if (initialFocus)
+      dialog
+        .querySelector<HTMLElement>(initialFocus)
+        ?.focus({ preventScroll: true });
     return () => {
       dialog.close();
       if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {

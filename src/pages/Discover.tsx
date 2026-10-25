@@ -26,11 +26,13 @@ export function Discover({
   reservations,
   onOpen,
   onProfile,
+  onPlaza,
 }: {
   profile: Profile | null;
   reservations: string[];
   onOpen: (a: Activity) => void;
   onProfile: () => void;
+  onPlaza: () => void;
 }) {
   const [filter, setFilter] = useState("Todos");
   const [search, setSearch] = useState("");
@@ -54,7 +56,9 @@ export function Discover({
     <div className="discover page-content">
       <div className="page-heading">
         <div>
-          <p className="eyebrow">MENOS BUSCAR. MÁS COMPARTIR.</p>
+          <p className="eyebrow">
+            ENCUENTROS · COMPARTIR TIEMPO, DESCUBRIR PERSONAS
+          </p>
           <h1>
             {profile
               ? `Qué bueno verte, ${profile.alias}.`
@@ -127,6 +131,21 @@ export function Discover({
           <p>Continuar es opcional y necesita interés recíproco.</p>
         </div>
       </section>
+      <div className="encounters-open-door">
+        <span>
+          <MessageCircle size={19} />
+        </span>
+        <div>
+          <strong>La conversación no tiene que esperar.</strong>
+          <p>
+            Mientras llega un encuentro, pasa por La Plaza. Puedes compartir
+            algo y volver cuando te acomode.
+          </p>
+        </div>
+        <button className="button secondary" onClick={onPlaza}>
+          Visitar La Plaza <ArrowRight size={16} />
+        </button>
+      </div>
       <section
         id="activities"
         className="activities-section"

@@ -42,7 +42,7 @@ test("complete journey: profile, reservation, local chat, feedback and private r
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("/");
+  await page.goto("/#discover");
   await expect(
     page.getByRole("heading", { name: "Hay mucho por compartir." }),
   ).toBeVisible();
@@ -105,7 +105,7 @@ test("complete journey: profile, reservation, local chat, feedback and private r
 test("filters and normalized search have meaningful empty and recovery states", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#discover");
   await page.getByRole("button", { name: "Bienestar", exact: true }).click();
   await expect(page.locator(".activity-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Todos", exact: true }).click();
@@ -134,7 +134,7 @@ test("filters and normalized search have meaningful empty and recovery states", 
 test("blocking hides messages and excludes participant from reconnection", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#discover");
   await book(page);
   await page
     .getByRole("button", { name: "Entrar a la sala de prueba", exact: true })
@@ -166,7 +166,7 @@ test("blocking hides messages and excludes participant from reconnection", async
 });
 
 test("cancellation, export and complete local reset work", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#discover");
   await book(page);
   await page
     .getByRole("button", { name: "Cancelar reserva", exact: true })
@@ -195,7 +195,7 @@ test("cancellation, export and complete local reset work", async ({ page }) => {
   await page.getByRole("button", { name: "Sí, borrar datos" }).click();
   await page.reload();
   await expect(
-    page.getByRole("heading", { name: "Hay mucho por compartir." }),
+    page.getByRole("heading", { name: /Las buenas conexiones/ }),
   ).toBeVisible();
   expect(
     await page.evaluate(
@@ -207,7 +207,7 @@ test("cancellation, export and complete local reset work", async ({ page }) => {
 test("optional interests and alias can be skipped, adulthood remains required", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#discover");
   await page.getByRole("button", { name: "Preparar mi perfil" }).click();
   await page.getByRole("button", { name: "Omitir intereses" }).click();
   await page.getByRole("button", { name: "Guardar mi perfil" }).click();
@@ -226,7 +226,7 @@ test("optional interests and alias can be skipped, adulthood remains required", 
 test("room cannot be reached without a reservation; corrupt storage is recoverable", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/#discover");
   await page.evaluate(() =>
     localStorage.setItem("entre.prototype.v1", "{broken"),
   );
@@ -245,7 +245,7 @@ test("room cannot be reached without a reservation; corrupt storage is recoverab
 });
 
 test("modal keeps focus and Escape closes it", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/#discover");
   await page
     .getByRole("button", {
       name: "Ver encuentro: Historias y cultura",
@@ -276,7 +276,7 @@ test("core screens have no automatically detected WCAG A/AA violations", async (
       })),
     ).toEqual([]);
   }
-  await page.goto("/");
+  await page.goto("/#discover");
   await audit();
   await page
     .getByRole("button", {

@@ -1,6 +1,8 @@
-# Entre · prototipo de conexiones humanas
+# Afinia · prototipo de conexiones humanas
 
-Primer prototipo navegable de la plataforma. **Entre es un nombre de trabajo, sin validación de marca.** Construido con React, TypeScript y Vite. Interfaz adaptable en español; fechas de ejemplo en la zona `America/Santiago`.
+Prototipo navegable con **La Plaza, Conexiones y Encuentros**. **Afinia es el nombre de trabajo de la interfaz, sin validación de marca**; los identificadores técnicos de Entre se conservan para proteger datos existentes. Construido con React, TypeScript y Vite. Interfaz adaptable en español; fechas de ejemplo en la zona `America/Santiago`.
+
+La entrada es La Plaza: publicaciones y respuestas locales, filtros, guardados, invitaciones de ejemplo y enlaces a encuentros relacionados. Conexiones distingue afinidades e invitaciones pendientes. Encuentros mantiene reservas, recepción y dinámica grupal. **Los espacios nuevos no conectan con personas reales**; están separados del backend de cuentas y salas persistentes. Alcance y próximos pasos: [docs/ECOSISTEMA.md](docs/ECOSISTEMA.md).
 
 ## Ejecutar
 
@@ -47,13 +49,13 @@ Todo está etiquetado como prototipo. Los cupos y fechas de la maqueta son ilust
 
 ## Stickers
 
-Hay **144 stickers propios en 12 colecciones**, con búsqueda, favoritos, recientes y vista previa antes de enviar. En las salas, abrir el botón de stickers junto al mensaje. Para probarlos también en una conversación individual: **Mis conexiones → Probar chat privado** (requiere un perfil de prueba). Este chat no implica que alguien haya aceptado una solicitud ni contacta a otras personas.
+Hay **144 stickers propios en 12 colecciones**, con búsqueda, favoritos, recientes y vista previa antes de enviar. En las salas, abrir el botón de stickers junto al mensaje. Para probarlos también en una conversación individual: **Conexiones → Probar chat privado** (requiere un perfil de prueba). Este chat no implica que alguien haya aceptado una solicitud ni contacta a otras personas.
 
 Los favoritos y recientes se comparten entre ambas vistas; los mensajes siguen siendo efímeros. Detalles, catálogo, ampliación y requisitos de la mensajería real: [docs/STICKERS.md](docs/STICKERS.md).
 
 ## Datos y privacidad
 
-Perfil, reservas, evaluaciones, bloqueos, solicitudes y stickers favoritos/recientes se guardan en `localStorage` bajo `entre.prototype.v1`. Los mensajes de salas y chats individuales de prueba solo viven en memoria y se pierden al abandonarlos o recargar. No ingresar datos sensibles ni utilizar el prototipo con usuarios reales. La descarga JSON contiene los datos persistidos; la función de borrar reinicia únicamente el estado de este prototipo.
+Perfil, reservas, evaluaciones, bloqueos, solicitudes, publicaciones/respuestas/guardados/invitaciones de Plaza y stickers favoritos/recientes se guardan en `localStorage` bajo `entre.prototype.v1`. Los mensajes de salas y chats individuales de prueba solo viven en memoria y se pierden al abandonarlos o recargar. No ingresar datos sensibles ni utilizar el prototipo con usuarios reales. La descarga JSON contiene los datos persistidos; la función de borrar reinicia únicamente el estado de este prototipo.
 
 La maqueta pública no utiliza backend. El laboratorio añade una API local con presencia y mensajería compartidas en memoria, sin cuentas de producción ni persistencia. No hay IA generativa, notificaciones, pagos ni protección de fotografías. Los límites de perfil son controles de la experiencia de prueba. Antes de un piloto se necesitan servicios desplegados, revisión jurídica y controles de seguridad verificables.
 
@@ -73,7 +75,9 @@ El runner ejecuta primero las pruebas del motor y las pruebas de integración de
 ## Organización
 
 - `src/App.tsx`: navegación, estado global y acciones de usuario.
-- `src/pages/`: descubrir, perfil, agenda, conexiones y sala/evaluación.
+- `src/pages/`: Plaza, encuentros, perfil, agenda, conexiones y sala/evaluación.
+- `src/plaza/`: temas, conversaciones/personas de ejemplo, ilustraciones e invitación con consentimiento.
+- `src/ecosystem.css`: identidad y adaptación de los tres espacios, incluida la navegación móvil.
 - `src/data.ts`: actividades y personajes sintéticos, fechas y catálogos.
 - `src/room/`: reglas deterministas de sala, hook de reloj y paneles de recepción, guía y participación.
 - `src/chat/`: catálogo, selector y compositor común de texto/stickers, mensajes y chat individual de demostración.

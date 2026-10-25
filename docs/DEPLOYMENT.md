@@ -32,3 +32,7 @@ El código fuente incluye una API local y una vista de desarrollo para probar pr
 Se añade un build separado `npm run build:pilot` y un servidor `npm start` que sirve web/API con SQLite persistente. Se preparan Docker, Compose, una referencia de proxy y copias consistentes. El soporte de HostGator confirmó al usuario que el Plan Personal compartido no es adecuado para Node.js 24, procesos permanentes y WebSocket. Se necesita un VPS u otro alojamiento compatible. No se han contratado servicios, accedido al hosting ni cambiado archivos del sitio, DNS, SSL o correo de `polysdeals.com`.
 
 El destino provisional propuesto es `entre.polysdeals.com`, pendiente de confirmar y crear. GitHub Pages continúa sirviendo exclusivamente la maqueta; publicar `gh-pages` no habilita las cuentas. La ejecución en un contenedor local no demuestra publicación en HostGator. Ver `docs/CUENTAS_Y_DESPLIEGUE.md` para requisitos y pasos.
+
+## Afinia · tres espacios · 25 de octubre de 2026
+
+El build estático incorpora La Plaza, Conexiones y Encuentros con la identidad de Afinia. La entrada predeterminada es La Plaza; `#discover` sigue abriendo Encuentros y se conservan los enlaces anteriores. Publicaciones, respuestas e invitaciones de esta iteración son locales al navegador y no requieren otro proveedor para probar la maqueta. Las cuentas y salas del piloto siguen siendo un build separado. Esta entrega no despliega un servidor ni modifica DNS o archivos de `polysdeals.com`.

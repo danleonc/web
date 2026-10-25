@@ -28,7 +28,7 @@ export function AccountPanel({
   function saveRecovery() {
     const blob = new Blob(
       [
-        `Entre · clave de recuperación\n\n${state.recovery}\n\nGuárdala fuera de este navegador. Permite cambiar tu contraseña. No la compartas.\n`,
+        `Afinia · clave de recuperación\n\n${state.recovery}\n\nGuárdala fuera de este navegador. Permite cambiar tu contraseña. No la compartas.\n`,
       ],
       { type: "text/plain" },
     );
