@@ -31,6 +31,7 @@ export function ImageView({
   onReport?: () => void;
 }) {
   const [src, setSrc] = useState("");
+  const [extension, setExtension] = useState("webp");
   const [unavailable, setUnavailable] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [hidden, setHidden] = useState(() => hiddenIds().includes(image.id));
@@ -52,6 +53,7 @@ export function ImageView({
       return;
     }
     if (shared) {
+      setExtension("webp");
       setSrc(`/api/media/${image.id}`);
       return;
     }
@@ -64,6 +66,13 @@ export function ImageView({
           setUnavailable(true);
           return;
         }
+        setExtension(
+          blob.type === "image/jpeg"
+            ? "jpg"
+            : blob.type === "image/png"
+              ? "png"
+              : "webp",
+        );
         objectUrl = URL.createObjectURL(blob);
         setSrc(objectUrl);
       })
@@ -155,7 +164,7 @@ export function ImageView({
               <a
                 className="button secondary"
                 href={src}
-                download="afinia-imagen.webp"
+                download={`afinia-imagen.${extension}`}
               >
                 Descargar imagen
               </a>

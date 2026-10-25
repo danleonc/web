@@ -1,7 +1,7 @@
 import sharp from "sharp";
 import type { IncomingMessage } from "node:http";
 import { imageHeader } from "../src/media/header.ts";
-import { maxImageBytes } from "../src/media/types.ts";
+import { maxImageBytes, compressionSizes } from "../src/media/types.ts";
 sharp.cache({ memory: 16, files: 0, items: 20 });
 sharp.concurrency(1);
 let jobs = 0;
@@ -45,19 +45,21 @@ export async function normalizeUpload(req: IncomingMessage) {
       (metadata.height || 0) > 8192
     )
       throw Error("Elige una imagen sin animación y de hasta 16 megapíxeles.");
-    for (const quality of [78, 62, 45]) {
-      const output = await sharp(input, { limitInputPixels: 16_000_000 })
-        .timeout({ seconds: 10 })
-        .rotate()
-        .resize({
-          width: 1280,
-          height: 1280,
-          fit: "inside",
-          withoutEnlargement: true,
-        })
-        .webp({ quality, effort: 3 })
-        .toBuffer();
-      if (output.length <= maxImageBytes) return output;
+    for (const edge of compressionSizes) {
+      for (const quality of [78, 62, 45]) {
+        const output = await sharp(input, { limitInputPixels: 16_000_000 })
+          .timeout({ seconds: 10 })
+          .rotate()
+          .resize({
+            width: edge,
+            height: edge,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .webp({ quality, effort: 3 })
+          .toBuffer();
+        if (output.length <= maxImageBytes) return output;
+      }
     }
     throw Error("No se pudo reducir la imagen al tamaño permitido.");
   } finally {

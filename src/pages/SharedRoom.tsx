@@ -329,7 +329,7 @@ export function SharedRoom({
                         {
                           method: "POST",
                           headers: {
-                            "Content-Type": "image/webp",
+                            "Content-Type": blob.type,
                             "X-Upload-Id": image.id,
                           },
                           body: blob,

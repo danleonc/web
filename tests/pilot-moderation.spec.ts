@@ -105,6 +105,27 @@ test("piloto: imagen compartida, reporte, revisión, baneo apelable y expulsión
     await page
       .getByRole("button", { name: "Adjuntar imagen", exact: true })
       .click();
+    // Reproduce mobile browsers that decode ordinary photos but cannot export WebP.
+    if (mobile)
+      await page.evaluate(() => {
+        Object.defineProperty(window, "createImageBitmap", {
+          value: undefined,
+          configurable: true,
+        });
+        const original = HTMLCanvasElement.prototype.toBlob;
+        HTMLCanvasElement.prototype.toBlob = function (
+          callback,
+          type,
+          quality,
+        ) {
+          original.call(
+            this,
+            callback,
+            type === "image/webp" ? "image/png" : type,
+            quality,
+          );
+        };
+      });
     await page.locator("input[type=file]").setInputFiles({
       name: "foto-prueba.png",
       mimeType: "image/png",

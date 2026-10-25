@@ -1,5 +1,9 @@
 // Read dimensions before decoding so a tiny compressed file cannot allocate a giant bitmap.
-export function imageHeader(bytes: Uint8Array, mime: string) {
+export function imageHeader(
+  bytes: Uint8Array,
+  mime: string,
+  limits = { maxPixels: 16_000_000, maxDimension: 8192 },
+) {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const text = (offset: number, length: number) =>
     String.fromCharCode(...bytes.subarray(offset, offset + length));
@@ -83,9 +87,12 @@ export function imageHeader(bytes: Uint8Array, mime: string) {
   if (animated) throw Error("Elige una imagen sin animación.");
   if (!width || !height)
     throw Error("No se reconoce una imagen JPG, PNG o WebP válida.");
-  if (width * height > 16_000_000 || Math.max(width, height) > 8192)
+  if (
+    width * height > limits.maxPixels ||
+    Math.max(width, height) > limits.maxDimension
+  )
     throw Error(
-      "La imagen es demasiado grande. Elige una de hasta 16 megapíxeles.",
+      `Esta imagen supera los ${Math.round(limits.maxPixels / 1_000_000)} megapíxeles o ${limits.maxDimension} píxeles por lado admitidos.`,
     );
   return { width, height };
 }

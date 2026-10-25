@@ -43,6 +43,8 @@ Inicia Vite (4173) y una API local (8787). En la app, abrir **Laboratorio local*
 6. Evaluar comodidad y expresar interés individual o grupal por reencontrarse con personajes ficticios. No se fabrican aceptaciones recíprocas. Se puede retirar el interés.
 7. Editar perfil, descargar datos de prueba y borrarlos con confirmación desde «Cómo funciona».
 
+Las fotos de galería o cámara se reducen automáticamente antes de compartir. Se admiten originales JPG, PNG o WebP de hasta 40 MB; el cargador elige un formato compatible con el navegador y reduce calidad y resolución cuando hace falta. No es necesario comprimirlas manualmente.
+
 La recepción, los tiempos y las decisiones de la guía se pueden probar: preguntas de 90 segundos, una extensión de 30 segundos, pasar/escuchar/listo, mayoría para otra pregunta y contingencias por falta de quórum. El banco tiene hasta tres preguntas por temática. Detalles: [docs/GUIA_SALAS.md](docs/GUIA_SALAS.md).
 
 Todo está etiquetado como prototipo. Los cupos y fechas de la maqueta son ilustrativos, y sus salas pueden abrirse sin esperar al horario de ejemplo. La sincronización entre navegadores se prueba únicamente en el laboratorio local separado.

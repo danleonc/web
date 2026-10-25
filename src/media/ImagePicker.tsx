@@ -19,6 +19,8 @@ export function ImagePicker({
   const [url, setUrl] = useState("");
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [originalSize, setOriginalSize] = useState(0);
   const [error, setError] = useState("");
   useEffect(() => {
     if (!prepared) return;
@@ -52,8 +54,8 @@ export function ImagePicker({
         }}
       >
         <p>
-          JPG, PNG o WebP, hasta 5 MB y 16 megapíxeles. Se reduce a 1280 píxeles
-          y hasta 350 KB, sin conservar metadatos de ubicación.
+          Elige una foto de tu galería o toma una con la cámara. Afinia la
+          reduce automáticamente para compartirla; no necesitas comprimirla tú.
         </p>
         <label className="image-file-label">
           <ImagePlus size={20} /> Elegir imagen
@@ -62,9 +64,13 @@ export function ImagePicker({
             accept="image/jpeg,image/png,image/webp"
             disabled={busy}
             onChange={async (e) => {
-              const file = e.target.files?.[0];
+              const input = e.currentTarget;
+              const file = input.files?.[0];
               if (!file) return;
               setBusy(true);
+              setPreparing(true);
+              setPrepared(null);
+              setOriginalSize(file.size);
               setError("");
               try {
                 setPrepared(await prepareImage(file));
@@ -77,16 +83,33 @@ export function ImagePicker({
                 );
               } finally {
                 setBusy(false);
-                e.target.value = "";
+                setPreparing(false);
+                input.value = "";
               }
             }}
           />
         </label>
+        <p className="small-text muted">
+          Fotos JPG, PNG o WebP de hasta 40 MB. Se eliminan los metadatos de
+          ubicación.
+        </p>
+        {preparing && (
+          <p role="status">Estamos ajustando tu foto automáticamente…</p>
+        )}
         {url && prepared && (
           <div className="image-preview">
             <img src={url} alt="Vista previa de tu imagen" />
             <span>
-              {Math.ceil(prepared.blob.size / 1024)} KB · imagen comprimida
+              Lista para compartir · {Math.ceil(prepared.blob.size / 1024)} KB
+              {originalSize > prepared.blob.size && (
+                <>
+                  {" "}
+                  · reducida automáticamente desde{" "}
+                  {originalSize >= 1024 * 1024
+                    ? `${(originalSize / (1024 * 1024)).toLocaleString("es-CL", { maximumFractionDigits: 1 })} MB`
+                    : `${Math.ceil(originalSize / 1024)} KB`}
+                </>
+              )}
             </span>
           </div>
         )}

@@ -1,6 +1,4 @@
-import { imageHeader } from "./header";
-import type { ImageRef } from "./types";
-import { maxImageBytes } from "./types";
+export { prepareImage } from "./prepare";
 type Asset = { id: string; blob: Blob; size: number };
 function database(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -80,48 +78,5 @@ export async function clearImages() {
     });
   } finally {
     db.close();
-  }
-}
-export async function prepareImage(
-  file: File,
-): Promise<{ image: ImageRef; blob: Blob }> {
-  if (
-    !["image/jpeg", "image/png", "image/webp"].includes(file.type) ||
-    file.size > 5 * 1024 * 1024
-  )
-    throw Error(
-      "Elige una imagen JPG, PNG o WebP de hasta 5 MB. No se admiten archivos animados ni SVG.",
-    );
-  const bytes = new Uint8Array(await file.arrayBuffer());
-  imageHeader(bytes, file.type);
-  const bitmap = await createImageBitmap(file);
-  try {
-    if (
-      bitmap.width * bitmap.height > 16_000_000 ||
-      bitmap.width > 8192 ||
-      bitmap.height > 8192
-    )
-      throw Error(
-        "La imagen es demasiado grande. Elige una de hasta 16 megapíxeles.",
-      );
-    const scale = Math.min(1, 1280 / Math.max(bitmap.width, bitmap.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
-    canvas
-      .getContext("2d")!
-      .drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-    for (const quality of [0.78, 0.62, 0.45]) {
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(resolve, "image/webp", quality),
-      );
-      if (blob && blob.type === "image/webp" && blob.size <= maxImageBytes)
-        return { image: { id: crypto.randomUUID(), description: "" }, blob };
-    }
-    throw Error(
-      "No se pudo comprimir esta imagen. Prueba con otra más pequeña.",
-    );
-  } finally {
-    bitmap.close();
   }
 }
