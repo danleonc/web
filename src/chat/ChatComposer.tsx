@@ -1,5 +1,7 @@
 import { useId, useState } from "react";
-import { Send, Sticker as StickerIcon } from "lucide-react";
+import { ImagePicker } from "../media/ImagePicker";
+import type { ImageRef } from "../media/types";
+import { ImagePlus, Send, Sticker as StickerIcon } from "lucide-react";
 import { StickerPicker } from "./StickerPicker";
 import { getSticker } from "./stickers";
 import type { StickerActions } from "./stickers";
@@ -10,16 +12,19 @@ export function ChatComposer({
   onToggleFavorite,
   onStickerUsed,
   onTypingChange,
+  onSendImage,
   disabled = false,
 }: StickerActions & {
   onSendText: (text: string) => void | boolean;
   onTypingChange?: (active: boolean) => void;
   disabled?: boolean;
+  onSendImage?: (image: ImageRef, blob: Blob) => Promise<boolean | void>;
   onSendSticker: (id: string) => void | boolean;
 }) {
   const [draft, setDraft] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
   const inputId = useId();
+  const [imageOpen, setImageOpen] = useState(false);
   return (
     <>
       <form
@@ -44,6 +49,17 @@ export function ChatComposer({
           <StickerIcon size={22} />
           <span className="sr-only">Stickers</span>
         </button>
+        {onSendImage && (
+          <button
+            type="button"
+            className="sticker-trigger"
+            aria-label="Adjuntar imagen"
+            disabled={disabled}
+            onClick={() => setImageOpen(true)}
+          >
+            <ImagePlus size={22} />
+          </button>
+        )}
         <label className="sr-only" htmlFor={inputId}>
           Tu mensaje de prueba
         </label>
@@ -69,6 +85,16 @@ export function ChatComposer({
           <Send size={18} />
         </button>
       </form>
+      {imageOpen && onSendImage && (
+        <ImagePicker
+          onClose={() => setImageOpen(false)}
+          onChoose={async (image, blob) => {
+            if (disabled)
+              throw Error("La sala no está disponible para enviar imágenes.");
+            return onSendImage(image, blob);
+          }}
+        />
+      )}
       {pickerOpen && (
         <StickerPicker
           preferences={stickerPreferences}

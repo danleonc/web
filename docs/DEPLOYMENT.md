@@ -36,3 +36,7 @@ El destino provisional propuesto es `entre.polysdeals.com`, pendiente de confirm
 ## Afinia · tres espacios · 25 de octubre de 2026
 
 El build estático incorpora La Plaza, Conexiones y Encuentros con la identidad de Afinia. La entrada predeterminada es La Plaza; `#discover` sigue abriendo Encuentros y se conservan los enlaces anteriores. Publicaciones, respuestas e invitaciones de esta iteración son locales al navegador y no requieren otro proveedor para probar la maqueta. Las cuentas y salas del piloto siguen siendo un build separado. Esta entrega no despliega un servidor ni modifica DNS o archivos de `polysdeals.com`.
+
+## Imágenes y convivencia · 25 de octubre de 2026
+
+La maqueta incorpora imágenes locales en Plaza/salas y controles de convivencia de prueba. La compilación de piloto añade imágenes privadas, reportes, moderación por rol, sanciones y apelación; requiere migración SQLite v2 y asignación explícita de moderación. El Dockerfile incluye Sharp y sus binarios nativos de producción, y se comprobó ejecución sin root, raíz de solo lectura, volumen y límite de 512 MiB. La referencia Nginx limita los cuerpos a 2 MiB. Esta entrega conserva la separación entre GitHub Pages y el backend; no publica el piloto en HostGator. Operación y alcance: [IMAGENES_Y_CONVIVENCIA.md](IMAGENES_Y_CONVIVENCIA.md).

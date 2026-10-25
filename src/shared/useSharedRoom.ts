@@ -113,14 +113,22 @@ export function useSharedRoom(
         };
         ws.onclose = (event) => {
           if (cancelled) return;
-          if (event.code === 4003) {
+          if (
+            event.code === 4003 ||
+            event.code === 4004 ||
+            event.code === 4005
+          ) {
             setStatus("blocked");
             setSnapshot(null);
             setPending([]);
             setError(
-              accountsEnabled
-                ? "El bloqueo quedó guardado en tu cuenta y saliste de la sala."
-                : "El bloqueo quedó registrado y saliste de la sala. No podrás coincidir con esa persona durante esta sesión de desarrollo.",
+              event.code === 4005
+                ? "Fuiste retirado de este encuentro. No puedes volver a esta sala; tu cuenta no queda baneada. Puedes comunicarte con moderación desde el acceso a tu cuenta."
+                : event.code === 4004
+                  ? "Tu cuenta tiene una restricción. Consulta el motivo y la opción de apelar en tu cuenta."
+                  : accountsEnabled
+                    ? "El bloqueo quedó guardado en tu cuenta y saliste de la sala."
+                    : "El bloqueo quedó registrado y saliste de la sala. No podrás coincidir con esa persona durante esta sesión de desarrollo.",
             );
             return;
           }

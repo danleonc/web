@@ -1,14 +1,26 @@
+import { ImageView } from "../media/ImageView";
+import type { ImageRef } from "../media/types";
 import { Avatar } from "../components";
 import { getSticker } from "./stickers";
 type Sender = { name: string; own: boolean };
 export type ChatMessage = Sender &
-  ({ type: "text"; text: string } | { type: "sticker"; stickerId: string });
+  (
+    | { type: "text"; text: string }
+    | { type: "sticker"; stickerId: string }
+    | { type: "image"; image: ImageRef }
+  );
 export function ChatMessageBubble({
   message,
   simulated = true,
+  shared = false,
+  removed = false,
+  onReport,
 }: {
   message: ChatMessage;
   simulated?: boolean;
+  shared?: boolean;
+  removed?: boolean;
+  onReport?: () => void;
 }) {
   const sticker =
     message.type === "sticker" ? getSticker(message.stickerId) : undefined;
@@ -27,6 +39,13 @@ export function ChatMessageBubble({
         </span>
         {message.type === "text" ? (
           <p>{message.text}</p>
+        ) : message.type === "image" ? (
+          <ImageView
+            image={message.image}
+            shared={shared}
+            removed={removed}
+            onReport={onReport}
+          />
         ) : sticker ? (
           <img
             className="sent-sticker"
@@ -37,6 +56,11 @@ export function ChatMessageBubble({
           />
         ) : (
           <p>Sticker no disponible</p>
+        )}
+        {onReport && message.type !== "image" && (
+          <button className="message-report" onClick={onReport}>
+            Reportar mensaje
+          </button>
         )}
       </div>
     </div>

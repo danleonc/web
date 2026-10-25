@@ -1,7 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { accountsEnabled } from "./mode";
 import type { SharedMessage } from "./protocol";
-export type AccountView = { id: string; alias: string };
+export type AccountView = {
+  id: string;
+  alias: string;
+  moderator?: boolean;
+  imagesEnabled?: boolean;
+  restriction?: {
+    kind: "suspend" | "ban";
+    reason: string;
+    until: number | null;
+    actionId: string;
+  } | null;
+};
 export type Offering = {
   id: string;
   title: string;
@@ -65,6 +76,14 @@ export function useAccount() {
       }
       if (!response.ok) throw Error("El servidor no pudo consultar tu sesión.");
       const user = (await response.json()) as AccountView;
+      setAccount(user);
+      if (user.restriction) {
+        setActivities([]);
+        setRooms([]);
+        setMessages([]);
+        setLoaded(true);
+        return;
+      }
       const [offers, history] = await Promise.all([
         fetch("/api/activities"),
         fetch("/api/history"),
@@ -114,7 +133,8 @@ export function useAccount() {
       const value = await response.json();
       if (!response.ok)
         throw Error(
-          errors[value.error] ||
+          value.message ||
+            errors[value.error] ||
             "No se pudo completar la acción. Inténtalo de nuevo.",
         );
       if (path.endsWith("/logout")) {
@@ -169,6 +189,7 @@ export function useAccount() {
     error,
     request,
     history,
+    refresh,
     clearHistory: () => {
       historyVersion.current++;
       setMessages([]);

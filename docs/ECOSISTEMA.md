@@ -22,7 +22,7 @@ Los bloqueos de personajes de las salas se respetan también en sus publicacione
 
 ## Identidad y diseño
 
-Se adopta **Afinia como nombre de trabajo de la interfaz** siguiendo el contexto aportado; no acredita disponibilidad comercial de marca. Marca floral, verde profundo, crema, albaricoque y lavanda, tipografía editorial e ilustraciones SVG propias. No se usan fotos reales, avatares generados presentados como usuarios, métricas de actividad inventadas ni imágenes remotas.
+Se adopta **Afinia como nombre de trabajo de la interfaz** siguiendo el contexto aportado; no acredita disponibilidad comercial de marca. Marca floral, verde profundo, crema, albaricoque y lavanda, tipografía editorial e ilustraciones SVG propias. Las ilustraciones iniciales no representan usuarios reales. Se pueden adjuntar imágenes propias a publicaciones y encuentros; no se introducen fotos de terceros, métricas de actividad inventadas ni imágenes remotas.
 
 Los espacios comparten navegación, botones y jerarquías, con cabeceras e intenciones distintas. Se añaden estados vacíos, confirmaciones, foco inicial en el editor, retorno de foco, contraste, adaptación móvil y respeto de movimiento reducido. Las pruebas automáticas no sustituyen evaluación con tecnologías de asistencia.
 
@@ -32,7 +32,9 @@ Se conserva `entre.prototype.v1` para proteger perfiles, reservas, evaluaciones,
 
 Límites: 30 publicaciones propias, últimas 100 respuestas propias y hasta tres invitaciones a perfiles de ejemplo. Los borradores sin publicar no se exportan ni sobreviven a recargar. Los chats de demostración siguen siendo efímeros.
 
-**Los espacios nuevos son una maqueta local, también en el build del piloto con cuentas.** No añaden endpoints de Plaza, sincronización de publicaciones entre personas, chat privado real ni moderación operativa. El backend de cuentas, reservas e historial de salas se mantiene separado. No se contrata infraestructura ni se modifica `polysdeals.com`. El build estático utiliza el flujo de GitHub Pages existente.
+**Los espacios nuevos son una maqueta local, también en el build del piloto con cuentas.** No añaden endpoints de Plaza, sincronización de publicaciones entre personas, chat privado real ni moderación compartida de Plaza. Sus reportes son locales. Los encuentros del backend sí disponen de revisión por rol y apelación, pendientes de asignar un responsable humano. El backend de cuentas, reservas e historial de salas se mantiene separado. No se contrata infraestructura ni se modifica `polysdeals.com`. El build estático utiliza el flujo de GitHub Pages existente.
+
+Las publicaciones admiten una imagen comprimida y una descripción opcional. Ampliar, ocultar, descargar y reportar están al alcance desde la imagen. Hay normas accesibles y bloqueo desde cada conversación; reportar no se confunde con sancionar. Archivos locales, límites y alcance del piloto: [Imágenes y convivencia](IMAGENES_Y_CONVIVENCIA.md).
 
 ## Qué viene después
 

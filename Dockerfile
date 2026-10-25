@@ -16,8 +16,12 @@ COPY --from=build --chown=node:node /app/package.json ./package.json
 COPY --from=build --chown=node:node /app/server ./server
 COPY --from=build --chown=node:node /app/src/data.ts ./src/data.ts
 COPY --from=build --chown=node:node /app/src/room/engine.ts ./src/room/engine.ts
+COPY --from=build --chown=node:node /app/src/safety/rules.ts ./src/safety/rules.ts
+COPY --from=build --chown=node:node /app/src/media/types.ts ./src/media/types.ts
+COPY --from=build --chown=node:node /app/src/media/header.ts ./src/media/header.ts
 COPY --from=build --chown=node:node /app/src/chat/sticker-packs.json ./src/chat/sticker-packs.json
 COPY --from=build --chown=node:node /app/scripts/backup-db.mjs ./scripts/backup-db.mjs
+COPY --from=build --chown=node:node /app/scripts/moderator.mjs ./scripts/moderator.mjs
 COPY --from=build --chown=node:node /app/dist-pilot ./dist-pilot
 USER node
 EXPOSE 8788

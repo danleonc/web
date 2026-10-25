@@ -1,10 +1,16 @@
 import type { Session } from "../room/engine";
+import type { SafetyView, ConductReason, Choice } from "../safety/rules";
+import type { ImageRef } from "../media/types";
 export type SharedMessage = {
   id: string;
   clientId: string;
   senderId: string;
   name: string;
-} & ({ type: "text"; text: string } | { type: "sticker"; stickerId: string });
+} & (
+  | { type: "text"; text: string }
+  | { type: "sticker"; stickerId: string }
+  | { type: "image"; image: ImageRef }
+);
 export type SharedSnapshot = {
   type: "snapshot";
   me: string;
@@ -13,6 +19,8 @@ export type SharedSnapshot = {
   now: number;
   session: Session;
   messages: SharedMessage[];
+  safety: SafetyView;
+  hiddenImages: string[];
 };
 export type SharedEvent =
   | SharedSnapshot
@@ -23,10 +31,13 @@ export type SharedCommand =
   | { type: "respond"; status: "ready" | "pass" | "listen" | "pending" }
   | { type: "typing"; active: boolean }
   | { type: "block"; participantId: string }
+  | { type: "open-removal"; targetId: string; reason: ConductReason }
+  | { type: "removal-vote"; ballotId: string; choice: Choice }
   | {
       type: "message";
       clientId: string;
       content:
         | { type: "text"; text: string }
-        | { type: "sticker"; stickerId: string };
+        | { type: "sticker"; stickerId: string }
+        | { type: "image"; image: ImageRef };
     };

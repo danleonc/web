@@ -1,3 +1,4 @@
+import type { ImageRef } from "../media/types";
 export const plazaTopics = [
   {
     id: "cultura",
@@ -35,6 +36,7 @@ export type PlazaPost = {
   own: boolean;
   art?: "music" | "books" | "garden" | "art";
   tags: string[];
+  image?: ImageRef;
 };
 export type PlazaComment = {
   id: string;

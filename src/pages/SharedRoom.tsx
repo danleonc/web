@@ -1,3 +1,4 @@
+import { ConductGuide } from "../safety/ConductGuide";
 import { useState, useEffect } from "react";
 import { LockKeyhole, Radio, Users } from "lucide-react";
 import { featuredActivities } from "../data";
@@ -12,11 +13,19 @@ import { accountsEnabled } from "../shared/mode";
 import { useAccount } from "../shared/accounts";
 import { AccountPanel } from "../shared/AccountPanel";
 
+import { RemovalPanel } from "../safety/RemovalPanel";
+import { ReportDialog } from "../safety/ReportDialog";
+
 export function SharedRoom({
   profile,
   onProfile,
   ...stickerActions
 }: StickerActions & { profile: Profile | null; onProfile: () => void }) {
+  const [report, setReport] = useState<{
+    targetId: string;
+    subject: string;
+    messageId?: string;
+  } | null>(null);
   const [activityId, setActivityId] = useState("cafe");
   const [active, setActive] = useState(false);
   const [aware, setAware] = useState(false);
@@ -24,6 +33,12 @@ export function SharedRoom({
   useEffect(() => {
     setActive(false);
   }, [account.account?.id]);
+  useEffect(() => {
+    if (account.account?.restriction) {
+      setActive(false);
+      setReport(null);
+    }
+  }, [account.account?.restriction?.actionId]);
   const activity = featuredActivities.find((a) => a.id === activityId)!;
   const shared = useSharedRoom(
     activityId,
@@ -72,8 +87,9 @@ export function SharedRoom({
           onLogout={() => setActive(false)}
         />
       )}
-      {accountsEnabled && !account.account ? null : !accountsEnabled &&
-        !profile ? (
+      {accountsEnabled &&
+      (!account.account ||
+        account.account.restriction) ? null : !accountsEnabled && !profile ? (
         <section className="panel shared-connect">
           <h2>Prepara primero un perfil de prueba.</h2>
           <p>
@@ -178,6 +194,30 @@ export function SharedRoom({
           {shared.error}
         </p>
       )}
+      {report && snapshot && (
+        <ReportDialog
+          subject={report.subject}
+          onClose={() => setReport(null)}
+          onSubmit={async (reason, note) => {
+            const response = await fetch(
+              `/api/rooms/${snapshot.roomKey}/reports`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  targetId: report.targetId,
+                  reason,
+                  note,
+                  messageId: report.messageId,
+                }),
+              },
+            );
+            const value = await response.json();
+            if (!response.ok)
+              throw Error(value.message || "No se pudo guardar el reporte.");
+          }}
+        />
+      )}
       {session && snapshot && (
         <div className="room-layout shared-layout">
           <section
@@ -254,6 +294,21 @@ export function SharedRoom({
                 <ChatMessageBubble
                   key={message.id}
                   simulated={false}
+                  shared
+                  removed={
+                    message.type === "image" &&
+                    snapshot.hiddenImages.includes(message.image.id)
+                  }
+                  onReport={
+                    accountsEnabled && message.senderId !== snapshot.me
+                      ? () =>
+                          setReport({
+                            targetId: message.senderId,
+                            subject: `Mensaje de ${message.name}`,
+                            messageId: message.id,
+                          })
+                      : undefined
+                  }
                   message={{
                     ...message,
                     own: message.senderId === snapshot.me,
@@ -265,6 +320,32 @@ export function SharedRoom({
               {...stickerActions}
               disabled={
                 !connected || !canChat(session) || shared.pending.length >= 20
+              }
+              onSendImage={
+                accountsEnabled && account.account?.imagesEnabled
+                  ? async (image, blob) => {
+                      const response = await fetch(
+                        `/api/rooms/${snapshot.roomKey}/media`,
+                        {
+                          method: "POST",
+                          headers: {
+                            "Content-Type": "image/webp",
+                            "X-Upload-Id": image.id,
+                          },
+                          body: blob,
+                        },
+                      );
+                      const value = await response.json();
+                      if (!response.ok)
+                        throw Error(
+                          value.message || "No se pudo enviar la imagen.",
+                        );
+                      return shared.sendMessage({
+                        type: "image",
+                        image: { ...image, id: value.id },
+                      });
+                    }
+                  : undefined
               }
               onTypingChange={(typing) =>
                 shared.dispatch({
@@ -312,48 +393,88 @@ export function SharedRoom({
               </div>
             )}
           </section>
-          <aside className="panel participants-panel">
-            <h3>Personas de esta prueba</h3>
-            <p className="small-text muted">
-              {accountsEnabled
-                ? "Cuentas conectadas. No hay verificación de identidad."
-                : "Sesiones de desarrollo, sin verificación de identidad."}
-            </p>
-            {snapshot.session.participants.map((p) => (
-              <div className="shared-participant" key={p.id}>
-                <strong>
-                  {p.name}
-                  {p.id === snapshot.me ? " · tú" : ""}
-                </strong>
-                <span>
-                  {!p.present
-                    ? "Desconectado"
-                    : p.typingUntil > shared.now
-                      ? "Escribiendo…"
-                      : responseLabels[p.status]}
-                </span>
-                {p.id !== snapshot.me && p.present && (
-                  <button
-                    className="button text-danger"
-                    disabled={!connected}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          accountsEnabled
-                            ? "Bloquear guarda esta decisión en tu cuenta y te saca de la sala. ¿Continuar?"
-                            : "Bloquear registra esta decisión en tu sesión de desarrollo y te saca de la sala. ¿Continuar?",
-                        )
-                      ) {
-                        shared.send({ type: "block", participantId: p.id });
-                        account.clearHistory();
+          <aside className="room-aside">
+            <ConductGuide />
+            <RemovalPanel
+              safety={snapshot.safety}
+              people={snapshot.session.participants}
+              me={snapshot.me}
+              now={shared.now}
+              canStart={connected && canChat(session)}
+              onStart={(targetId, reason) => {
+                if (
+                  confirm(
+                    "Tu solicitud inicia una votación con tu voto a favor de retirar. Solo afecta a este encuentro. ¿Continuar?",
+                  )
+                )
+                  shared.send({ type: "open-removal", targetId, reason });
+              }}
+              onVote={(ballotId, choice) =>
+                shared.send({ type: "removal-vote", ballotId, choice })
+              }
+            />
+            {accountsEnabled && !account.account?.imagesEnabled && (
+              <p className="small-text muted">
+                Las imágenes se habilitan cuando el responsable configura una
+                cuenta de moderación.
+              </p>
+            )}
+            <section className="panel participants-panel">
+              <h3>Personas de esta prueba</h3>
+              <p className="small-text muted">
+                {accountsEnabled
+                  ? "Cuentas conectadas. No hay verificación de identidad."
+                  : "Sesiones de desarrollo, sin verificación de identidad."}
+              </p>
+              {snapshot.session.participants.map((p) => (
+                <div className="shared-participant" key={p.id}>
+                  <strong>
+                    {p.name}
+                    {p.id === snapshot.me ? " · tú" : ""}
+                  </strong>
+                  <span>
+                    {!p.present
+                      ? "Desconectado"
+                      : p.typingUntil > shared.now
+                        ? "Escribiendo…"
+                        : responseLabels[p.status]}
+                  </span>
+                  {accountsEnabled && p.id !== snapshot.me && (
+                    <button
+                      className="button text"
+                      onClick={() =>
+                        setReport({
+                          targetId: p.id,
+                          subject: `Conducta de ${p.name}`,
+                        })
                       }
-                    }}
-                  >
-                    Bloquear y salir
-                  </button>
-                )}
-              </div>
-            ))}
+                    >
+                      Reportar conducta de {p.name}
+                    </button>
+                  )}
+                  {p.id !== snapshot.me && p.present && (
+                    <button
+                      className="button text-danger"
+                      disabled={!connected}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            accountsEnabled
+                              ? "Bloquear guarda esta decisión en tu cuenta y te saca de la sala. ¿Continuar?"
+                              : "Bloquear registra esta decisión en tu sesión de desarrollo y te saca de la sala. ¿Continuar?",
+                          )
+                        ) {
+                          shared.send({ type: "block", participantId: p.id });
+                          account.clearHistory();
+                        }
+                      }}
+                    >
+                      Bloquear y salir
+                    </button>
+                  )}
+                </div>
+              ))}
+            </section>
           </aside>
         </div>
       )}

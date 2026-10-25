@@ -1,0 +1,284 @@
+/* Shared controls follow the warm, restrained identity of La Plaza. */
+.shared-image {
+  margin: 14px 0;
+  max-width: 100%;
+  min-width: 0;
+}
+.image-thumbnail {
+  display: block;
+  position: relative;
+  padding: 0;
+  width: 100%;
+  max-width: 460px;
+  border: 1px solid var(--line, #dedbd6);
+  border-radius: 18px;
+  overflow: hidden;
+  background: #f1eee8;
+  text-align: left;
+  cursor: zoom-in;
+}
+.image-thumbnail img {
+  display: block;
+  max-height: 300px;
+  width: 100%;
+  object-fit: contain;
+}
+.image-thumbnail > span {
+  position: absolute;
+  bottom: 9px;
+  right: 9px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  color: #fff;
+  background: #343d39;
+  border-radius: 20px;
+  font-size: 11px;
+}
+.image-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin-top: 5px;
+}
+.image-actions button,
+.message-report {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 0;
+  background: none;
+  color: #56645c;
+  padding: 8px 0;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.image-placeholder {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 20px;
+  background: #f5f2ec;
+  border-radius: 16px;
+  font-size: 12px;
+  color: #4e6055;
+}
+.expanded-image > img {
+  display: block;
+  max-width: 100%;
+  max-height: 65vh;
+  margin: auto;
+  object-fit: contain;
+}
+.image-preview {
+  margin: 18px 0;
+  padding: 12px;
+  background: #f3f0e9;
+  border-radius: 18px;
+  text-align: center;
+}
+.image-preview img {
+  display: block;
+  max-height: 260px;
+  max-width: 100%;
+  object-fit: contain;
+  margin: auto;
+  border-radius: 10px;
+}
+.image-preview span {
+  display: block;
+  font-size: 11px;
+  margin-top: 7px;
+  color: #526256;
+}
+.image-file-label {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 1px dashed #9bb09b;
+  border-radius: 14px;
+  padding: 14px;
+  font-weight: 600;
+  color: #3c5744;
+}
+.image-file-label input {
+  max-width: 100%;
+  font-size: 12px;
+}
+.image-picker p,
+.safety-report p {
+  line-height: 1.65;
+}
+.post-image-compose {
+  margin-top: 16px;
+}
+.plaza-post > .shared-image {
+  margin: 0 22px;
+}
+.removal-panel {
+  padding: 22px;
+  font-size: 12px;
+  line-height: 1.6;
+  border-top: 3px solid #b3c5a4;
+}
+.removal-panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+}
+.removal-panel .field-label {
+  font-size: 11px;
+}
+.removal-panel select {
+  font-size: 12px;
+}
+.removal-panel .button {
+  margin-top: 10px;
+  white-space: normal;
+}
+.safety-notice,
+.removal-ballot {
+  background: #f2f4ec;
+  border: 1px solid #d7decd;
+  border-radius: 12px;
+  padding: 12px;
+  color: #3a503d;
+}
+.safety-demo {
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 12px;
+  background: #f4efdf;
+}
+.safety-demo .button {
+  margin: 6px 0;
+}
+.moderation-desk {
+  padding: 20px;
+  border: 1px solid #cfdac7;
+  background: #fafbf7;
+  border-radius: 16px;
+  margin: 20px 0;
+}
+.moderation-desk summary {
+  font-weight: 700;
+  cursor: pointer;
+}
+.moderation-list {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 15px 0;
+}
+.moderation-list .button {
+  font-size: 11px;
+  white-space: normal;
+}
+.moderation-case {
+  padding: 20px;
+  border: 1px solid #d6ddd0;
+  border-radius: 12px;
+  margin-top: 12px;
+}
+.moderation-case blockquote {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  padding: 14px;
+  background: #eee;
+  margin: 12px 0;
+}
+.moderation-case textarea {
+  min-height: 80px;
+}
+.moderation-case .button,
+.restriction-notice .button {
+  margin-top: 12px;
+}
+.restriction-notice {
+  border: 1px solid #dec5b3;
+  border-radius: 16px;
+  padding: 20px;
+  background: #fff4e9;
+}
+.message > div {
+  min-width: 0;
+}
+.message.own .image-actions button,
+.message.own .message-report {
+  color: #415a47;
+}
+.composer input {
+  min-width: 0;
+}
+@media (max-width: 600px) {
+  .composer {
+    gap: 6px;
+  }
+  .composer .sticker-trigger {
+    width: 30px;
+    flex-shrink: 0;
+    padding: 4px;
+  }
+  .image-thumbnail img {
+    max-height: 220px;
+  }
+  .moderation-desk {
+    padding: 14px;
+  }
+  .moderation-case {
+    padding: 12px;
+  }
+  .expanded-image .modal-actions {
+    flex-wrap: wrap;
+  }
+}
+
+.conduct-guide {
+  padding: 18px;
+  border: 1px solid #d4dece;
+  border-radius: 14px;
+  background: #f5f7ee;
+  font-size: 12px;
+  line-height: 1.7;
+  color: #41533e;
+}
+.conduct-guide summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.conduct-guide ul {
+  padding-left: 18px;
+}
+.conduct-guide li + li {
+  margin-top: 7px;
+}
+
+.room-layout .conversation {
+  align-self: start;
+  width: 100%;
+}
+.removal-panel summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.removal-panel summary::after {
+  content: "+";
+  margin-left: auto;
+}
+.removal-panel details[open] summary::after {
+  content: "−";
+}
+.room-aside > .conduct-guide {
+  margin: 14px 0;
+}

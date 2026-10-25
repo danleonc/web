@@ -5,6 +5,7 @@ import {
   plazaPeople,
   isPlazaPersonBlocked,
 } from "./plaza/data";
+import { validImageRef } from "./media/types";
 import type { PlazaState } from "./plaza/data";
 export type Profile = {
   alias: string;
@@ -60,7 +61,15 @@ function loadPlaza(value: unknown, blocked: string[]): PlazaState {
               short(p.author, 30),
           )
           .slice(0, 30)
-          .map((p) => ({ ...p, personId: "self", art: undefined, tags: [] }))
+          .map((p) => ({
+            ...p,
+            personId: "self",
+            art: undefined,
+            tags: [],
+            image: validImageRef(p.image)
+              ? { id: p.image.id, description: p.image.description }
+              : undefined,
+          }))
       : [],
     comments: Array.isArray(v.comments)
       ? v.comments

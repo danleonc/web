@@ -1,3 +1,4 @@
+import { ConductGuide } from "../safety/ConductGuide";
 import { useRef, useState } from "react";
 import {
   ArrowRight,
@@ -36,7 +37,14 @@ import type {
   PlazaState,
   TopicId,
 } from "../plaza/data";
+import { ImagePicker } from "../media/ImagePicker";
+import { ImageView } from "../media/ImageView";
+import { saveImage, deleteImage } from "../media/local";
+import type { ImageRef } from "../media/types";
+import { ReportDialog } from "../safety/ReportDialog";
+import { saveLocalReport } from "../safety/local";
 type Draft = {
+  image?: ImageRef;
   title: string;
   body: string;
   topic: TopicId;
@@ -58,6 +66,7 @@ type Props = {
   onOpenPost: (id: string | null) => void;
   onInvite: (i: PlazaInvitation) => void;
   onNotice: (message: string) => void;
+  onBlock: (name: string) => void;
 };
 export function Plaza({
   profile,
@@ -74,6 +83,7 @@ export function Plaza({
   onOpenPost,
   onInvite,
   onNotice,
+  onBlock,
 }: Props) {
   const [topic, setTopic] = useState("todos");
   const [search, setSearch] = useState("");
@@ -81,6 +91,8 @@ export function Plaza({
   const [page, setPage] = useState(0);
   const [composer, setComposer] = useState(false);
   const editing = draft.editingId || null;
+  const [imagePicker, setImagePicker] = useState(false);
+  const [report, setReport] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<PlazaPost | null>(null);
   const [composeError, setComposeError] = useState("");
   const [prepare, setPrepare] = useState(false);
@@ -154,6 +166,7 @@ export function Plaza({
       personId: "self",
       own: true,
       tags: [],
+      image: draft.image,
     };
     onChange({
       ...state,
@@ -161,6 +174,9 @@ export function Plaza({
         ? state.posts.map((p) => (p.id === editing ? post : p))
         : [post, ...state.posts],
     });
+    const oldImage = state.posts.find((p) => p.id === editing)?.image;
+    if (oldImage && oldImage.id !== draft.image?.id)
+      void deleteImage(oldImage.id).catch(() => {});
     onDraft(blankDraft);
     setComposer(false);
     setTopic("todos");
@@ -327,7 +343,15 @@ export function Plaza({
                         />
                       </button>
                     </div>
-                    {p.art && (
+                    {p.image && (
+                      <ImageView
+                        image={p.image}
+                        onReport={() =>
+                          setReport(`Imagen de ${p.author}: ${p.title}`)
+                        }
+                      />
+                    )}
+                    {p.art && !p.image && (
                       <button
                         className="post-art-button"
                         aria-label={`Abrir conversación: ${p.title}`}
@@ -475,6 +499,7 @@ export function Plaza({
               Probar con una idea <ArrowRight size={14} />
             </button>
           </section>
+          <ConductGuide />
           <div className="plaza-principles">
             <span>
               <Check size={15} /> Sin rankings de personas
@@ -599,6 +624,36 @@ export function Plaza({
               onChange={(e) => onDraft({ ...draft, body: e.target.value })}
               placeholder="No hace falta escribir mucho. Un pequeño comienzo está bien."
             />
+            <div className="post-image-compose">
+              {draft.image && (
+                <>
+                  <ImageView image={draft.image} />
+                  <button
+                    className="button text-danger"
+                    type="button"
+                    onClick={() => {
+                      const id = draft.image!.id;
+                      if (!state.posts.some((p) => p.image?.id === id))
+                        void deleteImage(id).catch(() => {});
+                      onDraft({ ...draft, image: undefined });
+                    }}
+                  >
+                    Quitar imagen adjunta
+                  </button>
+                </>
+              )}
+              <button
+                className="button secondary"
+                type="button"
+                onClick={() => setImagePicker(true)}
+              >
+                {draft.image ? "Cambiar imagen" : "Añadir una imagen"}
+              </button>
+              <p className="small-text muted">
+                Una imagen por publicación. Su función es abrir una
+                conversación; evita datos personales de terceros.
+              </p>
+            </div>
             <div className="compose-footnote">
               <span>Visible solo en este navegador de prueba.</span>
               <span>{draft.body.length}/1000</span>
@@ -650,6 +705,14 @@ export function Plaza({
             <span className="plaza-topic">
               {plazaTopics.find((t) => t.id === active.topic)!.label}
             </span>
+            {active.image && (
+              <ImageView
+                image={active.image}
+                onReport={() =>
+                  setReport(`Imagen de ${active.author}: ${active.title}`)
+                }
+              />
+            )}
             <p className="thread-body">{active.body}</p>
             <div className="thread-bridge">
               <div>
@@ -705,6 +768,18 @@ export function Plaza({
                         </span>
                       </strong>
                       <p>{c.body}</p>
+                      {!c.own && (
+                        <button
+                          className="message-report"
+                          onClick={() =>
+                            setReport(
+                              `Respuesta de ${c.author}: ${c.body.slice(0, 120)}`,
+                            )
+                          }
+                        >
+                          Reportar respuesta
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))
@@ -774,6 +849,31 @@ export function Plaza({
               </button>
             )}
             <div className="thread-bottom-actions">
+              <button
+                className="button text"
+                onClick={() =>
+                  setReport(`Publicación de ${active.author}: ${active.title}`)
+                }
+              >
+                Reportar publicación
+              </button>
+              {!active.own && (
+                <button
+                  className="button text-danger"
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `¿Bloquear a ${active.author} en esta maqueta? Ocultará sus publicaciones y respuestas y retirará tus invitaciones pendientes.`,
+                      )
+                    ) {
+                      onBlock(active.author);
+                      onOpenPost(null);
+                    }
+                  }}
+                >
+                  Bloquear a {active.author}
+                </button>
+              )}
               {active.own && (
                 <>
                   <button
@@ -784,6 +884,7 @@ export function Plaza({
                         body: active.body,
                         topic: active.topic,
                         editingId: active.id,
+                        image: active.image,
                       });
                       setComposeError("");
                       onOpenPost(null);
@@ -857,6 +958,8 @@ export function Plaza({
                     saved: state.saved.filter((id) => id !== deleting.id),
                     hidden: state.hidden.filter((id) => id !== deleting.id),
                   });
+                  if (deleting.image)
+                    void deleteImage(deleting.image.id).catch(() => {});
                   if (draft.editingId === deleting.id) onDraft(blankDraft);
                   setDeleting(null);
                   onNotice(
@@ -869,6 +972,27 @@ export function Plaza({
             </div>
           </div>
         </Modal>
+      )}
+      {imagePicker && (
+        <ImagePicker
+          label="Adjuntar a mi publicación"
+          onClose={() => setImagePicker(false)}
+          onChoose={async (image, blob) => {
+            await saveImage(image.id, blob);
+            const old = draft.image;
+            if (old && !state.posts.some((p) => p.image?.id === old.id))
+              await deleteImage(old.id);
+            onDraft({ ...draft, image });
+          }}
+        />
+      )}
+      {report && (
+        <ReportDialog
+          subject={report}
+          local
+          onClose={() => setReport(null)}
+          onSubmit={(reason, note) => saveLocalReport(report, reason, note)}
+        />
       )}
       {invite && (
         <InviteDialog

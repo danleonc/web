@@ -31,6 +31,9 @@ import { SharedRoom } from "./pages/SharedRoom";
 import { accountsEnabled, sharedEnabled } from "./shared/mode";
 import { getSticker } from "./chat/stickers";
 import type { StickerActions } from "./chat/stickers";
+import { clearImages } from "./media/local";
+import { clearHiddenImages } from "./media/ImageView";
+import { localReports, clearLocalReports } from "./safety/local";
 import { Plaza, blankDraft } from "./pages/Plaza";
 import { activities } from "./data";
 import { plazaPeople } from "./plaza/data";
@@ -200,7 +203,14 @@ function App() {
       new Blob(
         [
           JSON.stringify(
-            { prototype: true, exportedAt: new Date().toISOString(), ...state },
+            {
+              prototype: true,
+              exportedAt: new Date().toISOString(),
+              ...state,
+              reports: localReports(),
+              imagesNote:
+                "Este JSON incluye referencias de imágenes, no sus archivos. Descarga cada imagen desde su vista ampliada.",
+            },
             null,
             2,
           ),
@@ -426,7 +436,7 @@ function App() {
             </button>
           </div>
         </header>
-        <div className="demo-strip">
+        <div className="demo-strip" role="region" aria-label="Aviso de maqueta">
           <Sparkles size={14} />
           <span>
             {page === "shared"
@@ -463,6 +473,21 @@ function App() {
               activePost={plazaThread}
               onOpenPost={setPlazaThread}
               onInvite={saveInvitation}
+              onBlock={(name) => {
+                setState((s) => ({
+                  ...s,
+                  blocked: [...new Set([...s.blocked, `plaza:${name}`])],
+                  plaza: {
+                    ...s.plaza,
+                    invitations: s.plaza.invitations.filter(
+                      (i) =>
+                        plazaPeople.find((p) => p.id === i.personId)?.name !==
+                        name,
+                    ),
+                  },
+                }));
+                setToast("Bloqueo guardado en este navegador.");
+              }}
               onNotice={setToast}
             />
           )}
@@ -750,9 +775,10 @@ function App() {
               </li>
             </ul>
             <p className="small-text muted">
-              La descarga incluye los datos locales de prueba. No incluye
-              mensajes de sala ni borradores sin publicar. Borrar estos datos
-              solo reinicia este navegador.
+              La descarga incluye los datos locales y reportes de prueba, junto
+              con referencias de imágenes. Descarga cada archivo desde su vista
+              ampliada. Los mensajes de sala y borradores sin publicar no se
+              exportan. Borrar estos datos solo reinicia este navegador.
             </p>
             <button className="button secondary full" onClick={exportData}>
               <ArrowDownToLine size={17} /> Descargar mis datos de prueba
@@ -779,7 +805,8 @@ function App() {
               Se borrarán el perfil, las reservas, las evaluaciones, los
               stickers favoritos y recientes, publicaciones, respuestas e
               invitaciones de La Plaza y los bloqueos de este prototipo en este
-              navegador. No podrás deshacerlo.
+              navegador, junto con las imágenes y los reportes locales. No
+              podrás deshacerlo.
             </p>
             <div className="modal-actions">
               <button
@@ -791,6 +818,13 @@ function App() {
               <button
                 className="button danger"
                 onClick={() => {
+                  void clearImages().catch(() =>
+                    setToast(
+                      "No se pudo borrar el archivo local de imágenes; revisa el almacenamiento del navegador.",
+                    ),
+                  );
+                  clearHiddenImages();
+                  clearLocalReports();
                   setState(emptyState);
                   setRoom(null);
                   setPendingBooking(null);

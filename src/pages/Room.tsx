@@ -1,3 +1,5 @@
+import { isPlazaPersonBlocked } from "../plaza/data";
+import { ConductGuide } from "../safety/ConductGuide";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
@@ -26,6 +28,18 @@ import {
   DemoControls,
 } from "../room/SessionPanels";
 
+import {
+  createSafety,
+  resolveSafety,
+  startRemoval,
+  voteRemoval,
+  safetyView,
+} from "../safety/rules";
+import { RemovalPanel } from "../safety/RemovalPanel";
+import { ReportDialog } from "../safety/ReportDialog";
+import { saveLocalReport } from "../safety/local";
+import { saveImage, deleteImage } from "../media/local";
+
 export function Room({
   activity,
   profile,
@@ -46,11 +60,28 @@ export function Room({
   onDiscover: () => void;
   onCancelReservation: () => void;
 }) {
+  const [roomSafety, setRoomSafety] = useState(createSafety);
+  const [report, setReport] = useState<string | null>(null);
+  const [ballotError, setBallotError] = useState("");
+  const imageIds = useRef<string[]>([]);
+  useEffect(
+    () => () => {
+      for (const id of imageIds.current) void deleteImage(id).catch(() => {});
+    },
+    [],
+  );
   const { session, dispatch, now } = useSession(
     activity,
     profile.alias,
     blocked,
+    roomSafety.expelled,
   );
+  const excluded = session.participants
+    .filter((p) => roomSafety.expelled.includes(p.id))
+    .map((p) => p.name);
+  useEffect(() => {
+    setRoomSafety((s) => resolveSafety(s, now));
+  }, [now]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [exampleShown, setExampleShown] = useState(false);
   const [stage, setStage] = useState<"room" | "feedback">("room");
@@ -78,8 +109,7 @@ export function Room({
   }, [session.phase]);
   const visiblePeople = session.participants
     .filter(
-      (p) =>
-        !p.own && p.present && !blocked.includes(`${activity.id}:${p.name}`),
+      (p) => !p.own && p.present && !isPlazaPersonBlocked(p.name, blocked),
     )
     .map((p) => p.name);
   useEffect(() => {
@@ -307,11 +337,20 @@ export function Room({
                 </p>
               </div>
               {messages
-                .filter(
-                  (m) => m.own || !blocked.includes(`${activity.id}:${m.name}`),
-                )
+                .filter((m) => m.own || !isPlazaPersonBlocked(m.name, blocked))
                 .map((m, i) => (
-                  <ChatMessageBubble key={i} message={m} />
+                  <ChatMessageBubble
+                    key={i}
+                    message={m}
+                    onReport={
+                      !m.own
+                        ? () =>
+                            setReport(
+                              `Mensaje de ${m.name} en ${activity.title}`,
+                            )
+                        : undefined
+                    }
+                  />
                 ))}
               {!exampleShown && visiblePeople.length > 0 && (
                 <button className="example-button" onClick={showExample}>
@@ -331,6 +370,21 @@ export function Room({
                   now: Date.now(),
                 })
               }
+              onSendImage={async (image, blob) => {
+                if (!canChat(session)) throw Error("La sala está en pausa.");
+                await saveImage(image.id, blob);
+                imageIds.current.push(image.id);
+                setMessages((m) => [
+                  ...m,
+                  { type: "image", image, name: profile.alias, own: true },
+                ]);
+                dispatch({
+                  type: "response",
+                  id: "self",
+                  status: "participated",
+                  now: Date.now(),
+                });
+              }}
               onSendText={(text) => {
                 if (!canChat(session)) return;
                 setMessages((m) => [
@@ -370,6 +424,86 @@ export function Room({
           </section>
           <aside className="room-aside">
             <Participants session={session} now={now} />
+            <ConductGuide />
+            <RemovalPanel
+              safety={safetyView(roomSafety, "self")}
+              people={session.participants}
+              me="self"
+              now={now}
+              canStart={canChat(session)}
+              onStart={(id, reason) => {
+                setBallotError("");
+                setRoomSafety((s) => {
+                  const next = startRemoval(
+                    s,
+                    "self",
+                    id,
+                    reason,
+                    session.participants
+                      .filter((p) => p.present)
+                      .map((p) => p.id),
+                    Date.now(),
+                    crypto.randomUUID(),
+                  );
+                  if (next === s)
+                    setBallotError(
+                      "Espera dos minutos antes de abrir otra solicitud.",
+                    );
+                  return next;
+                });
+              }}
+              onVote={(id, choice) =>
+                setRoomSafety((s) =>
+                  voteRemoval(
+                    s,
+                    "self",
+                    id,
+                    choice,
+                    session.participants
+                      .filter((p) => p.present)
+                      .map((p) => p.id),
+                    Date.now(),
+                  ),
+                )
+              }
+            />
+            {ballotError && <p role="alert">{ballotError}</p>}
+            {roomSafety.ballot && (
+              <details className="demo-controls safety-demo">
+                <summary>Simular votos de personajes ficticios</summary>
+                <p>
+                  Estos botones representan a otras personas solo en esta
+                  maqueta. En el piloto cada cuenta emite su propio voto.
+                </p>
+                {roomSafety.ballot.eligible
+                  .filter(
+                    (id) => id !== "self" && !roomSafety.ballot!.votes[id],
+                  )
+                  .map((id) => (
+                    <button
+                      className="button secondary"
+                      key={id}
+                      onClick={() =>
+                        setRoomSafety((s) =>
+                          voteRemoval(
+                            s,
+                            id,
+                            s.ballot!.id,
+                            "remove",
+                            session.participants
+                              .filter((p) => p.present)
+                              .map((p) => p.id),
+                            Date.now(),
+                          ),
+                        )
+                      }
+                    >
+                      Simular voto de{" "}
+                      {session.participants.find((p) => p.id === id)?.name}
+                    </button>
+                  ))}
+              </details>
+            )}
             <div className="host-control panel">
               <span className="note-icon">
                 <Sparkles size={21} />
@@ -404,8 +538,10 @@ export function Room({
               session={session}
               dispatch={dispatch}
               now={now}
-              unavailable={activity.people.filter((name) =>
-                blocked.includes(`${activity.id}:${name}`),
+              unavailable={activity.people.filter(
+                (name) =>
+                  isPlazaPersonBlocked(name, blocked) ||
+                  excluded.includes(name),
               )}
             />
             <p className="small-text muted room-boundaries">
@@ -417,6 +553,14 @@ export function Room({
             </p>
           </aside>
         </div>
+      )}
+      {report && (
+        <ReportDialog
+          subject={report}
+          local
+          onClose={() => setReport(null)}
+          onSubmit={(reason, note) => saveLocalReport(report, reason, note)}
+        />
       )}
       {safety && (
         <Modal title="Tu seguridad va primero" onClose={() => setSafety(false)}>
@@ -459,7 +603,7 @@ export function Room({
             <div className="safety-actions">
               <button
                 className="button secondary"
-                disabled={blocked.includes(`${activity.id}:${reportName}`)}
+                disabled={isPlazaPersonBlocked(reportName, blocked)}
                 onClick={() => {
                   onBlock(reportName);
                   setReconnect((s) => s.filter((n) => n !== reportName));
@@ -479,6 +623,15 @@ export function Room({
                 }
               >
                 Simular denuncia
+              </button>
+              <button
+                className="button secondary"
+                onClick={() => {
+                  setSafety(false);
+                  setReport(`Conducta de ${reportName} en ${activity.title}`);
+                }}
+              >
+                Guardar reporte local
               </button>
             </div>
             {safetyResult && (

@@ -53,11 +53,15 @@ Cada cuenta cuenta una vez, incluso desde dispositivos distintos. Al arrancar, e
 
 Cada sala conserva sus últimos 50 mensajes y 200 identificadores de reintento. Solo sus miembros pueden consultar el historial; la API no admite un identificador de usuario para consultar datos ajenos. Bloquear se guarda por cuenta, filtra el historial en ambos sentidos y obliga a quien bloquea a salir; otra sesión de la misma cuenta mantiene el bloqueo.
 
-Después de cinco minutos sin conexiones se archiva la sala. Los historiales archivados se eliminan automáticamente a los 30 días. Cuentas, reservas y bloqueos permanecen guardados; todavía no hay eliminación/exportación de cuenta en servidor. El botón de borrar/exportar de la maqueta solo afecta al navegador. Los mensajes no tienen cifrado de extremo a extremo. No hay denuncias operativas, revisión humana, verificación de identidad ni IA analizando conversaciones; no abrir un piloto público como si esos servicios existieran.
+Después de cinco minutos sin conexiones se archiva la sala. Los historiales archivados se eliminan automáticamente a los 30 días. Cuentas, reservas y bloqueos permanecen guardados; todavía no hay eliminación/exportación de cuenta en servidor. El botón de borrar/exportar de la maqueta solo afecta al navegador. Los mensajes no tienen cifrado de extremo a extremo. El piloto incorpora reportes persistentes, consola por rol, sanciones justificadas y apelación; su implementación no proporciona un equipo de revisión. Se debe asignar un responsable antes de invitar participantes. No hay verificación de identidad ni IA analizando conversaciones. Ver [Imágenes y convivencia](IMAGENES_Y_CONVIVENCIA.md).
+
+## Imágenes y moderación
+
+Se incorporan imágenes normalizadas de acceso privado, votaciones de expulsión, reportes con evidencia limitada, suspensiones/baneo revisados y apelación. Configurar un moderador desde la CLI habilita las imágenes compartidas; no hay un administrador predeterminado. Reglas, límites y procedimiento: [IMAGENES_Y_CONVIVENCIA.md](IMAGENES_Y_CONVIVENCIA.md). La Plaza y su registro de reportes siguen siendo locales incluso con cuentas.
 
 ## Copias y restauración
 
-La base usa claves foráneas, migración `user_version=1`, WAL y transacciones. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
+La base usa claves foráneas, migración automática v1 → `user_version=2`, WAL y transacciones. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
 
 ```sh
 node scripts/backup-db.mjs .data/entre.sqlite backups/entre-fecha-unica.sqlite
@@ -99,4 +103,4 @@ npm run test:pilot
 
 La prueba de navegador del piloto usa una base temporal aislada y omite el horario **solo en su fixture de tests**, para comprobar registro, recuperación, reserva y mensajería sin esperar a la fecha programada. No hay endpoint público que cambie el reloj o ignore el horario.
 
-La siguiente etapa es confirmar compatibilidad del hosting, desplegar una instancia privada y comprobar HTTPS/WebSocket, reinicio y copias desde dispositivos reales. Después: gestión de convocatorias, moderación/denuncias y controles de datos de cuenta antes de invitar participantes.
+La siguiente etapa es confirmar compatibilidad del hosting, desplegar una instancia privada y comprobar HTTPS/WebSocket, reinicio y copias desde dispositivos reales. Después: gestión de convocatorias, asignación y validación de moderación, sincronización de Plaza y controles de datos de cuenta antes de invitar participantes.

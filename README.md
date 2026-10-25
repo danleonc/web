@@ -38,8 +38,8 @@ Inicia Vite (4173) y una API local (8787). En la app, abrir **Laboratorio local*
 1. Descubrir tres convocatorias ficticias por temas amplios; filtrar por categoría, buscar sin exigir acentos y filtrar por intereses declarados.
 2. Completar un perfil de prueba en dos pasos. Alias, intereses y límites son opcionales. No se pregunta qué relación buscas. Se exige declaración de mayoría de edad para avanzar; **no es verificación de edad o identidad**.
 3. Reservar un encuentro, revisar la agenda y cancelar una reserva con confirmación.
-4. Entrar a la recepción local, comprobar un quórum de 3–6 asistentes ficticios e iniciar el encuentro. Escribir mensajes, enviar stickers, mostrar explícitamente una respuesta ficticia y activar o retirar un guion de anfitrión. No hay IA.
-5. Probar bloqueo y denuncia simulada. Bloquear oculta mensajes del personaje y lo excluye de posibles reencuentros. La denuncia no se envía ni guarda y no existe equipo de moderación.
+4. Entrar a la recepción local, comprobar un quórum de 3–6 asistentes ficticios e iniciar el encuentro. Escribir mensajes, enviar stickers o una imagen, mostrar explícitamente una respuesta ficticia y activar o retirar un guion de anfitrión. No hay IA.
+5. Adjuntar una imagen en Plaza o en la sala, ocultar/reportar contenido y bloquear personajes. La maqueta guarda reportes locales y permite simular votos de expulsión; no los envía a un equipo humano. En el piloto con cuentas hay cola de revisión, expulsión compartida, suspensiones/baneo y apelación con roles de moderación. Ver [Imágenes y convivencia](docs/IMAGENES_Y_CONVIVENCIA.md).
 6. Evaluar comodidad y expresar interés individual o grupal por reencontrarse con personajes ficticios. No se fabrican aceptaciones recíprocas. Se puede retirar el interés.
 7. Editar perfil, descargar datos de prueba y borrarlos con confirmación desde «Cómo funciona».
 
@@ -55,7 +55,7 @@ Los favoritos y recientes se comparten entre ambas vistas; los mensajes siguen s
 
 ## Datos y privacidad
 
-Perfil, reservas, evaluaciones, bloqueos, solicitudes, publicaciones/respuestas/guardados/invitaciones de Plaza y stickers favoritos/recientes se guardan en `localStorage` bajo `entre.prototype.v1`. Los mensajes de salas y chats individuales de prueba solo viven en memoria y se pierden al abandonarlos o recargar. No ingresar datos sensibles ni utilizar el prototipo con usuarios reales. La descarga JSON contiene los datos persistidos; la función de borrar reinicia únicamente el estado de este prototipo.
+Perfil, reservas, evaluaciones, bloqueos, solicitudes, publicaciones/respuestas/guardados/invitaciones de Plaza y stickers favoritos/recientes se guardan en `localStorage` bajo `entre.prototype.v1`. Los mensajes de salas y chats individuales de prueba solo viven en memoria y se pierden al abandonarlos o recargar. No ingresar datos sensibles ni utilizar el prototipo con usuarios reales. Las imágenes locales viven en IndexedDB y los reportes locales tienen su propio registro. La descarga JSON incluye referencias de imágenes y reportes; los archivos se descargan individualmente desde su vista ampliada. La función de borrar también limpia las imágenes y reportes locales, sin borrar cuentas del piloto.
 
 La maqueta pública no utiliza backend. El laboratorio añade una API local con presencia y mensajería compartidas en memoria, sin cuentas de producción ni persistencia. No hay IA generativa, notificaciones, pagos ni protección de fotografías. Los límites de perfil son controles de la experiencia de prueba. Antes de un piloto se necesitan servicios desplegados, revisión jurídica y controles de seguridad verificables.
 
@@ -82,6 +82,8 @@ El runner ejecuta primero las pruebas del motor y las pruebas de integración de
 - `src/room/`: reglas deterministas de sala, hook de reloj y paneles de recepción, guía y participación.
 - `src/chat/`: catálogo, selector y compositor común de texto/stickers, mensajes y chat individual de demostración.
 - `server/`, `src/shared/` y `src/pages/SharedRoom.tsx`: API volátil de desarrollo, protocolo y laboratorio entre navegadores.
+- `src/media/` y `src/safety/`: imágenes, normas, reportes, votaciones y consola/apelación del piloto.
+- `server/features.ts`, `server/moderation.ts`, `server/images.ts`: permisos, revisión y normalización de archivos.
 - `src/store.ts`: carga, validación básica y guardado del estado local.
 - `src/components.tsx`: diálogos nativos, avatares y estados vacíos.
 - `src/Illustration.tsx`: ilustraciones SVG propias; no se cargan fotos de terceros.

@@ -11,6 +11,20 @@ import { featuredActivities } from "../src/data.ts";
 import { canChat, createSession, sessionReducer } from "../src/room/engine.ts";
 import type { Session } from "../src/room/engine.ts";
 import type { SharedEvent, SharedMessage } from "../src/shared/protocol.ts";
+import {
+  createSafety,
+  resolveSafety,
+  startRemoval,
+  voteRemoval,
+  safetyView,
+  applyExpulsions,
+  removeByModerator,
+  validReason,
+} from "../src/safety/rules.ts";
+import type { RoomSafety } from "../src/safety/rules.ts";
+import { validImageRef } from "../src/media/types.ts";
+import { ModerationStore } from "./moderation.ts";
+import { handleFeatures } from "./features.ts";
 
 type Identity = {
   id: string;
@@ -27,6 +41,7 @@ type Room = {
   seen: Map<string, string>;
   revision: number;
   idleAt: number;
+  safety: RoomSafety;
 };
 type Connection = {
   socket: WebSocket;
@@ -71,6 +86,7 @@ export function createRoomServer(options: Options = {}) {
     ? new Auth(storage, options.secureCookies ?? false, now)
     : null;
   const enforceSchedule = options.enforceSchedule ?? !!storage;
+  const moderation = storage ? new ModerationStore(storage, now) : null;
   const allowed = new Set(
     options.allowedOrigins || [
       "http://localhost:4173",
@@ -192,7 +208,7 @@ export function createRoomServer(options: Options = {}) {
             ? "public, max-age=31536000, immutable"
             : "no-cache",
           "Content-Security-Policy":
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         });
         res.end(req.method === "HEAD" ? undefined : body);
       } catch {
@@ -201,6 +217,29 @@ export function createRoomServer(options: Options = {}) {
       return;
     }
     const identity = authenticated(req);
+    if (
+      await handleFeatures(
+        {
+          storage,
+          moderation,
+          now,
+          rooms,
+          validOrigin,
+          tokenHash,
+          isPresent: (room, id) =>
+            roomConnections(room).some((c) => c.identity.id === id),
+          blocked: (sender, viewer) =>
+            !!identitiesById(sender)?.blocks.has(viewer),
+          advance,
+          onDecision,
+        },
+        req,
+        res,
+        path,
+        identity,
+      )
+    )
+      return;
     if (storage && req.method === "GET" && path === "/api/activities") {
       if (!identity) {
         json(res, 401, { error: "session_required" });
@@ -315,7 +354,13 @@ export function createRoomServer(options: Options = {}) {
         res,
         identity ? 200 : 401,
         identity
-          ? { id: identity.id, alias: identity.alias }
+          ? {
+              id: identity.id,
+              alias: identity.alias,
+              moderator: moderation?.moderator(identity.id) || false,
+              restriction: moderation?.restriction(identity.id) || null,
+              imagesEnabled: moderation?.hasModerators() || false,
+            }
           : { error: "session_required" },
       );
       return;
@@ -451,6 +496,8 @@ export function createRoomServer(options: Options = {}) {
       revision: c.room.revision,
       now: now(),
       session: c.room.session,
+      safety: safetyView(c.room.safety, c.identity.id),
+      hiddenImages: moderation?.hiddenImages(c.room.key) || [],
       messages: c.room.messages.filter(
         (m) =>
           !c.identity.blocks.has(m.senderId) &&
@@ -467,11 +514,38 @@ export function createRoomServer(options: Options = {}) {
     for (const c of roomConnections(room)) snapshot(c);
   }
   function advance(room: Room) {
-    const next = sessionReducer(room.session, { type: "tick", now: now() });
-    if (next !== room.session) {
+    const before = room.safety;
+    room.safety = resolveSafety(room.safety, now());
+    const next = sessionReducer(applyExpulsions(room.session, room.safety), {
+      type: "tick",
+      now: now(),
+    });
+    if (["closed", "insufficient"].includes(next.phase) && room.safety.ballot)
+      room.safety = {
+        ...room.safety,
+        ballot: null,
+        notice:
+          "El encuentro terminó. La votación no produce un baneo de cuenta.",
+      };
+    for (const c of roomConnections(room))
+      if (room.safety.expelled.includes(c.identity.id))
+        c.socket.close(4005, "Retirado de este encuentro");
+    if (next !== room.session || before !== room.safety) {
       room.session = next;
       broadcast(room);
     }
+  }
+  function onDecision(roomId: string, target: string, kind: string) {
+    const room = [...rooms.values()].find((r) => r.key === roomId);
+    if (room) {
+      if (kind === "remove-room")
+        room.safety = removeByModerator(room.safety, target);
+      advance(room);
+      broadcast(room);
+    }
+    for (const c of connections)
+      if (c.identity.id === target && moderation?.restriction(target))
+        c.socket.close(4004, "Cuenta restringida");
   }
   function reject(socket: import("node:stream").Duplex, status: number) {
     socket.end(
@@ -486,6 +560,10 @@ export function createRoomServer(options: Options = {}) {
     const identity = authenticated(req);
     if (!identity) {
       reject(socket, 401);
+      return;
+    }
+    if (moderation?.restriction(identity.id)) {
+      reject(socket, 403);
       return;
     }
     const match = new URL(req.url || "/", "http://localhost").pathname.match(
@@ -542,10 +620,15 @@ export function createRoomServer(options: Options = {}) {
         seen: new Map(),
         revision: 0,
         idleAt: now(),
+        safety: createSafety(),
       };
       rooms.set(activity.id, room);
     }
     advance(room);
+    if (room.safety.expelled.includes(identity.id)) {
+      reject(socket, 403);
+      return;
+    }
     if (["closed", "insufficient"].includes(room.session.phase)) {
       reject(socket, 410);
       return;
@@ -622,6 +705,14 @@ export function createRoomServer(options: Options = {}) {
       });
       ws.on("error", () => {});
       ws.on("message", (raw) => {
+        if (moderation?.restriction(identity.id)) {
+          ws.close(4004, "Cuenta restringida");
+          return;
+        }
+        if (joined.safety.expelled.includes(identity.id)) {
+          ws.close(4005, "Retirado de este encuentro");
+          return;
+        }
         if (
           c.expires <= now() ||
           (storage && c.tokenHash && !storage.session(c.tokenHash, now()))
@@ -662,6 +753,73 @@ export function createRoomServer(options: Options = {}) {
         }
         if (value.type === "leave" && keys(value, ["type"])) {
           ws.close(1000, "Salida voluntaria");
+          return;
+        }
+        if (
+          value.type === "open-removal" &&
+          keys(value, ["type", "targetId", "reason"]) &&
+          typeof value.targetId === "string" &&
+          validReason(value.reason)
+        ) {
+          if (!canChat(joined.session)) {
+            error(
+              c,
+              "room_not_ready",
+              "La sala necesita quórum para abrir una votación.",
+            );
+            return;
+          }
+          const next = startRemoval(
+            joined.safety,
+            identity.id,
+            value.targetId,
+            value.reason,
+            joined.session.participants
+              .filter((p) => p.present)
+              .map((p) => p.id),
+            now(),
+            randomUUID(),
+          );
+          if (next === joined.safety) {
+            error(
+              c,
+              "removal_unavailable",
+              "No se puede abrir otra solicitud ahora. Se requieren al menos tres presentes y dos minutos entre solicitudes.",
+            );
+            return;
+          }
+          joined.safety = next;
+          advance(joined);
+          broadcast(joined);
+          return;
+        }
+        if (
+          value.type === "removal-vote" &&
+          keys(value, ["type", "ballotId", "choice"]) &&
+          typeof value.ballotId === "string" &&
+          (value.choice === "remove" || value.choice === "keep")
+        ) {
+          const next = voteRemoval(
+            joined.safety,
+            identity.id,
+            value.ballotId,
+            value.choice,
+            joined.session.participants
+              .filter((p) => p.present)
+              .map((p) => p.id),
+            now(),
+          );
+          if (next === joined.safety) {
+            error(
+              c,
+              "vote_rejected",
+              "El voto no es válido, ya está registrado o venció el plazo.",
+            );
+            return;
+          }
+          joined.safety = next;
+          advance(joined);
+          broadcast(joined);
           return;
         }
         if (
@@ -709,7 +867,7 @@ export function createRoomServer(options: Options = {}) {
             return;
           }
           const content = value.content;
-          const message: SharedMessage | undefined =
+          let message: SharedMessage | undefined =
             content.type === "text" &&
             keys(content, ["type", "text"]) &&
             typeof content.text === "string" &&
@@ -736,6 +894,32 @@ export function createRoomServer(options: Options = {}) {
                     stickerId: content.stickerId,
                   }
                 : undefined;
+          if (
+            content.type === "image" &&
+            keys(content, ["type", "image"]) &&
+            validImageRef(content.image) &&
+            storage &&
+            moderation
+          ) {
+            const asset = moderation.media(content.image.id);
+            if (
+              asset &&
+              asset.room_id === joined.key &&
+              asset.owner_id === identity.id &&
+              !asset.hidden
+            )
+              message = {
+                id: randomUUID(),
+                clientId: value.clientId,
+                senderId: identity.id,
+                name: identity.alias,
+                type: "image",
+                image: {
+                  id: content.image.id,
+                  description: content.image.description,
+                },
+              };
+          }
           if (!message) {
             error(c, "invalid_message", "Texto o sticker no válido.");
             return;
@@ -872,6 +1056,9 @@ export function createRoomServer(options: Options = {}) {
         (storage && c.tokenHash && !storage.session(c.tokenHash, now()))
       )
         c.socket.close(4001, "Sesion vencida");
+    for (const c of connections)
+      if (moderation?.restriction(c.identity.id))
+        c.socket.close(4004, "Cuenta restringida");
   }
   const timer = setInterval(tick, 500);
   timer.unref();

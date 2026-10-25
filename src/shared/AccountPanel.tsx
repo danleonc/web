@@ -1,3 +1,4 @@
+import { AccountRestriction, ModerationDesk } from "../safety/ModerationDesk";
 import { useState, useId } from "react";
 import type { useAccount } from "./accounts";
 import { featuredActivities } from "../data";
@@ -235,7 +236,18 @@ export function AccountPanel({
               </div>
             </div>
           )}
-          <h3>Encuentros y reservas de tu cuenta</h3>
+          {state.account.restriction && (
+            <AccountRestriction
+              key={state.account.id}
+              restriction={state.account.restriction}
+            />
+          )}
+          {state.account.moderator && !state.account.restriction && (
+            <ModerationDesk key={state.account.id} />
+          )}
+          {!state.account.restriction && (
+            <h3>Encuentros y reservas de tu cuenta</h3>
+          )}
           <p className="small-text muted">
             Horarios en Santiago de Chile. Puedes elegir un encuentro por
             horario; las plazas se comparten entre todas las cuentas.
@@ -302,6 +314,7 @@ export function AccountPanel({
                     <ChatMessageBubble
                       key={m.id}
                       simulated={false}
+                      shared
                       message={{ ...m, own: m.senderId === state.account!.id }}
                     />
                   ))}

@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import { createHash } from "node:crypto";
 import type { Session } from "../src/room/engine.ts";
 import type { SharedMessage } from "../src/shared/protocol.ts";
+import type { RoomSafety } from "../src/safety/rules.ts";
 
 export const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
@@ -22,6 +23,7 @@ export type StoredRoom = {
   seen: Map<string, string>;
   revision: number;
   idleAt: number;
+  safety: RoomSafety;
 };
 export class Storage {
   readonly db: DatabaseSync;
@@ -34,9 +36,10 @@ export class Storage {
       "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;",
     );
     const version = this.db.prepare("PRAGMA user_version").get()!.user_version;
-    if (version !== 0 && version !== 1)
+    if (version !== 0 && version !== 1 && version !== 2)
       throw new Error("Unsupported database version");
-    this.db.exec(`
+    if (version === 0)
+      this.db.exec(`
       BEGIN IMMEDIATE;
       CREATE TABLE IF NOT EXISTS accounts(id TEXT PRIMARY KEY, username TEXT NOT NULL UNIQUE, alias TEXT NOT NULL, password_hash TEXT NOT NULL, recovery_hash TEXT NOT NULL, created_at INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE, expires_at INTEGER NOT NULL);
@@ -53,6 +56,16 @@ export class Storage {
       PRAGMA user_version=1;
       COMMIT;
     `);
+    if (version !== 2)
+      this.db.exec(`BEGIN IMMEDIATE;
+      ALTER TABLE rooms ADD COLUMN safety_json TEXT NOT NULL DEFAULT '{"ballot":null,"expelled":[],"cooldownUntil":0,"notice":""}';
+      CREATE TABLE moderators(user_id TEXT PRIMARY KEY REFERENCES accounts(id));
+      CREATE TABLE reports(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,reporter_id TEXT NOT NULL REFERENCES accounts(id),target_id TEXT NOT NULL REFERENCES accounts(id),reason TEXT NOT NULL,note TEXT NOT NULL,message_id TEXT NOT NULL,evidence_json TEXT NOT NULL,image_id TEXT,created_at INTEGER NOT NULL,status TEXT NOT NULL DEFAULT 'open',resolution TEXT NOT NULL DEFAULT '',UNIQUE(reporter_id,room_id,target_id,reason,message_id));
+      CREATE TABLE moderation_actions(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES accounts(id),moderator_id TEXT NOT NULL REFERENCES accounts(id),report_id TEXT,kind TEXT NOT NULL,reason TEXT NOT NULL,until_at INTEGER,created_at INTEGER NOT NULL);
+      CREATE TABLE restrictions(user_id TEXT PRIMARY KEY REFERENCES accounts(id),kind TEXT NOT NULL,reason TEXT NOT NULL,until_at INTEGER,action_id TEXT NOT NULL);
+      CREATE TABLE appeals(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES accounts(id),action_id TEXT NOT NULL,note TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',review_note TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,UNIQUE(user_id,action_id));
+      CREATE TABLE media(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,owner_id TEXT NOT NULL REFERENCES accounts(id),client_id TEXT NOT NULL,body BLOB NOT NULL,created_at INTEGER NOT NULL,hidden INTEGER NOT NULL DEFAULT 0,UNIQUE(room_id,owner_id,client_id));
+      PRAGMA user_version=2;COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");
@@ -203,7 +216,7 @@ export class Storage {
     this.transaction(() => {
       this.db
         .prepare(
-          "INSERT INTO rooms VALUES(?,?,?,?,?,NULL) ON CONFLICT(id) DO UPDATE SET session_json=excluded.session_json,revision=excluded.revision,idle_at=excluded.idle_at",
+          "INSERT INTO rooms(id,activity_id,session_json,revision,idle_at,archived_at,safety_json) VALUES(?,?,?,?,?,NULL,?) ON CONFLICT(id) DO UPDATE SET session_json=excluded.session_json,revision=excluded.revision,idle_at=excluded.idle_at,safety_json=excluded.safety_json",
         )
         .run(
           room.key,
@@ -211,6 +224,7 @@ export class Storage {
           JSON.stringify(room.session),
           room.revision,
           room.idleAt,
+          JSON.stringify(room.safety),
         );
       // A visitor who leaves reception must not retain access to the later group.
       // After a meeting starts, disconnected members remain in its roster.
@@ -218,7 +232,8 @@ export class Storage {
       const member = this.db.prepare(
         "INSERT OR IGNORE INTO memberships VALUES(?,?)",
       );
-      for (const p of room.session.participants) member.run(room.key, p.id);
+      for (const p of room.session.participants)
+        if (!room.safety.expelled.includes(p.id)) member.run(room.key, p.id);
       // Only the most recent 50 messages and 200 receipts are retained, as advertised.
       this.db.prepare("DELETE FROM messages WHERE room_id=?").run(room.key);
       const message = this.db.prepare("INSERT INTO messages VALUES(?,?,?,?,?)");
@@ -240,6 +255,7 @@ export class Storage {
         session: JSON.parse(r.session_json as string),
         revision: r.revision as number,
         idleAt: r.idle_at as number,
+        safety: JSON.parse(r.safety_json as string),
         messages: this.messages(r.id as string),
         seen: new Map(
           (
