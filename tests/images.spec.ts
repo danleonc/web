@@ -300,20 +300,42 @@ test("se conserva un límite amplio del original y se puede elegir otra foto sin
   await page.locator("input[type=file]").evaluate((input: HTMLInputElement) => {
     const files = new DataTransfer();
     files.items.add(
-      new File([new Uint8Array(40 * 1024 * 1024 + 1)], "foto-excesiva.jpg", {
+      new File([new Uint8Array(20 * 1024 * 1024 + 1)], "foto-excesiva.jpg", {
         type: "image/jpeg",
       }),
     );
     input.files = files.files;
     input.dispatchEvent(new Event("change", { bubbles: true }));
   });
-  await expect(page.getByRole("alert")).toContainText("supera los 40 MB");
+  await expect(page.getByRole("alert")).toContainText("supera los 20 MB");
   await expect(
     page.getByRole("button", {
       name: "Adjuntar a mi publicación",
       exact: true,
     }),
   ).toBeDisabled();
-  await page.locator("input[type=file]").setInputFiles(smallPhoto);
+  // A valid original exactly at the advertised limit is still accepted.
+  const jpeg = await sharp({
+    create: { width: 640, height: 480, channels: 3, background: "#b78468" },
+  })
+    .jpeg()
+    .toBuffer();
+  await page
+    .locator("input[type=file]")
+    .evaluate((input: HTMLInputElement, bytes: number[]) => {
+      const files = new DataTransfer();
+      files.items.add(
+        new File(
+          [
+            new Uint8Array(bytes),
+            new Uint8Array(20 * 1024 * 1024 - bytes.length),
+          ],
+          "foto-en-el-limite.jpg",
+          { type: "image/jpeg" },
+        ),
+      );
+      input.files = files.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    }, Array.from(jpeg));
   await attachAndPublish(page);
 });

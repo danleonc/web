@@ -11,7 +11,8 @@ export const validImageRef = (v: unknown): v is ImageRef =>
 export const maxImageBytes = 350 * 1024;
 
 // Originals and delivered images have different budgets: users choose a photo; we resize it.
-export const maxOriginalImageBytes = 40 * 1024 * 1024;
+export const maxOriginalImageMB = 20;
+export const maxOriginalImageBytes = maxOriginalImageMB * 1024 * 1024;
 export const originalImageLimits = {
   maxPixels: 120_000_000,
   maxDimension: 20_000,

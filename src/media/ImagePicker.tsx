@@ -3,6 +3,7 @@ import { ImagePlus } from "lucide-react";
 import { Modal } from "../components";
 import { prepareImage } from "./local";
 import type { ImageRef } from "./types";
+import { maxOriginalImageMB } from "./types";
 export function ImagePicker({
   onClose,
   onChoose,
@@ -90,8 +91,8 @@ export function ImagePicker({
           />
         </label>
         <p className="small-text muted">
-          Fotos JPG, PNG o WebP de hasta 40 MB. Se eliminan los metadatos de
-          ubicación.
+          Fotos JPG, PNG o WebP de hasta {maxOriginalImageMB} MB. Se eliminan
+          los metadatos de ubicación.
         </p>
         {preparing && (
           <p role="status">Estamos ajustando tu foto automáticamente…</p>
