@@ -27,6 +27,10 @@ Los archivos del piloto se guardan como BLOB en SQLite fuera del directorio púb
 
 En la maqueta los archivos se guardan en IndexedDB `afinia.images.v1`, con hasta 10 MiB. Eliminar una publicación elimina su archivo; los adjuntos de chat se eliminan al abandonar la sala. Quitar o reemplazar un adjunto sin publicar también libera el archivo cuando ya no pertenece a una publicación. Un borrador cerrado puede conservar su adjunto; recargar pierde ese borrador y puede dejar su archivo local hasta el borrado completo. El reset limpia el almacén. Las referencias permanecen en `entre.prototype.v1.plaza`; ocultos en `afinia.hidden-images.v1`; reportes locales en `afinia.reports.v1` (últimos 50). La exportación JSON incluye referencias y reportes, **no los binarios**: cada imagen puede descargarse desde su vista ampliada. Los ajustes locales no borran datos del servidor.
 
+## Encuadre de la vista previa
+
+Las fotos llenan el ancho de la vista previa y de las tarjetas de Plaza. El marco conserva las proporciones habituales: verticales hasta 3:4, cuadradas y horizontales hasta 1,91:1. Las fotos más estrechas o panorámicas se encuadran desde el centro para evitar franjas laterales; el encuadre es visual, sin modificar el archivo guardado. «Ver completa» muestra la foto entera antes de adjuntarla y después de publicarla. Las tarjetas muestran la imagen de borde a borde y los chats mantienen un ancho adaptado a la conversación.
+
 ## Expulsión del encuentro
 
 1. Una cuenta presente solicita retirar a otra, elige una conducta y confirma. La solicitud incluye el voto a favor de quien la abre.

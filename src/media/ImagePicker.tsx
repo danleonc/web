@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Maximize2 } from "lucide-react";
 import { Modal } from "../components";
 import { prepareImage } from "./local";
 import type { ImageRef } from "./types";
 import { maxOriginalImageMB } from "./types";
+import { PhotoFrame } from "./PhotoFrame";
 export function ImagePicker({
   onClose,
   onChoose,
@@ -18,6 +19,7 @@ export function ImagePicker({
     blob: Blob;
   } | null>(null);
   const [url, setUrl] = useState("");
+  const [expanded, setExpanded] = useState(false);
   const [description, setDescription] = useState("");
   const [busy, setBusy] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -34,6 +36,13 @@ export function ImagePicker({
       title="Una imagen también puede abrir una conversación."
       onClose={onClose}
     >
+      {expanded && prepared && (
+        <Modal title="Tu foto completa" wide onClose={() => setExpanded(false)}>
+          <div className="modal-content expanded-image">
+            <img src={url} alt="Tu foto completa, sin recorte" />
+          </div>
+        </Modal>
+      )}
       <form
         className="modal-content image-picker"
         onSubmit={async (e) => {
@@ -99,7 +108,17 @@ export function ImagePicker({
         )}
         {url && prepared && (
           <div className="image-preview">
-            <img src={url} alt="Vista previa de tu imagen" />
+            <button
+              type="button"
+              className="image-thumbnail"
+              aria-label="Ver foto completa antes de compartir"
+              onClick={() => setExpanded(true)}
+            >
+              <PhotoFrame src={url} alt="Vista previa de tu imagen" />
+              <span>
+                <Maximize2 size={13} /> Ver completa
+              </span>
+            </button>
             <span>
               Lista para compartir · {Math.ceil(prepared.blob.size / 1024)} KB
               {originalSize > prepared.blob.size && (

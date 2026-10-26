@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { EyeOff, Flag, Maximize2 } from "lucide-react";
 import { Modal } from "../components";
+import { PhotoFrame } from "./PhotoFrame";
 import { getImage } from "./local";
 import { validImageRef } from "./types";
 import type { ImageRef } from "./types";
@@ -121,14 +122,14 @@ export function ImageView({
           aria-label="Ampliar imagen compartida"
           onClick={() => setExpanded(true)}
         >
-          <img
+          <PhotoFrame
             src={src}
             alt={image.description || "Imagen compartida, sin descripción"}
             loading="lazy"
             onError={() => setUnavailable(true)}
           />
           <span>
-            <Maximize2 size={13} /> Ampliar
+            <Maximize2 size={13} /> Ver completa
           </span>
         </button>
       ) : (
