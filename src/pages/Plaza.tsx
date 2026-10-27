@@ -269,7 +269,7 @@ export function Plaza({
       <section className="plaza-welcome" aria-labelledby="plaza-title">
         <div className="plaza-welcome-copy">
           <p className="eyebrow">
-            <span className="little-spark">✳</span> LA PLAZA · A TU RITMO
+            <span className="little-spark">✳</span> La Plaza · A tu ritmo
           </p>
           <h1 id="plaza-title">
             Las buenas conexiones
@@ -277,9 +277,8 @@ export function Plaza({
             empiezan <em>compartiendo.</em>
           </h1>
           <p>
-            {profile ? `Qué gusto verte, ${profile.alias}. ` : ""}Una pregunta,
-            una historia, algo que te mueve. Aquí siempre puedes dejar un punto
-            de partida y volver después.
+            {profile ? `Qué gusto verte, ${profile.alias}. ` : ""}
+            Comparte una idea o súmate a una conversación.
           </p>
           <div className="hero-actions">
             <button className="button primary" onClick={startSharing}>
@@ -330,7 +329,6 @@ export function Plaza({
         >
           <div className="plaza-section-head">
             <div>
-              <p className="eyebrow">ALGO EN COMÚN, ALGO POR DESCUBRIR</p>
               <h2 id="plaza-conversations-title">¿De qué conversamos?</h2>
             </div>
             <button
@@ -425,16 +423,6 @@ export function Plaza({
                         }
                       />
                     )}
-                    {p.art && !p.image && (
-                      <button
-                        className="post-art-button"
-                        aria-label={`Abrir conversación: ${p.title}`}
-                        onClick={() => openPost(p.id)}
-                        tabIndex={-1}
-                      >
-                        <PlazaArt scene={p.art} />
-                      </button>
-                    )}
                     <div className="plaza-post-content">
                       <span className={`plaza-topic ${t.color}`}>
                         <span />
@@ -454,6 +442,16 @@ export function Plaza({
                         ))}
                       </div>
                     </div>
+                    {p.art && !p.image && (
+                      <button
+                        className="post-art-button"
+                        aria-label={`Abrir conversación: ${p.title}`}
+                        onClick={() => openPost(p.id)}
+                        tabIndex={-1}
+                      >
+                        <PlazaArt scene={p.art} />
+                      </button>
+                    )}
                     <div className="plaza-post-actions">
                       <button onClick={() => openPost(p.id)}>
                         <MessageCircle size={16} />
@@ -531,9 +529,9 @@ export function Plaza({
         </section>
         <aside className="plaza-aside" aria-label="Para seguir conectando">
           <section className="plaza-plan">
-            <p className="eyebrow">DE CONVERSAR A COMPARTIR</p>
+            <p className="eyebrow">De conversar a compartir</p>
             <PlazaArt scene="books" />
-            <span className="small-label">ENCUENTRO DE EJEMPLO</span>
+            <span className="small-label">Encuentro de ejemplo</span>
             <h2>
               Una historia.
               <br />

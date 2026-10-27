@@ -178,12 +178,12 @@ body {
   grid-template-columns: 1.3fr 1fr;
   background: #f0f0e4;
   border: 1px solid #e6e7d7;
-  border-radius: 16px;
+  border-radius: 20px;
   overflow: hidden;
-  min-height: 318px;
+  min-height: 0;
 }
 .plaza-welcome-copy {
-  padding: 32px 0 30px 32px;
+  padding: 28px;
   position: relative;
   z-index: 1;
 }
@@ -191,7 +191,9 @@ body {
   display: flex;
   gap: 9px;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  letter-spacing: 0.3px;
 }
 .little-spark {
   color: #956147;
@@ -209,19 +211,20 @@ body {
   color: #526b49;
 }
 .plaza-welcome-copy > p:not(.eyebrow) {
-  font-size: 12px;
-  line-height: 1.8;
+  font-size: 14px;
+  line-height: 1.7;
   max-width: 440px;
   color: #53614e;
-  margin-bottom: 21px;
+  margin-bottom: 18px;
 }
 .plaza-welcome .hero-actions {
   gap: 10px;
   flex-wrap: wrap;
 }
 .plaza-welcome .hero-actions .button {
-  font-size: 11px;
-  padding: 11px 15px;
+  font-size: 13px;
+  padding: 11px 16px;
+  min-height: 44px;
 }
 .plaza-welcome .button.secondary {
   background: #f9f8ed;
@@ -230,9 +233,10 @@ body {
   display: flex;
   gap: 6px;
   align-items: center;
-  font-size: 9px;
+  font-size: 11px;
   color: #56644d;
-  margin-top: 17px;
+  margin-top: 12px;
+  line-height: 1.6;
 }
 .plaza-welcome-picture {
   display: flex;
@@ -254,7 +258,7 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 9px;
+  font-size: 11px;
   color: #52634d;
 }
 .illustration-caption > span {
@@ -267,8 +271,8 @@ body {
 .ecosystem-paths {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  margin: 20px 0 35px;
-  padding: 16px 0;
+  margin: 12px 0 22px;
+  padding: 10px 0;
   border-bottom: 1px solid #e5e7de;
 }
 .ecosystem-paths > * {
@@ -278,6 +282,7 @@ body {
   align-content: center;
   padding: 0 20px;
   text-align: left;
+  min-height: 44px;
 }
 .ecosystem-paths > *:first-child {
   padding-left: 3px;
@@ -291,7 +296,7 @@ body {
   color: #687b57;
 }
 .ecosystem-paths strong {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 550;
   color: #3d5241;
 }
@@ -300,7 +305,7 @@ body {
   align-items: center;
   gap: 5px;
   margin-top: 4px;
-  font-size: 10px;
+  font-size: 12px;
   color: #65715e;
 }
 .ecosystem-paths button:hover strong {
@@ -322,10 +327,10 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 .plaza-section-head h2 {
-  font-size: 27px;
+  font-size: 28px;
   margin-bottom: 0;
 }
 .plaza-section-head .eyebrow {
@@ -340,8 +345,10 @@ body {
   flex-shrink: 0;
   padding: 9px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 12px;
   color: #5a6c4c;
+  min-height: 44px;
+  min-width: 44px;
 }
 .quiet-save.selected {
   background: #e8eddc;
@@ -362,13 +369,14 @@ body {
   flex-wrap: wrap;
 }
 .plaza-topic-tabs button {
-  font-size: 10px;
+  font-size: 12px;
   color: #5c6655;
   border: 1px solid #e0e4d7;
   border-radius: 20px;
-  padding: 8px 11px;
+  padding: 10px 12px;
   background: #fcfcf8;
-  min-height: 33px;
+  min-height: 44px;
+  min-width: 44px;
 }
 .plaza-topic-tabs button.selected {
   border-color: #355b43;
@@ -382,19 +390,21 @@ body {
   align-items: center;
   gap: 7px;
   border: 1px solid #e1e5d9;
-  padding: 8px 10px;
-  border-radius: 7px;
+  padding: 8px 12px;
+  border-radius: 12px;
   color: #68745d;
   background: #fffefa;
   max-width: 210px;
+  min-height: 46px;
 }
 .plaza-search input {
   width: 100%;
   min-width: 0;
   border: 0;
   background: transparent;
-  font-size: 11px;
+  font-size: 16px;
   outline-offset: 6px;
+  line-height: 1.5;
 }
 .plaza-composer-prompt {
   display: flex;
@@ -403,15 +413,17 @@ body {
   padding: 12px 15px;
   background: #fffefa;
   border: 1px solid #e4e7dc;
-  border-radius: 10px;
+  border-radius: 14px;
   width: 100%;
   margin-bottom: 19px;
   color: #65715e;
   text-align: left;
+  min-height: 64px;
 }
 .plaza-composer-prompt > span:not(.avatar) {
-  font-size: 11px;
+  font-size: 14px;
   flex: 1;
+  line-height: 1.5;
 }
 .plaza-composer-prompt:hover {
   border-color: #a9b79a;
@@ -425,7 +437,7 @@ body {
 .plaza-post {
   background: #fffefa;
   border: 1px solid #e1e5db;
-  border-radius: 12px;
+  border-radius: 18px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -442,21 +454,21 @@ body {
   display: flex;
   align-items: center;
   gap: 9px;
-  padding: 15px;
+  padding: 12px 16px;
 }
 .plaza-post-person .avatar {
-  width: 30px;
-  height: 30px;
-  font-size: 13px;
+  width: 38px;
+  height: 38px;
+  font-size: 15px;
 }
 .plaza-post-person strong {
   display: block;
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 550;
 }
 .plaza-post-person > div > span {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   color: #626b5a;
   margin-top: 3px;
 }
@@ -464,8 +476,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   margin-left: auto;
   color: #75816a;
   border-radius: 50%;
@@ -484,7 +496,7 @@ body {
 .plaza-post-art {
   display: block;
   width: 100%;
-  height: 146px;
+  height: 130px;
   background: #f2e1c9;
 }
 .plaza-post-art.art-art {
@@ -497,7 +509,7 @@ body {
   background: #efe6d5;
 }
 .plaza-post-content {
-  padding: 17px 18px 12px;
+  padding: 4px 18px 18px;
   flex: 1;
 }
 .plaza-topic {
@@ -505,8 +517,8 @@ body {
   align-items: center;
   gap: 5px;
   border-radius: 12px;
-  padding: 4px 8px;
-  font-size: 8px;
+  padding: 5px 9px;
+  font-size: 11px;
   color: #665137;
   background: #f4eadc;
 }
@@ -527,8 +539,8 @@ body {
 .plaza-post h3 {
   overflow-wrap: anywhere;
   font-family: var(--serif);
-  font-size: 23px;
-  line-height: 1.15;
+  font-size: 26px;
+  line-height: 1.2;
   letter-spacing: -0.4px;
   margin: 12px 0 9px;
 }
@@ -536,13 +548,16 @@ body {
   padding: 0;
   text-align: left;
   font: inherit;
+  display: block;
+  width: 100%;
+  min-height: 44px;
 }
 .plaza-post h3 button:hover {
   color: #587849;
 }
 .plaza-post-content > p {
-  font-size: 12px;
-  line-height: 1.85;
+  font-size: 14px;
+  line-height: 1.75;
   color: #5c6658;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -555,7 +570,7 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 5px 9px;
-  font-size: 9px;
+  font-size: 11px;
   color: #5b7152;
 }
 .plaza-post-actions {
@@ -564,15 +579,16 @@ body {
   justify-content: space-between;
   gap: 5px;
   border-top: 1px solid #edf0e5;
-  padding: 10px 13px;
+  padding: 8px 12px;
 }
 .plaza-post-actions > button {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: 12px;
   color: #66715c;
-  padding: 7px 3px;
+  padding: 6px 5px;
+  min-height: 44px;
 }
 .plaza-post-actions > .post-join {
   color: #3c643d;
@@ -586,19 +602,21 @@ body {
   padding: 26px 0 8px;
 }
 .plaza-pagination .button {
-  min-height: 34px;
+  min-height: 44px;
   padding: 7px;
+  min-width: 44px;
 }
 .plaza-pagination > span {
   text-align: center;
-  font-size: 11px;
+  font-size: 12px;
   color: #55634b;
 }
 .plaza-pagination small {
   display: block;
-  font-size: 9px;
+  font-size: 11px;
   color: #69745f;
   margin-top: 5px;
+  line-height: 1.5;
 }
 .plaza-aside {
   padding-top: 2px;
@@ -611,8 +629,8 @@ body {
   overflow: hidden;
 }
 .plaza-plan .eyebrow {
-  font-size: 8px;
-  letter-spacing: 1px;
+  font-size: 11px;
+  letter-spacing: 0.3px;
 }
 .plaza-plan .plaza-post-art {
   width: calc(100% + 38px);
@@ -630,14 +648,15 @@ body {
   color: #587444;
 }
 .plaza-plan > p:not(.eyebrow) {
-  font-size: 10px;
+  font-size: 13px;
   color: #5a694e;
-  line-height: 1.9;
+  line-height: 1.75;
 }
 .plaza-plan .button {
-  font-size: 10px;
+  font-size: 13px;
   padding-left: 10px;
   padding-right: 10px;
+  min-height: 44px;
 }
 .plaza-tip {
   padding: 24px 5px 21px;
@@ -657,17 +676,18 @@ body {
   letter-spacing: -0.3px;
 }
 .plaza-tip p {
-  font-size: 11px;
+  font-size: 13px;
   color: #626c59;
-  line-height: 1.9;
+  line-height: 1.75;
 }
 .plaza-tip button {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 10px;
+  font-size: 13px;
   color: #3f6844;
   padding: 0;
+  min-height: 44px;
 }
 .plaza-principles {
   display: grid;
@@ -678,7 +698,7 @@ body {
   display: flex;
   align-items: center;
   gap: 7px;
-  font-size: 10px;
+  font-size: 12px;
   color: #63705a;
 }
 .plaza-compose-form fieldset {
@@ -872,18 +892,18 @@ body {
   min-width: 0;
 }
 .plaza-reply strong {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 550;
 }
 .plaza-reply strong > span {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 400;
   color: #66725d;
 }
 .plaza-reply p {
-  font-size: 12px;
+  font-size: 14px;
   color: #4f5e47;
-  line-height: 1.8;
+  line-height: 1.75;
   margin: 5px 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -1316,22 +1336,90 @@ body {
   width: 24px;
   height: 25px;
 }
+/* La Plaza: readable stories and comfortable controls at every viewport. */
+.plaza-page .button {
+  min-height: 44px;
+}
+.plaza-page .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.plaza-page .text-input {
+  font-size: 16px;
+  line-height: 1.65;
+}
+.plaza-page .field-label {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.plaza-page .small-text {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.plaza-page .small-label {
+  font-size: 11px;
+}
+.plaza-page .message-report {
+  min-height: 44px;
+  font-size: 12px;
+}
+.plaza-page .image-actions button {
+  min-height: 44px;
+  font-size: 12px;
+}
+.plaza-page .thread-bottom-actions .button {
+  min-height: 44px;
+  font-size: 12px;
+}
+.plaza-page .thread-reply-form .button {
+  font-size: 13px;
+}
+.plaza-page .reply-continuation-actions .button {
+  font-size: 13px;
+}
+.plaza-page .compose-topics label {
+  min-height: 44px;
+  font-size: 12px;
+}
+.plaza-page .plaza-compose-form legend {
+  font-size: 14px;
+}
+.plaza-page .compose-footnote {
+  font-size: 12px;
+}
+.plaza-page .reply-image-draft > div {
+  font-size: 12px;
+}
+.plaza-welcome-copy > p,
+.plaza-welcome h1 {
+  overflow-wrap: anywhere;
+}
+.plaza-search:focus-within {
+  outline: 3px solid #a46743;
+  outline-offset: 3px;
+}
+.plaza-search input:focus-visible {
+  outline: none;
+}
+
 @media (min-width: 1600px) {
   .plaza-welcome-copy {
-    padding: 42px;
+    padding: 28px;
   }
   .plaza-welcome {
-    min-height: 340px;
+    min-height: 0;
+    border-radius: 20px;
   }
   .plaza-layout {
     grid-template-columns: minmax(0, 1fr) 265px;
     gap: 32px;
   }
   .plaza-post-art {
-    height: 175px;
+    height: 130px;
   }
   .plaza-post-content > p {
-    font-size: 12px;
+    font-size: 14px;
+    line-height: 1.75;
   }
 }
 @media (max-height: 850px) and (min-width: 701px) {
@@ -1420,6 +1508,8 @@ body {
 @media (max-width: 900px) and (min-width: 701px) {
   .plaza-welcome {
     grid-template-columns: 1fr;
+    min-height: 0;
+    border-radius: 20px;
   }
   .plaza-welcome-picture {
     position: absolute;
@@ -1430,22 +1520,29 @@ body {
     pointer-events: none;
   }
   .plaza-welcome-copy {
-    padding: 29px;
+    padding: 28px;
   }
   .plaza-welcome-copy > p:not(.eyebrow) {
-    max-width: 85%;
+    max-width: 440px;
+    font-size: 14px;
+    line-height: 1.7;
+    margin-bottom: 18px;
   }
   .illustration-caption {
     display: none;
+    font-size: 11px;
   }
   .ecosystem-paths > * {
     padding: 0 12px;
+    min-height: 44px;
   }
   .ecosystem-paths strong {
-    font-size: 10px;
+    font-size: 12px;
   }
   .ecosystem-paths {
     column-gap: 4px;
+    margin: 12px 0 22px;
+    padding: 10px 0;
   }
   .connections-hero-art {
     display: none;
@@ -1576,10 +1673,13 @@ body {
   .plaza-welcome {
     grid-template-columns: 1fr;
     min-height: 0;
-    border-radius: 13px;
+    border-radius: 20px;
   }
   .plaza-welcome-copy {
-    padding: 25px 23px 20px;
+    padding: 22px;
+  }
+  .plaza-welcome .hero-actions .button.secondary {
+    display: none;
   }
   .plaza-welcome h1 {
     font-size: clamp(30px, 8.4vw, 42px);
@@ -1587,24 +1687,27 @@ body {
     line-height: 1.1;
   }
   .plaza-welcome .eyebrow {
-    font-size: 8px;
-    letter-spacing: 1.2px;
-    margin-bottom: 14px;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+    margin-bottom: 12px;
   }
   .plaza-welcome-copy > p:not(.eyebrow) {
-    font-size: 11px;
-    margin-bottom: 19px;
+    font-size: 14px;
+    margin-bottom: 18px;
+    line-height: 1.7;
+    max-width: 440px;
   }
   .plaza-welcome .hero-actions {
     gap: 8px;
   }
   .plaza-welcome .hero-actions .button {
-    padding: 10px 12px;
-    font-size: 10px;
+    padding: 11px 16px;
+    font-size: 13px;
+    min-height: 44px;
   }
   .plaza-welcome-note {
-    margin-top: 15px;
-    font-size: 9px;
+    margin-top: 12px;
+    font-size: 11px;
     align-items: start;
     line-height: 1.6;
   }
@@ -1612,6 +1715,7 @@ body {
     flex-shrink: 0;
   }
   .plaza-welcome-picture {
+    display: none;
     max-height: 180px;
     margin-top: -9px;
     padding-bottom: 20px;
@@ -1624,11 +1728,11 @@ body {
   .illustration-caption {
     right: auto;
     bottom: 12px;
-    font-size: 8px;
+    font-size: 11px;
   }
   .ecosystem-paths {
-    margin: 10px 0 24px;
-    padding: 13px 0;
+    margin: 12px 0 22px;
+    padding: 10px 0;
     gap: 7px;
   }
   .ecosystem-paths > * {
@@ -1638,17 +1742,19 @@ body {
     padding: 0 6px;
     gap: 6px;
     text-align: center;
+    min-height: 44px;
   }
   .ecosystem-paths > *:first-child {
     padding-left: 0;
   }
   .ecosystem-paths strong {
-    font-size: 9px;
+    display: none;
+    font-size: 12px;
     font-weight: 500;
     line-height: 1.5;
   }
   .ecosystem-paths small {
-    font-size: 8px;
+    font-size: 12px;
     margin: 0;
   }
   .ecosystem-paths > * > svg {
@@ -1660,19 +1766,21 @@ body {
     gap: 23px;
   }
   .plaza-section-head {
-    margin-bottom: 15px;
+    margin-bottom: 16px;
   }
   .plaza-section-head h2 {
-    font-size: 25px;
+    font-size: 28px;
   }
   .plaza-section-head .eyebrow {
     font-size: 7px;
     letter-spacing: 0.8px;
   }
   .quiet-save {
-    font-size: 9px;
-    padding: 7px;
+    font-size: 12px;
+    padding: 9px;
     gap: 5px;
+    min-height: 44px;
+    min-width: 44px;
   }
   .quiet-save > svg {
     width: 14px;
@@ -1684,67 +1792,79 @@ body {
     gap: 5px;
   }
   .plaza-topic-tabs button {
-    font-size: 9px;
-    padding: 8px 11px;
+    font-size: 12px;
+    padding: 10px 12px;
+    min-height: 44px;
+    min-width: 44px;
   }
   .plaza-search {
     max-width: none;
     min-width: 0;
     flex-basis: 100%;
-    padding: 10px;
+    padding: 8px 12px;
+    min-height: 46px;
+    border-radius: 12px;
   }
   .plaza-composer-prompt {
     padding: 12px;
+    border-radius: 14px;
+    min-height: 64px;
   }
   .plaza-composer-prompt > span:not(.avatar) {
-    font-size: 11px;
+    font-size: 14px;
+    line-height: 1.5;
   }
   .plaza-post-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
   .plaza-post-art {
-    height: 160px;
+    height: 130px;
   }
   .plaza-post-content {
-    padding: 18px;
+    padding: 4px 18px 18px;
   }
   .plaza-post h3 {
     font-size: 26px;
+    line-height: 1.2;
   }
   .plaza-post-content > p {
-    font-size: 12px;
-    line-height: 1.9;
+    font-size: 14px;
+    line-height: 1.75;
   }
   .post-tags {
-    font-size: 10px;
+    font-size: 11px;
   }
   .plaza-post-person strong {
-    font-size: 12px;
+    font-size: 14px;
   }
   .plaza-post-person > div > span {
-    font-size: 10px;
+    font-size: 11px;
   }
   .plaza-post-actions > button {
-    font-size: 10px;
-    padding: 8px 4px;
+    font-size: 12px;
+    padding: 6px 5px;
+    min-height: 44px;
   }
   .plaza-post-actions {
     padding-left: 14px;
     padding-right: 14px;
+    padding: 8px 12px;
   }
   .plaza-topic {
-    font-size: 9px;
+    font-size: 11px;
+    padding: 5px 9px;
   }
   .plaza-pagination {
     gap: 11px;
     padding-top: 21px;
   }
   .plaza-pagination > span {
-    font-size: 10px;
+    font-size: 12px;
   }
   .plaza-pagination small {
-    font-size: 8px;
+    font-size: 11px;
+    line-height: 1.5;
   }
   .plaza-plan {
     padding: 21px;
@@ -1777,7 +1897,8 @@ body {
     font-size: 24px;
   }
   .plaza-tip p {
-    font-size: 12px;
+    font-size: 13px;
+    line-height: 1.75;
   }
   .plaza-principles {
     display: none;

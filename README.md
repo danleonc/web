@@ -13,6 +13,8 @@ con un [brief de Afinia](.agents/skills/frontend-design/references/afinia.md).
 origen, su revisión y licencia se describen en
 [UPSTREAM.md](.agents/skills/frontend-design/UPSTREAM.md). La instalación es local
 al proyecto y no requiere conectar 21st.dev ni contratar servicios adicionales.
+La primera aplicación y su comparación visual se documentan en la
+[auditoría de La Plaza](docs/diseno/Auditoria_La_Plaza.md).
 
 ## Ejecutar
 
