@@ -4,8 +4,8 @@ Requisito confirmado por el usuario el 19 de octubre de 2026: las personas tambi
 
 ## Implementado
 
-- **204 stickers / 22 colecciones**, incluidos 60 nuevos stickers de personajes sin rótulos y los 144 clásicos. Colecciones clásicas: Entre nos, Michis, Perritos, Un empujoncito, Vida cotidiana, A celebrar, Así me siento, Con calma, Humor cósmico, Cuidarnos, A mi ritmo y Pequeños planes.
-- Nuevos personajes WebP transparentes de 320 × 320, sin rótulos; los clásicos mantienen SVG y expresiones en español. No son caracteres emoji enviados como texto.
+- **60 stickers / diez colecciones**: Moka, Pipo, Tuerca, Órbita, Lila, Gota, Michi Rosa, Nico, Flama y Babú. Seis expresiones por personaje, sin rótulos. Por solicitud del usuario se retiraron los 144 stickers anteriores.
+- Ilustraciones WebP transparentes de 320 × 320, sin rótulos. No son caracteres emoji enviados como texto.
 - Selector común a La Plaza, salas y chat individual: personajes/colecciones, búsqueda por expresión sin exigir acentos, colecciones favoritas, favoritos manuales y por frecuencia, los 24 más recientes y vista previa con confirmación.
 - Los mensajes identifican el sticker por un ID del catálogo. Nunca se acepta una URL arbitraria como contenido de sticker.
 - Etiquetas accesibles, teclado, Escape y foco de retorno. No hay animaciones ni sonidos automáticos.
@@ -17,11 +17,11 @@ Requisito confirmado por el usuario el 19 de octubre de 2026: las personas tambi
 
 ## Catálogo y ampliación
 
-La fuente editorial es `src/chat/sticker-packs.json`. Cada colección tiene un ID, nombre, palabras de búsqueda, motivo, color y expresiones con posiciones estables (doce en los clásicos y seis en los personajes). Los SVG se generan con `node scripts/generate-stickers.mjs` y quedan en `public/stickers/`. El generador usa únicamente formas y texto definidos para este proyecto; no descarga packs, memes, marcas ni personajes ajenos. Mantener la revisión de derechos y contenido al añadir materiales de terceros en el futuro.
+La fuente editorial es `src/chat/sticker-packs.json`. Cada colección tiene un ID, nombre, palabras de búsqueda, motivo, color, formato WebP y seis expresiones con posiciones estables. Los recursos publicados se versionan en `public/stickers/`. El generador SVG anterior fue retirado junto con sus archivos; el procedimiento de extracción de las ilustraciones se describe al final.
 
 Los IDs actuales son `<colección>-<posición>`. Para conservar favoritos y referencias, **no reordenar ni reutilizar posiciones publicadas**. Nuevas colecciones o expresiones deben añadir IDs estables; si un recurso se retira, el receptor debe admitir un estado de sticker no disponible. El objetivo es variedad útil y calidad, sin inflar el número mediante duplicados indistinguibles.
 
-La versión inicial incluye expresión de límites («Prefiero pasar», «Prefiero no contar», «Sin presión») y de afecto sin obligación romántica. Enviar afecto no supone consentimiento ni prueba atracción. La IA no recibe ni deduce preferencias personales a partir del uso de stickers.
+Las expresiones incluyen saludos, risa, afecto, sorpresa, descanso y agobio. Enviar afecto no supone consentimiento ni prueba atracción. La IA no recibe ni deduce preferencias personales a partir del uso de stickers.
 
 ## Contrato de mensajería compartida y ampliaciones
 
@@ -63,4 +63,8 @@ La IA avanzada, los packs de terceros y la mensajería de producción siguen pen
 
 ### Recursos y regeneración
 
-El campo opcional `format` del catálogo permite WebP sin cambiar el contrato de IDs; su ausencia conserva SVG. `scripts/generate-stickers.mjs` solo regenera los clásicos. `scripts/extract-character-stickers.mjs` extrae las ilustraciones de cinco hojas revisadas de 4 × 3, las normaliza a 320 × 320 con transparencia y conserva el mapeo editorial de poses. Recibe las cinco rutas locales en orden; los originales de generación se conservan fuera del repositorio en el entorno. Las imágenes WebP publicadas son la fuente de distribución y están versionadas.
+El campo `format` del catálogo indica WebP sin cambiar el contrato de IDs. `scripts/extract-character-stickers.mjs` extrae las ilustraciones de cinco hojas revisadas de 4 × 3, las normaliza a 320 × 320 con transparencia y conserva el mapeo editorial de poses. Recibe las cinco rutas locales en orden; los originales de generación se conservan fuera del repositorio en el entorno. Las imágenes WebP publicadas son la fuente de distribución y están versionadas.
+
+## Actualización · Retiro de las colecciones anteriores
+
+Por solicitud expresa del usuario se eliminaron del catálogo las doce colecciones antiguas, sus 144 SVG y el generador que las producía. Quedan únicamente los 60 stickers nuevos en diez colecciones, con los mismos IDs. La validación existente limpia automáticamente referencias retiradas de estrellas, recientes, frecuencia de uso y colecciones favoritas al cargar el navegador; preserva perfiles, reservas y preferencias de los personajes vigentes. El servidor rechaza nuevos envíos con IDs retirados; los mensajes históricos que los referencien muestran «Sticker no disponible». Las cifras y referencias a los clásicos en los apartados históricos anteriores describen entregas previas.

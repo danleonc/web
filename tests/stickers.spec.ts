@@ -49,30 +49,30 @@ test("catalog supports search, categories, preview, favorites and sending withou
   });
   await expect(
     picker.getByRole("button", { name: /^Seleccionar sticker:/ }),
-  ).toHaveCount(204);
-  await picker.getByRole("button", { name: "Michis", exact: true }).click();
+  ).toHaveCount(60);
+  await picker.getByRole("button", { name: "Michi Rosa", exact: true }).click();
   await expect(
     picker.getByRole("button", { name: /^Seleccionar sticker:/ }),
-  ).toHaveCount(12);
+  ).toHaveCount(6);
   await picker.getByLabel("Buscar stickers").fill("abrazo");
   await expect(
     picker.getByRole("button", { name: /^Seleccionar sticker:/ }),
   ).toHaveCount(1);
   await picker
     .getByRole("button", {
-      name: "Agregar a favoritos: Abrazo gatuno",
+      name: "Agregar a favoritos: Michi Rosa: Abrazo con cariño",
       exact: true,
     })
     .click();
   await picker
     .getByRole("button", {
-      name: "Seleccionar sticker: Abrazo gatuno",
+      name: "Seleccionar sticker: Michi Rosa: Abrazo con cariño",
       exact: true,
     })
     .click();
   await expect(
     picker.getByRole("img", {
-      name: "Vista previa: Abrazo gatuno",
+      name: "Vista previa: Michi Rosa: Abrazo con cariño",
       exact: true,
     }),
   ).toBeVisible();
@@ -81,7 +81,10 @@ test("catalog supports search, categories, preview, favorites and sending withou
     .getByRole("button", { name: "Enviar sticker", exact: true })
     .click();
   await expect(
-    page.getByRole("img", { name: "Sticker: Abrazo gatuno", exact: true }),
+    page.getByRole("img", {
+      name: "Sticker: Michi Rosa: Abrazo con cariño",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.getByLabel("Tu mensaje de prueba")).toHaveValue(
     "Este texto sigue aquí",
@@ -96,7 +99,7 @@ test("catalog supports search, categories, preview, favorites and sending withou
   await picker.getByRole("button", { name: "Recientes", exact: true }).click();
   await expect(
     picker.getByRole("button", {
-      name: "Seleccionar sticker: Abrazo gatuno",
+      name: "Seleccionar sticker: Michi Rosa: Abrazo con cariño",
       exact: true,
     }),
   ).toBeVisible();
@@ -113,7 +116,7 @@ test("catalog supports search, categories, preview, favorites and sending withou
       const v = JSON.parse(localStorage.getItem("entre.prototype.v1")!);
       return [v.stickerFavorites, v.stickerRecent];
     }),
-  ).toEqual([["michis-12"], ["michis-12"]]);
+  ).toEqual([["michi-rosa-3"], ["michi-rosa-3"]]);
 });
 
 test("private demo reuses preferences, nested picker closes independently and chat is ephemeral", async ({
@@ -124,7 +127,10 @@ test("private demo reuses preferences, nested picker closes independently and ch
     .getByRole("button", { name: "Abrir stickers", exact: true })
     .click();
   await page
-    .getByRole("button", { name: "Agregar a favoritos: ¡Hola!", exact: true })
+    .getByRole("button", {
+      name: "Agregar a favoritos: Moka: Saludando",
+      exact: true,
+    })
     .click();
   await page.keyboard.press("Escape");
   await page.goto("/#connections");
@@ -146,7 +152,7 @@ test("private demo reuses preferences, nested picker closes independently and ch
   await picker.getByRole("button", { name: "Favoritos", exact: true }).click();
   await expect(
     picker.getByRole("button", {
-      name: "Seleccionar sticker: ¡Hola!",
+      name: "Seleccionar sticker: Moka: Saludando",
       exact: true,
     }),
   ).toBeVisible();
@@ -158,13 +164,16 @@ test("private demo reuses preferences, nested picker closes independently and ch
     .click();
   picker = page.getByRole("dialog", { name: "Elige un sticker", exact: true });
   await picker
-    .getByRole("button", { name: "Seleccionar sticker: ¡Hola!", exact: true })
+    .getByRole("button", {
+      name: "Seleccionar sticker: Moka: Saludando",
+      exact: true,
+    })
     .click();
   await picker
     .getByRole("button", { name: "Enviar sticker", exact: true })
     .click();
   await expect(
-    chat.getByRole("img", { name: "Sticker: ¡Hola!", exact: true }),
+    chat.getByRole("img", { name: "Sticker: Moka: Saludando", exact: true }),
   ).toBeVisible();
   await chat.getByLabel("Tu mensaje de prueba").fill("Mensaje privado local");
   await chat.getByRole("button", { name: "Enviar mensaje de prueba" }).click();
@@ -196,9 +205,9 @@ test("private demo reuses preferences, nested picker closes independently and ch
   let content = "";
   for await (const chunk of stream!) content += chunk.toString();
   const data = JSON.parse(content);
-  expect(data.stickerFavorites).toEqual(["conversar-1"]);
-  expect(data.stickerRecent).toEqual(["conversar-1"]);
-  expect(data.stickerUsage).toEqual({ "conversar-1": 1 });
+  expect(data.stickerFavorites).toEqual(["moka-1"]);
+  expect(data.stickerRecent).toEqual(["moka-1"]);
+  expect(data.stickerUsage).toEqual({ "moka-1": 1 });
   expect(data.stickerFavoritePacks).toEqual([]);
   expect(content).not.toContain("Mensaje privado local");
   await page
@@ -240,7 +249,7 @@ test("empty states, accents and favorite removal work and picker is accessible",
   await picker
     .getByRole("button", { name: "Explorar todos los stickers", exact: true })
     .click();
-  await picker.getByLabel("Buscar stickers").fill("animo");
+  await picker.getByLabel("Buscar stickers").fill("carino");
   await expect(
     picker.getByRole("button", { name: /^Seleccionar sticker:/ }),
   ).not.toHaveCount(0);
@@ -252,11 +261,17 @@ test("empty states, accents and favorite removal work and picker is accessible",
     .getByRole("button", { name: "Explorar todos los stickers", exact: true })
     .click();
   await picker
-    .getByRole("button", { name: "Agregar a favoritos: ¡Hola!", exact: true })
+    .getByRole("button", {
+      name: "Agregar a favoritos: Moka: Saludando",
+      exact: true,
+    })
     .click();
   await picker.getByRole("button", { name: "Favoritos", exact: true }).click();
   await picker
-    .getByRole("button", { name: "Quitar de favoritos: ¡Hola!", exact: true })
+    .getByRole("button", {
+      name: "Quitar de favoritos: Moka: Saludando",
+      exact: true,
+    })
     .click();
   await expect(
     picker.getByRole("heading", { name: "Tus favoritos empiezan aquí" }),
@@ -433,16 +448,17 @@ test("favorites rank by use with explicit pins first and ignore invalid saved ID
       key,
       JSON.stringify({
         ...state,
-        stickerFavorites: ["pipo-2"],
-        stickerRecent: ["moka-1", "orbita-3"],
+        stickerFavorites: ["pipo-2", "conversar-1"],
+        stickerRecent: ["moka-1", "orbita-3", "michis-12"],
         stickerUsage: {
           "moka-1": 2,
           "orbita-3": 6,
           "unknown-9": 99,
+          "conversar-1": 100,
           "pipo-1": -1,
           "babu-1": "bad",
         },
-        stickerFavoritePacks: ["orbita", "unknown"],
+        stickerFavoritePacks: ["orbita", "unknown", "michis"],
       }),
     );
   });
@@ -476,4 +492,8 @@ test("favorites rank by use with explicit pins first and ignore invalid saved ID
   );
   expect(state.stickerUsage).toEqual({ "moka-1": 2, "orbita-3": 6 });
   expect(state.stickerFavoritePacks).toEqual(["orbita"]);
+  expect(state.stickerFavorites).toEqual(["pipo-2"]);
+  expect(state.stickerRecent).toEqual(["moka-1", "orbita-3"]);
+  expect(state.reservations).toEqual(["cafe"]);
+  expect(state.profile.alias).toBe("Luz");
 });

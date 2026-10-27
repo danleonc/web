@@ -18,7 +18,7 @@ async function seed(page: Page) {
         reservations: ["cafe"],
         feedback: [],
         blocked: [],
-        stickerFavorites: ["conversar-1"],
+        stickerFavorites: ["moka-1"],
         stickerRecent: [],
       }),
     ),
@@ -217,7 +217,7 @@ test("publicar, responder, editar y eliminar conserva los datos anteriores y el 
   expect(state.plaza.comments).toEqual([]);
   expect(state.profile.alias).toBe("Luz");
   expect(state.reservations).toEqual(["cafe"]);
-  expect(state.stickerFavorites).toEqual(["conversar-1"]);
+  expect(state.stickerFavorites).toEqual(["moka-1"]);
 });
 test("una conversación lleva a invitaciones y encuentros sin fabricar aceptación", async ({
   page,
@@ -366,7 +366,7 @@ test("los perfiles anteriores conservan sus datos y los bloqueos se respetan ent
   );
   expect(state.profile.alias).toBe("Luz");
   expect(state.reservations).toEqual(["cafe"]);
-  expect(state.stickerFavorites).toEqual(["conversar-1"]);
+  expect(state.stickerFavorites).toEqual(["moka-1"]);
   expect(state.plaza.posts).toEqual([]);
   expect(state.plaza.invitations).toEqual([]);
 });

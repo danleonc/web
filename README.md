@@ -51,7 +51,7 @@ Todo está etiquetado como prototipo. Los cupos y fechas de la maqueta son ilust
 
 ## Stickers
 
-Hay **204 stickers en 22 colecciones**, incluidos 60 nuevos stickers de diez personajes sin frases. El selector ofrece búsqueda, colecciones favoritas, estrellas manuales, favoritos por frecuencia de uso, recientes y confirmación antes de enviar. También se puede responder con stickers en **La Plaza**, conservando el borrador de texto. En las salas, abrir el botón de stickers junto al mensaje. Para probarlos también en una conversación individual: **Conexiones → Probar chat privado** (requiere un perfil de prueba). Este chat no implica que alguien haya aceptado una solicitud ni contacta a otras personas.
+Hay **60 stickers en diez colecciones de personajes sin frases**. El selector ofrece búsqueda, colecciones favoritas, estrellas manuales, favoritos por frecuencia de uso, recientes y confirmación antes de enviar. También se puede responder con stickers en **La Plaza**, conservando el borrador de texto. En las salas, abrir el botón de stickers junto al mensaje. Para probarlos también en una conversación individual: **Conexiones → Probar chat privado** (requiere un perfil de prueba). Este chat no implica que alguien haya aceptado una solicitud ni contacta a otras personas.
 
 Los favoritos y recientes se comparten entre ambas vistas; los mensajes siguen siendo efímeros. Detalles, catálogo, ampliación y requisitos de la mensajería real: [docs/STICKERS.md](docs/STICKERS.md).
 

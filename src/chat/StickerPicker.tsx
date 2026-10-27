@@ -56,7 +56,7 @@ export function StickerPicker({
     <Modal title="Elige un sticker" wide onClose={onClose}>
       <div className="sticker-picker">
         <p className="sticker-intro">
-          Diez personajes, muchas formas de sentir. Los nuevos stickers hablan
+          Diez personajes, muchas formas de sentir. Los stickers hablan
           sin palabras.
         </p>
         <label className="sticker-search">

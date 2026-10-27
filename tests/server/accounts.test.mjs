@@ -431,7 +431,7 @@ test("salas: mensajes y recibos sobreviven al reinicio; no se restauran asistent
   clients[1].send({
     type: "message",
     clientId: randomUUID(),
-    content: { type: "sticker", stickerId: "conversar-1" },
+    content: { type: "sticker", stickerId: "moka-1" },
   });
   await clients[2].wait((c) => c.snapshot.messages.length === 2);
   const roomId = clients[0].snapshot.roomKey;

@@ -13,6 +13,7 @@ import type { LocalState } from "../store";
 import { Avatar, Empty } from "../components";
 import { PrivateChatDemo } from "../chat/PrivateChatDemo";
 import type { StickerActions } from "../chat/stickers";
+import { stickers } from "../chat/stickers";
 import { plazaPeople, isPlazaPersonBlocked } from "../plaza/data";
 import type { PlazaInvitation } from "../plaza/data";
 import { InviteDialog } from "../plaza/InviteDialog";
@@ -344,8 +345,8 @@ export function Connections({
             También puedes decirlo con un sticker.
           </h2>
           <p>
-            Explora texto y 144 stickers en un chat privado de demostración. No
-            habilita contactos ni implica aceptación recíproca.
+            Explora texto y {stickers.length} stickers en un chat privado de
+            demostración. No habilita contactos ni implica aceptación recíproca.
           </p>
         </div>
         <button

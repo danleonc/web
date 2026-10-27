@@ -186,10 +186,10 @@ test("texto y stickers se entregan una vez con identidad del servidor", async (t
   b.send({
     type: "message",
     clientId: randomUUID(),
-    content: { type: "sticker", stickerId: "conversar-1" },
+    content: { type: "sticker", stickerId: "moka-1" },
   });
   await c.wait((x) => x.snapshot.messages.length === 2);
-  assert.equal(c.snapshot.messages[1].stickerId, "conversar-1");
+  assert.equal(c.snapshot.messages[1].stickerId, "moka-1");
   assert.equal(c.snapshot.messages[1].senderId, b.person.id);
 });
 
@@ -197,6 +197,11 @@ test("rechaza suplantación, relojes del cliente y acciones fuera del protocolo"
   const f = await setup(t);
   const [a, b] = await f.trio();
   const invalid = [
+    {
+      type: "message",
+      clientId: randomUUID(),
+      content: { type: "sticker", stickerId: "conversar-1" },
+    },
     { type: "respond", status: "ready", id: b.person.id },
     { type: "start", now: Number.MAX_SAFE_INTEGER },
     { type: "presence", id: b.person.id, present: false },
