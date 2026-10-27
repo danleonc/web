@@ -17,10 +17,10 @@ import {
   Sparkles,
   Users,
   X,
-  Sticker as StickerIcon,
 } from "lucide-react";
-import { StickerPicker } from "../chat/StickerPicker";
 import { getSticker } from "../chat/stickers";
+import { ReplyComposer } from "../plaza/ReplyComposer";
+import type { ReplyContent } from "../plaza/ReplyComposer";
 import type { StickerActions } from "../chat/stickers";
 import { Avatar, Empty, Modal } from "../components";
 import { featuredActivities, dateLabel, timeLabel } from "../data";
@@ -101,8 +101,8 @@ export function Plaza({
   const [deleting, setDeleting] = useState<PlazaPost | null>(null);
   const [composeError, setComposeError] = useState("");
   const [prepare, setPrepare] = useState(false);
-  const [comment, setComment] = useState("");
-  const [stickerPicker, setStickerPicker] = useState(false);
+  const latestState = useRef(state);
+  latestState.current = state;
   const [invite, setInvite] = useState<PlazaPost | null>(null);
   const listRef = useRef<HTMLElement>(null);
   const allPosts = [...state.posts, ...seedPosts].filter(
@@ -143,7 +143,6 @@ export function Plaza({
     else setPrepare(true);
   }
   function openPost(id: string) {
-    setComment("");
     onOpenPost(id);
   }
   function changePage(next: number) {
@@ -193,6 +192,59 @@ export function Plaza({
       editing
         ? "Publicación actualizada en este navegador."
         : "Tu publicación de prueba quedó guardada solo en este navegador.",
+    );
+  }
+  function releaseImages(images: (ImageRef | undefined)[], next: PlazaState) {
+    const kept = new Set(
+      [...next.posts, ...next.comments].flatMap((item) =>
+        item.image ? [item.image.id] : [],
+      ),
+    );
+    for (const id of new Set(
+      images.flatMap((image) => (image ? [image.id] : [])),
+    )) {
+      if (!kept.has(id)) void deleteImage(id).catch(() => {});
+    }
+  }
+  async function appendReply(
+    postId: string,
+    content: ReplyContent,
+    blob?: Blob,
+  ) {
+    if (!profile) throw Error("Prepara tu perfil para responder.");
+    if (content.image && blob) await saveImage(content.image.id, blob);
+    const current = latestState.current;
+    if (
+      !seedPosts.some((p) => p.id === postId) &&
+      !current.posts.some((p) => p.id === postId)
+    ) {
+      releaseImages([content.image], current);
+      throw Error("Esta publicación ya no está disponible.");
+    }
+    const comments = [
+      ...current.comments,
+      {
+        ...content,
+        id: crypto.randomUUID(),
+        postId,
+        author: profile.alias,
+        own: true,
+      },
+    ].slice(-100);
+    const next = { ...current, comments };
+    latestState.current = next;
+    onChange(next);
+    const kept = new Set(comments.map((c) => c.id));
+    releaseImages(
+      current.comments.filter((c) => !kept.has(c.id)).map((c) => c.image),
+      next,
+    );
+    onNotice(
+      content.image
+        ? "Respuesta con imagen guardada solo en este navegador."
+        : content.stickerId
+          ? "Sticker guardado en esta conversación de prueba, solo en tu navegador."
+          : "Respuesta guardada en este navegador. No se ha contactado a nadie.",
     );
   }
   const culture = featuredActivities[0];
@@ -784,18 +836,30 @@ export function Plaza({
                           loading="lazy"
                         />
                       )}
+                      {c.image && (
+                        <ImageView
+                          image={c.image}
+                          onReport={() =>
+                            setReport(
+                              `Imagen en respuesta de ${c.author}: ${c.image!.description || active.title}`,
+                            )
+                          }
+                        />
+                      )}
                       {c.own && (
                         <button
                           type="button"
                           className="message-report"
-                          onClick={() =>
-                            onChange({
+                          onClick={() => {
+                            const next = {
                               ...state,
                               comments: state.comments.filter(
                                 (reply) => reply.id !== c.id,
                               ),
-                            })
-                          }
+                            };
+                            onChange(next);
+                            releaseImages([c.image], next);
+                          }}
                         >
                           Eliminar mi respuesta
                         </button>
@@ -823,61 +887,13 @@ export function Plaza({
               )}
             </div>
             {profile ? (
-              <form
-                className="thread-reply-form"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (!comment.trim()) return;
-                  onChange({
-                    ...state,
-                    comments: [
-                      ...state.comments,
-                      {
-                        id: crypto.randomUUID(),
-                        postId: active.id,
-                        author: profile.alias,
-                        body: comment.trim(),
-                        own: true,
-                      },
-                    ].slice(-100),
-                  });
-                  setComment("");
-                  onNotice(
-                    "Respuesta guardada en este navegador. No se ha contactado a nadie.",
-                  );
-                }}
-              >
-                <label className="field-label" htmlFor="plaza-reply">
-                  Tu respuesta de prueba
-                </label>
-                <textarea
-                  id="plaza-reply"
-                  className="text-input"
-                  rows={3}
-                  maxLength={700}
-                  required
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder="Me quedé pensando en…"
-                />
-                <div className="compose-footnote">
-                  <span>
-                    No hay otras personas conectadas a esta conversación.
-                  </span>
-                  <button
-                    type="button"
-                    className="sticker-trigger"
-                    aria-label="Abrir stickers"
-                    aria-haspopup="dialog"
-                    onClick={() => setStickerPicker(true)}
-                  >
-                    <StickerIcon size={22} />
-                  </button>
-                  <button className="button primary" disabled={!comment.trim()}>
-                    Guardar respuesta <Send size={15} />
-                  </button>
-                </div>
-              </form>
+              <ReplyComposer
+                key={active.id}
+                {...stickerActions}
+                onReply={(content, blob) =>
+                  appendReply(active.id, content, blob)
+                }
+              />
             ) : (
               <button
                 className="button primary"
@@ -990,7 +1006,7 @@ export function Plaza({
               <button
                 className="button danger"
                 onClick={() => {
-                  onChange({
+                  const next = {
                     ...state,
                     posts: state.posts.filter((p) => p.id !== deleting.id),
                     comments: state.comments.filter(
@@ -998,9 +1014,18 @@ export function Plaza({
                     ),
                     saved: state.saved.filter((id) => id !== deleting.id),
                     hidden: state.hidden.filter((id) => id !== deleting.id),
-                  });
-                  if (deleting.image)
-                    void deleteImage(deleting.image.id).catch(() => {});
+                  };
+                  onChange(next);
+                  releaseImages(
+                    [
+                      deleting.image,
+                      ...state.comments
+                        .filter((c) => c.postId === deleting.id)
+                        .map((c) => c.image),
+                      ...(draft.editingId === deleting.id ? [draft.image] : []),
+                    ],
+                    next,
+                  );
                   if (draft.editingId === deleting.id) onDraft(blankDraft);
                   setDeleting(null);
                   onNotice(
@@ -1013,36 +1038,6 @@ export function Plaza({
             </div>
           </div>
         </Modal>
-      )}
-      {stickerPicker && active && profile && (
-        <StickerPicker
-          preferences={stickerActions.stickerPreferences}
-          onToggleFavorite={stickerActions.onToggleFavorite}
-          onToggleFavoritePack={stickerActions.onToggleFavoritePack}
-          onClose={() => setStickerPicker(false)}
-          onSend={(id) => {
-            if (!getSticker(id)) return;
-            onChange({
-              ...state,
-              comments: [
-                ...state.comments,
-                {
-                  id: crypto.randomUUID(),
-                  postId: active.id,
-                  author: profile.alias,
-                  body: "",
-                  own: true,
-                  stickerId: id,
-                },
-              ].slice(-100),
-            });
-            stickerActions.onStickerUsed(id);
-            setStickerPicker(false);
-            onNotice(
-              "Sticker guardado en esta conversación de prueba, solo en tu navegador.",
-            );
-          }}
-        />
       )}
       {imagePicker && (
         <ImagePicker

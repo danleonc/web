@@ -86,14 +86,28 @@ function loadPlaza(value: unknown, blocked: string[]): PlazaState {
               typeof c.body === "string" &&
               c.body.length <= 700 &&
               (short(c.body, 700) ||
+                validImageRef(c.image) ||
                 (typeof c.stickerId === "string" &&
                   !!getSticker(c.stickerId))) &&
               (c.stickerId === undefined ||
                 (typeof c.stickerId === "string" &&
                   !!getSticker(c.stickerId))) &&
+              (c.image === undefined ||
+                (validImageRef(c.image) && c.stickerId === undefined)) &&
               short(c.author, 30),
           )
           .slice(-100)
+          .map((c) => ({
+            id: c.id,
+            postId: c.postId,
+            body: c.body,
+            author: c.author,
+            own: true,
+            stickerId: c.stickerId,
+            image: validImageRef(c.image)
+              ? { id: c.image.id, description: c.image.description }
+              : undefined,
+          }))
       : [],
     saved: strings(v.saved) ? v.saved.slice(0, 50) : [],
     hidden: strings(v.hidden) ? v.hidden.slice(0, 50) : [],

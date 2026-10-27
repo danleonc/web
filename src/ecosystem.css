@@ -818,6 +818,35 @@ body {
 .thread-reply-form {
   padding-top: 10px;
 }
+.reply-compose-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.reply-compose-actions > .primary {
+  margin-left: auto;
+}
+.reply-local-note {
+  margin: 10px 0;
+  line-height: 1.7;
+}
+.reply-image-draft,
+.plaza-reply .shared-image {
+  width: min(340px, 100%);
+  margin: 12px 0;
+}
+.reply-image-draft > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 10px;
+  line-height: 1.6;
+  color: #65715b;
+  gap: 6px;
+  padding: 8px 0;
+}
 .thread-reply-form .compose-footnote > span {
   max-width: 55%;
 }

@@ -39,7 +39,7 @@ Inicia Vite (4173) y una API local (8787). En la app, abrir **Laboratorio local*
 2. Completar un perfil de prueba en dos pasos. Alias, intereses y límites son opcionales. No se pregunta qué relación buscas. Se exige declaración de mayoría de edad para avanzar; **no es verificación de edad o identidad**.
 3. Reservar un encuentro, revisar la agenda y cancelar una reserva con confirmación.
 4. Entrar a la recepción local, comprobar un quórum de 3–6 asistentes ficticios e iniciar el encuentro. Escribir mensajes, enviar stickers o una imagen, mostrar explícitamente una respuesta ficticia y activar o retirar un guion de anfitrión. No hay IA.
-5. Adjuntar una imagen en Plaza o en la sala, ocultar/reportar contenido y bloquear personajes. La maqueta guarda reportes locales y permite simular votos de expulsión; no los envía a un equipo humano. En el piloto con cuentas hay cola de revisión, expulsión compartida, suspensiones/baneo y apelación con roles de moderación. Ver [Imágenes y convivencia](docs/IMAGENES_Y_CONVIVENCIA.md).
+5. Adjuntar una imagen en publicaciones o comentarios de La Plaza (con texto opcional en las respuestas) o en la sala, ocultar/reportar contenido y bloquear personajes. La maqueta guarda reportes locales y permite simular votos de expulsión; no los envía a un equipo humano. En el piloto con cuentas hay cola de revisión, expulsión compartida, suspensiones/baneo y apelación con roles de moderación. Ver [Imágenes y convivencia](docs/IMAGENES_Y_CONVIVENCIA.md).
 6. Evaluar comodidad y expresar interés individual o grupal por reencontrarse con personajes ficticios. No se fabrican aceptaciones recíprocas. Se puede retirar el interés.
 7. Editar perfil, descargar datos de prueba y borrarlos con confirmación desde «Cómo funciona».
 

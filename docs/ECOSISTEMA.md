@@ -34,7 +34,7 @@ Límites: 30 publicaciones propias, últimas 100 respuestas propias y hasta tres
 
 **Los espacios nuevos son una maqueta local, también en el build del piloto con cuentas.** No añaden endpoints de Plaza, sincronización de publicaciones entre personas, chat privado real ni moderación compartida de Plaza. Sus reportes son locales. Los encuentros del backend sí disponen de revisión por rol y apelación, pendientes de asignar un responsable humano. El backend de cuentas, reservas e historial de salas se mantiene separado. No se contrata infraestructura ni se modifica `polysdeals.com`. El build estático utiliza el flujo de GitHub Pages existente.
 
-Las publicaciones admiten una imagen comprimida y una descripción opcional. Ampliar, ocultar, descargar y reportar están al alcance desde la imagen. Hay normas accesibles y bloqueo desde cada conversación; reportar no se confunde con sancionar. Archivos locales, límites y alcance del piloto: [Imágenes y convivencia](IMAGENES_Y_CONVIVENCIA.md).
+Las publicaciones y las respuestas admiten una imagen comprimida y una descripción opcional. Una respuesta puede ser una foto sola, texto o ambos; los stickers se envían por separado conservando el borrador. El adjunto de una respuesta se guarda al publicarla y se elimina junto con la respuesta o la publicación que la contiene. Ampliar, ocultar, descargar y reportar están al alcance desde la imagen. Hay normas accesibles y bloqueo desde cada conversación; reportar no se confunde con sancionar. Archivos locales, límites y alcance del piloto: [Imágenes y convivencia](IMAGENES_Y_CONVIVENCIA.md).
 
 ## Qué viene después
 
