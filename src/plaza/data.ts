@@ -40,6 +40,7 @@ export type PlazaPost = {
 };
 export type PlazaComment = {
   id: string;
+  replyTo?: string;
   postId: string;
   body: string;
   author: string;

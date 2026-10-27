@@ -286,13 +286,7 @@ export function createRoomServer(options: Options = {}) {
         return;
       }
       json(res, 200, {
-        messages: storage
-          .messages(id)
-          .filter(
-            (m) =>
-              !identity.blocks.has(m.senderId) &&
-              !identitiesById(m.senderId)?.blocks.has(identity.id),
-          ),
+        messages: visibleMessages(storage.messages(id), identity),
       });
       return;
     }
@@ -488,6 +482,20 @@ export function createRoomServer(options: Options = {}) {
     [...connections].filter(
       (c) => c.room === room && c.socket.readyState === WebSocket.OPEN,
     );
+  function visibleMessages(messages: SharedMessage[], viewer: Identity) {
+    const ownBlocks = storage ? storage.blocks(viewer.id) : viewer.blocks;
+    const visible = new Map<string, boolean>();
+    return messages.filter((message) => {
+      if (!visible.has(message.senderId)) {
+        const reverseBlocks = storage
+          ? storage.blocks(message.senderId)
+          : identitiesById(message.senderId)?.blocks;
+        visible.set(message.senderId,
+          !ownBlocks.has(message.senderId) && !reverseBlocks?.has(viewer.id));
+      }
+      return visible.get(message.senderId)!;
+    });
+  }
   function snapshot(c: Connection) {
     send(c, {
       type: "snapshot",
@@ -498,11 +506,7 @@ export function createRoomServer(options: Options = {}) {
       session: c.room.session,
       safety: safetyView(c.room.safety, c.identity.id),
       hiddenImages: moderation?.hiddenImages(c.room.key) || [],
-      messages: c.room.messages.filter(
-        (m) =>
-          !c.identity.blocks.has(m.senderId) &&
-          !identitiesById(m.senderId)?.blocks.has(c.identity.id),
-      ),
+      messages: visibleMessages(c.room.messages, c.identity),
     });
   }
   function identitiesById(id: string) {
@@ -867,9 +871,17 @@ export function createRoomServer(options: Options = {}) {
             return;
           }
           const content = value.content;
+          if (content.replyTo !== undefined) {
+            const original = typeof content.replyTo === "string" && content.replyTo.length <= 80
+              ? joined.messages.find((m) => m.id === content.replyTo) : undefined;
+            if (!original || !visibleMessages([original], identity).length) {
+              error(c, "invalid_reply", "El mensaje original ya no está disponible en esta sala. Descarta ese envío pendiente y vuelve a enviarlo sin cita.");
+              return;
+            }
+          }
           let message: SharedMessage | undefined =
             content.type === "text" &&
-            keys(content, ["type", "text"]) &&
+            keys(content, ["type", "text", "replyTo"]) &&
             typeof content.text === "string" &&
             content.text.trim().length > 0 &&
             content.text.length <= 1000
@@ -882,7 +894,7 @@ export function createRoomServer(options: Options = {}) {
                   text: content.text.trim(),
                 }
               : content.type === "sticker" &&
-                  keys(content, ["type", "stickerId"]) &&
+                  keys(content, ["type", "stickerId", "replyTo"]) &&
                   typeof content.stickerId === "string" &&
                   stickerIds.has(content.stickerId)
                 ? {
@@ -896,7 +908,7 @@ export function createRoomServer(options: Options = {}) {
                 : undefined;
           if (
             content.type === "image" &&
-            keys(content, ["type", "image"]) &&
+            keys(content, ["type", "image", "replyTo"]) &&
             validImageRef(content.image) &&
             storage &&
             moderation
@@ -924,6 +936,7 @@ export function createRoomServer(options: Options = {}) {
             error(c, "invalid_message", "Texto o sticker no válido.");
             return;
           }
+          if (typeof content.replyTo === "string") message.replyTo = content.replyTo;
           joined.messages.push(message);
           joined.messages = joined.messages.slice(-50);
           joined.seen.set(idempotency, message.id);

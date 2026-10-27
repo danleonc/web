@@ -5,6 +5,7 @@ import "./styles.css";
 import "./ecosystem.css";
 import "./safety.css";
 import "./spaces.css";
+import "./chat/replies.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>

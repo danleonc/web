@@ -1,5 +1,5 @@
 import { validStickerIds, stickerPacks, getSticker } from "./chat/stickers";
-import { emptyPlaza, plazaTopics } from "./plaza/data";
+import { emptyPlaza, plazaTopics, seedComments } from "./plaza/data";
 import { validImageRef } from "./media/types";
 import type { PlazaState } from "./plaza/data";
 import { normalizeInvitation } from "./plaza/invitations";
@@ -96,6 +96,9 @@ function loadPlaza(value: unknown, blocked: string[]): PlazaState {
           .map((c) => ({
             id: c.id,
             postId: c.postId,
+            replyTo: short(c.replyTo, 80) && c.replyTo !== c.id &&
+              ![...seedComments, ...(v.comments || [])].some((source) => source?.id === c.replyTo && source.postId !== c.postId)
+              ? c.replyTo : undefined,
             body: c.body,
             author: c.author,
             own: true,

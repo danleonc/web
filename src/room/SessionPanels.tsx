@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { Avatar } from "../components";
+import { dateLabel, timeLabel } from "../data";
 import type { Activity } from "../data";
 import { formatTime, majority, presentPeople } from "./engine";
 import type { Participant, Session, SessionEvent } from "./engine";
@@ -47,17 +48,10 @@ export function Lobby({
         <Users size={30} />
       </div>
       <p className="eyebrow">
-        RECEPCIÓN SIMULADA · LA GUÍA NO CUENTA EN EL QUÓRUM
+        Recepción simulada · La guía no cuenta en el quórum
       </p>
       <h2 id="lobby-title">Un grupo pequeño, espacio para cada persona.</h2>
-      <p>
-        Este encuentro necesita entre{" "}
-        <strong>
-          {session.minimum} y {session.maximum} personas
-        </strong>
-        . Tú estás presente; los demás asistentes son personajes que puedes
-        añadir o retirar para probar las reglas.
-      </p>
+      <div className="lobby-schedule"><Clock3 size={16} /><span>{dateLabel(activity.startsAt)} · {timeLabel(activity.startsAt)} h · Santiago<br /><small>Horario de ejemplo. Puedes probar la recepción ahora.</small></span></div>
       <div className="quorum-count">
         <strong>{count}</strong>
         <span>
@@ -72,21 +66,11 @@ export function Lobby({
           </span>
         </span>
       </div>
-      <DemoControls session={session} dispatch={dispatch} now={now} expanded />
-      <div className="lobby-rules">
-        <span>
-          <Check size={15} /> Con el mínimo, puede comenzar sin llenar todos los
-          cupos.
-        </span>
-        <span>
-          <Clock3 size={15} /> Espera máxima: 5 minutos. No hay traslados ni
-          nuevas fechas automáticas.
-        </span>
-        <span>
-          <ShieldCheck size={15} /> Después: 90 segundos por pregunta, una
-          extensión de 30 segundos y conversación libre.
-        </span>
-      </div>
+      <p className={`quorum-status ${count >= session.minimum ? "quorum-ready" : "quorum-waiting"}`} role="status">
+        {count >= session.minimum
+          ? `Ya hay quórum: ${count} personas. Pueden comenzar sin llenar todos los cupos.`
+          : `Faltan ${session.minimum - count} ${session.minimum - count === 1 ? "persona" : "personas"} para comenzar. Tu reserva sigue guardada.`}
+      </p>
       <div className="session-actions">
         <button
           className="button primary"
@@ -105,6 +89,29 @@ export function Lobby({
           Salir y conservar reserva
         </button>
       </div>
+      <p>
+        Este encuentro necesita entre{" "}
+        <strong>
+          {session.minimum} y {session.maximum} personas
+        </strong>
+        . Tú estás presente; los demás asistentes son personajes que puedes
+        añadir o retirar para probar las reglas.
+      </p>
+      <div className="lobby-rules">
+        <span>
+          <Check size={15} /> Con el mínimo, puede comenzar sin llenar todos los
+          cupos.
+        </span>
+        <span>
+          <Clock3 size={15} /> Espera máxima: 5 minutos. No hay traslados ni
+          nuevas fechas automáticas.
+        </span>
+        <span>
+          <ShieldCheck size={15} /> Después: 90 segundos por pregunta, una
+          extensión de 30 segundos y conversación libre.
+        </span>
+      </div>
+      <DemoControls session={session} dispatch={dispatch} now={now} expanded />
       <details className="session-details">
         <summary>Otras opciones de reserva</summary>
         <p>Tu reserva de {activity.title} solo cambia si tú lo decides.</p>
@@ -137,7 +144,7 @@ export function SessionFallback({
       <div className="lobby-symbol">
         <Clock3 size={29} />
       </div>
-      <p className="eyebrow">ESTADO DE LA SIMULACIÓN</p>
+      <p className="eyebrow">Estado de la simulación</p>
       <h2 id="fallback-title">
         {closed
           ? "Cerramos este momento compartido."

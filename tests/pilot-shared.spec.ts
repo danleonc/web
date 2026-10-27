@@ -85,6 +85,10 @@ test("cuentas distintas comparten sala y recuperan el historial al volver a entr
         exact: true,
       }),
     ).toBeVisible();
+    await pages[1].getByRole("group", { name: "Mensaje de grupo_0", exact: true }).getByRole("button", { name: "Responder", exact: true }).click();
+    await pages[1].getByLabel("Tu mensaje de prueba").fill("Respuesta guardada con referencia al original");
+    await pages[1].getByRole("button", { name: "Enviar mensaje de prueba", exact: true }).click();
+    await expect(pages[2].getByRole("group", { name: "Mensaje de grupo_1", exact: true }).locator(".reply-quote")).toContainText("Este mensaje queda guardado para el grupo");
     await pages[2]
       .getByRole("button", { name: "Salir de la sala compartida", exact: true })
       .click();
@@ -108,10 +112,12 @@ test("cuentas distintas comparten sala y recuperan el historial al volver a entr
     await expect(
       pages[2]
         .getByLabel("Historial guardado")
-        .getByText("Este mensaje queda guardado para el grupo", {
-          exact: true,
-        }),
+        .locator("p").filter({ hasText: /^Este mensaje queda guardado para el grupo$/ }),
     ).toBeVisible();
+    const history = pages[2].getByLabel("Historial guardado");
+    await expect(history.getByRole("button", { name: "Ver mensaje original de grupo_0" })).toBeVisible();
+    await history.getByRole("button", { name: "Ver mensaje original de grupo_0" }).click();
+    await expect(history.getByRole("group", { name: "Mensaje de grupo_0", exact: true })).toBeFocused();
   } finally {
     await Promise.all(contexts.map((c) => c.close()));
   }

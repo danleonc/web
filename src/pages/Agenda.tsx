@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, CalendarDays, Users, CheckCheck } from "lucide-react";
+import { ArrowRight, CalendarDays, Users, CheckCheck, Clock3, Check } from "lucide-react";
 import { activities, dateLabel, timeLabel } from "../data";
 import type { Activity } from "../data";
 import type { LocalState } from "../store";
@@ -22,11 +22,11 @@ export function Agenda({
   const [cancelId, setCancelId] = useState<string | null>(null);
   const reserved = activities.filter((a) => state.reservations.includes(a.id));
   return (
-    <div className="page-content">
-      <p className="eyebrow">UN ESPACIO EN TU DÍA</p>
+    <div className="page-content agenda-page">
+      <p className="eyebrow">Mi agenda · Un espacio en tu día</p>
       <h1>Tu agenda, a tu ritmo.</h1>
       <p className="page-description">
-        Un pequeño plan puede ser el comienzo de algo bueno.
+        Revisa tus reservas y entra a la recepción cuando quieras probar el encuentro.
       </p>
       <div className="inline-notice">
         <CalendarDays size={18} /> Fechas y reservas de ejemplo. Puedes entrar a
@@ -40,7 +40,10 @@ export function Agenda({
                 <Illustration scene={a.scene} />
               </div>
               <div className="agenda-content">
-                <span className="tag">{a.category}</span>
+                <div className="agenda-card-status">
+                  <span className="tag">{a.category}</span>
+                  <span className="reservation-saved"><Check size={14} /> Reserva de prueba guardada</span>
+                </div>
                 <h2>{a.title}</h2>
                 <p>
                   <CalendarDays size={16} />
@@ -48,8 +51,10 @@ export function Agenda({
                 </p>
                 <p>
                   <Users size={16} /> Entre {a.minimum} y {a.capacity}{" "}
-                  participantes ficticios · {a.duration} min
+                  participantes ficticios
                 </p>
+                <p><Clock3 size={16} /> {a.duration} minutos · guía opcional</p>
+                <p className="agenda-next-step">Primero entras a la recepción. El encuentro puede comenzar con {a.minimum} personas, sin llenar los {a.capacity} cupos.</p>
                 {state.feedback.some((f) => f.activityId === a.id) && (
                   <span className="completed-label">
                     <CheckCheck size={14} /> Ya completaste esta simulación

@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from "react";
 import { LockKeyhole } from "lucide-react";
 import { Modal } from "../components";
 import { ChatComposer } from "./ChatComposer";
-import { ChatMessageBubble } from "./ChatMessage";
+import { ChatMessageBubble, chatReplyTarget } from "./ChatMessage";
 import type { ChatMessage } from "./ChatMessage";
+import { useReplyTarget } from "./replies";
 import type { StickerActions } from "./stickers";
 export function PrivateChatDemo({
   alias,
@@ -11,6 +12,8 @@ export function PrivateChatDemo({
   ...stickerActions
 }: StickerActions & { alias: string; onClose: () => void }) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const targets = messages.map(chatReplyTarget);
+  const reply = useReplyTarget<HTMLInputElement>(targets, "private-demo");
   const bottom = useRef<HTMLDivElement>(null);
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
@@ -37,23 +40,28 @@ export function PrivateChatDemo({
               </p>
             </div>
           )}
-          {messages.map((message, i) => (
-            <ChatMessageBubble key={i} message={message} />
+          {messages.map((message) => (
+            <ChatMessageBubble key={message.id} message={message}
+              onReply={() => reply.select(message.id)}
+              replyTarget={targets.find((target) => target.id === message.replyTo)} />
           ))}
           <div ref={bottom} />
         </div>
         <ChatComposer
           {...stickerActions}
-          onSendText={(text) =>
+          inputRef={reply.inputRef}
+          replyTarget={reply.target}
+          onCancelReply={reply.clear}
+          onSendText={(text, replyTo) =>
             setMessages((m) => [
               ...m,
-              { type: "text", text, name: alias, own: true },
+              { id: crypto.randomUUID(), type: "text", text, name: alias, own: true, replyTo },
             ])
           }
-          onSendSticker={(stickerId) =>
+          onSendSticker={(stickerId, replyTo) =>
             setMessages((m) => [
               ...m,
-              { type: "sticker", stickerId, name: alias, own: true },
+              { id: crypto.randomUUID(), type: "sticker", stickerId, name: alias, own: true, replyTo },
             ])
           }
         />

@@ -468,3 +468,87 @@
     margin-top: 22px;
   }
 }
+
+/* La reserva y la recepción comparten la jerarquía de Encuentros. */
+.agenda-page .eyebrow,
+.room-page .eyebrow { font-size: 11px; letter-spacing: 0.3px; line-height: 1.6; }
+.agenda-page .page-description,
+.agenda-page .inline-notice,
+.agenda-page .modal-content,
+.room-page .session-lobby > p:not(.eyebrow) {
+  font-size: 14px;
+  line-height: 1.75;
+}
+.agenda-page .button,
+.room-page .session-lobby .button {
+  min-height: 44px;
+  font-size: 13px;
+}
+.agenda-page .icon-button { min-width: 44px; min-height: 44px; }
+.agenda-page .agenda-card { border-radius: 18px; }
+.agenda-page .agenda-art { width: 180px; min-height: 0; }
+.agenda-page .agenda-content { min-width: 0; padding: 24px; }
+.agenda-card-status { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.agenda-page .tag { font-size: 12px; }
+.reservation-saved,
+.agenda-page .completed-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #365b43;
+}
+.agenda-page .agenda-content h2 { overflow-wrap: anywhere; font-size: 28px; }
+.agenda-page .agenda-content p { align-items: start; font-size: 14px; line-height: 1.7; }
+.agenda-page .agenda-content p > svg { flex-shrink: 0; margin-top: 3px; }
+.agenda-page .agenda-content .agenda-next-step {
+  display: block;
+  font-size: 13px;
+  margin-top: 16px;
+  color: #536b47;
+  max-width: 65ch;
+}
+.room-page .session-lobby {
+  max-width: 840px;
+  border-radius: 18px;
+  padding: 28px;
+  text-align: left;
+}
+.room-page .lobby-symbol { width: 48px; height: 48px; margin-bottom: 18px; }
+.lobby-schedule { display: flex; align-items: start; gap: 8px; font-size: 14px; line-height: 1.7; margin-top: 18px; }
+.lobby-schedule > svg { flex-shrink: 0; margin-top: 3px; }
+.lobby-schedule small { font-size: 12px; color: #5d6f53; }
+.room-page .quorum-count { flex-wrap: wrap; margin: 20px 0 12px; }
+.room-page .quorum-count > span { font-size: 13px; }
+.room-page .quorum-count .time-pill { font-size: 13px; }
+.quorum-status { padding: 12px 14px; border-radius: 8px; border-left: 3px solid #77916b; background: #edf1e3; }
+.quorum-status.quorum-waiting { border-color: #a47743; background: #f7eddf; }
+.room-page .lobby-rules > span { font-size: 13px; line-height: 1.75; }
+.room-page .demo-people { margin-top: 24px; }
+.room-page .demo-people > p,
+.room-page .session-details p { font-size: 13px; line-height: 1.75; }
+.room-page .demo-people summary,
+.room-page .session-details summary { min-height: 44px; font-size: 13px; line-height: 1.7; padding: 10px 0; }
+.room-page .demo-person label { min-height: 44px; font-size: 14px; }
+.room-page .demo-person-actions button { min-height: 44px; font-size: 12px; }
+.room-page .back-link { min-height: 44px; font-size: 13px; margin-bottom: 12px; }
+.shared-lab .shared-lobby-status { font-size: 14px; line-height: 1.75; }
+@media (max-width: 900px) {
+  .agenda-page .agenda-art { width: 120px; }
+}
+@media (max-width: 700px) {
+  .agenda-page .agenda-card { flex-direction: column; }
+  .agenda-page .agenda-art { width: 100%; height: 110px; }
+  .agenda-page .agenda-art .activity-art { width: 200px; max-height: 110px; }
+  .agenda-page .agenda-content { padding: 20px; }
+  .agenda-page .agenda-actions .button.primary { width: 100%; }
+  .room-page .session-lobby { padding: 22px; }
+  .room-page .session-lobby h2 { font-size: 28px; }
+  .room-page .session-actions .button { width: 100%; }
+  .room-page .quorum-count { gap: 10px; padding: 14px; }
+  .room-page .quorum-count .time-pill { margin-left: 0; }
+}
+@media (max-width: 700px) {
+  .room-page .lobby-symbol { display: none; }
+}

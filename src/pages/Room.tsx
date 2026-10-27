@@ -15,8 +15,9 @@ import type { Activity } from "../data";
 import type { Profile, Feedback } from "../store";
 import { Avatar, Modal } from "../components";
 import { ChatComposer } from "../chat/ChatComposer";
-import { ChatMessageBubble } from "../chat/ChatMessage";
+import { ChatMessageBubble, chatReplyTarget } from "../chat/ChatMessage";
 import type { ChatMessage } from "../chat/ChatMessage";
+import { useReplyTarget } from "../chat/replies";
 import type { StickerActions } from "../chat/stickers";
 import { useSession } from "../room/useSession";
 import { canChat, formatTime } from "../room/engine";
@@ -112,6 +113,9 @@ export function Room({
       (p) => !p.own && p.present && !isPlazaPersonBlocked(p.name, blocked),
     )
     .map((p) => p.name);
+  const visibleMessages = messages.filter((m) => m.own || !isPlazaPersonBlocked(m.name, blocked));
+  const replyTargets = visibleMessages.map(chatReplyTarget);
+  const reply = useReplyTarget<HTMLInputElement>(replyTargets, activity.id, canChat(session) && stage === "room");
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [messages]);
@@ -127,6 +131,7 @@ export function Room({
     setMessages((m) => [
       ...m,
       {
+        id: crypto.randomUUID(),
         type: "text",
         name,
         text: "Una cosa que me alegró fue hacer tiempo para conversar sin apuro. ¿Y a ti? (Respuesta de ejemplo escrita de antemano)",
@@ -336,12 +341,12 @@ export function Room({
                   Solo tú puedes leerlo; no se envía ni se guarda al salir.
                 </p>
               </div>
-              {messages
-                .filter((m) => m.own || !isPlazaPersonBlocked(m.name, blocked))
-                .map((m, i) => (
+              {visibleMessages.map((m) => (
                   <ChatMessageBubble
-                    key={i}
+                    key={m.id}
                     message={m}
+                    replyTarget={replyTargets.find((target) => target.id === m.replyTo)}
+                    onReply={canChat(session) ? () => reply.select(m.id) : undefined}
                     onReport={
                       !m.own
                         ? () =>
@@ -362,6 +367,9 @@ export function Room({
             <ChatComposer
               {...stickerActions}
               disabled={!canChat(session)}
+              inputRef={reply.inputRef}
+              replyTarget={reply.target}
+              onCancelReply={reply.clear}
               onTypingChange={(active) =>
                 dispatch({
                   type: "typing",
@@ -370,13 +378,13 @@ export function Room({
                   now: Date.now(),
                 })
               }
-              onSendImage={async (image, blob) => {
+              onSendImage={async (image, blob, replyTo) => {
                 if (!canChat(session)) throw Error("La sala está en pausa.");
                 await saveImage(image.id, blob);
                 imageIds.current.push(image.id);
                 setMessages((m) => [
                   ...m,
-                  { type: "image", image, name: profile.alias, own: true },
+                  { id: crypto.randomUUID(), type: "image", image, name: profile.alias, own: true, replyTo },
                 ]);
                 dispatch({
                   type: "response",
@@ -385,11 +393,11 @@ export function Room({
                   now: Date.now(),
                 });
               }}
-              onSendText={(text) => {
-                if (!canChat(session)) return;
+              onSendText={(text, replyTo) => {
+                if (!canChat(session)) return false;
                 setMessages((m) => [
                   ...m,
-                  { type: "text", text, name: profile.alias, own: true },
+                  { id: crypto.randomUUID(), type: "text", text, name: profile.alias, own: true, replyTo },
                 ]);
                 dispatch({
                   type: "response",
@@ -398,11 +406,13 @@ export function Room({
                   now: Date.now(),
                 });
               }}
-              onSendSticker={(stickerId) => {
-                if (!canChat(session)) return;
+              onSendSticker={(stickerId, replyTo) => {
+                if (!canChat(session)) return false;
                 setMessages((m) => [
                   ...m,
                   {
+                    id: crypto.randomUUID(),
+                    replyTo,
                     type: "sticker",
                     stickerId,
                     name: profile.alias,

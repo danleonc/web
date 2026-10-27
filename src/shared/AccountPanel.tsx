@@ -2,7 +2,7 @@ import { AccountRestriction, ModerationDesk } from "../safety/ModerationDesk";
 import { useState, useId } from "react";
 import type { useAccount } from "./accounts";
 import { featuredActivities } from "../data";
-import { ChatMessageBubble } from "../chat/ChatMessage";
+import { ChatMessageBubble, chatReplyTarget } from "../chat/ChatMessage";
 type State = ReturnType<typeof useAccount>;
 const date = (value: string) =>
   new Intl.DateTimeFormat("es-CL", {
@@ -313,6 +313,7 @@ export function AccountPanel({
                   {state.messages.map((m) => (
                     <ChatMessageBubble
                       key={m.id}
+                      replyTarget={state.messages.filter((source) => source.id === m.replyTo).map((source) => chatReplyTarget({ ...source, own: source.senderId === state.account!.id }))[0]}
                       simulated={false}
                       shared
                       message={{ ...m, own: m.senderId === state.account!.id }}

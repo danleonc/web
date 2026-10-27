@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
+import { ReplyDraft, ReplyHelp } from "../chat/replies";
+import type { ReplyTarget } from "../chat/replies";
 import {
   ImagePlus,
   Maximize2,
@@ -15,14 +18,21 @@ import type { StickerActions } from "../chat/stickers";
 
 export type ReplyContent = {
   body: string;
+  replyTo?: string;
   image?: ImageRef;
   stickerId?: string;
 };
 export function ReplyComposer({
   onReply,
+  replyTarget,
+  onCancelReply,
+  inputRef,
   ...stickers
 }: StickerActions & {
   onReply: (reply: ReplyContent, blob?: Blob) => Promise<void>;
+  replyTarget?: ReplyTarget;
+  onCancelReply?: (id?: string) => void;
+  inputRef?: RefObject<HTMLTextAreaElement | null>;
 }) {
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<{
@@ -54,13 +64,15 @@ export function ReplyComposer({
     try {
       await onReply(
         stickerId
-          ? { body: "", stickerId }
+          ? { body: "", stickerId, replyTo: replyTarget?.id }
           : {
               body: text.trim(),
+              replyTo: replyTarget?.id,
               image: attachment?.image,
             },
         stickerId ? undefined : attachment?.blob,
       );
+      if (replyTarget) onCancelReply?.(replyTarget.id);
       if (stickerId) {
         stickers.onStickerUsed(stickerId);
         setStickerPicker(false);
@@ -82,6 +94,7 @@ export function ReplyComposer({
   }
   return (
     <>
+      {replyTarget && <ReplyDraft target={replyTarget} onCancel={() => onCancelReply?.()} disabled={busy} />}
       <form
         className="thread-reply-form"
         onSubmit={(e) => {
@@ -95,6 +108,7 @@ export function ReplyComposer({
           <span>(texto opcional si adjuntas una imagen)</span>
         </label>
         <textarea
+          ref={inputRef}
           id="plaza-reply"
           className="text-input"
           rows={3}
@@ -179,6 +193,7 @@ export function ReplyComposer({
           </button>
         </div>
       </form>
+      <ReplyHelp />
       {imagePicker && (
         <ImagePicker
           label="Adjuntar a mi respuesta"

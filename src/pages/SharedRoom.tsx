@@ -5,7 +5,8 @@ import { featuredActivities } from "../data";
 import type { Profile } from "../store";
 import type { StickerActions } from "../chat/stickers";
 import { ChatComposer } from "../chat/ChatComposer";
-import { ChatMessageBubble } from "../chat/ChatMessage";
+import { useReplyTarget } from "../chat/replies";
+import { ChatMessageBubble, chatReplyTarget } from "../chat/ChatMessage";
 import { useSharedRoom } from "../shared/useSharedRoom";
 import { canChat, formatTime, presentPeople } from "../room/engine";
 import { GuidePanel, responseLabels } from "../room/SessionPanels";
@@ -47,6 +48,9 @@ export function SharedRoom({
   );
   const { session, snapshot, status } = shared;
   const connected = status === "connected" && !!session;
+  const messages = (snapshot?.messages || []).map((m) => ({ ...m, own: m.senderId === snapshot?.me }));
+  const targets = messages.map(chatReplyTarget);
+  const reply = useReplyTarget<HTMLInputElement>(targets, snapshot?.roomKey || "", connected && !!session && canChat(session));
   return (
     <div className="page-content shared-lab">
       <p className="eyebrow">
@@ -251,6 +255,11 @@ export function SharedRoom({
                     recepción. La guía no cuenta y no se añaden personajes
                     ficticios.
                   </p>
+                  <p className="shared-lobby-status" role="status">
+                    {presentPeople(session).length >= session.minimum
+                      ? "El mínimo está reunido; no es necesario llenar todos los cupos."
+                      : `Faltan ${session.minimum - presentPeople(session).length} personas para reunir el mínimo. Tu reserva no se reprograma.`}
+                  </p>
                   <button
                     className="button primary"
                     disabled={presentPeople(session).length < session.minimum}
@@ -290,9 +299,11 @@ export function SharedRoom({
                   inicie el encuentro.
                 </p>
               )}
-              {snapshot.messages.map((message) => (
+              {messages.map((message) => (
                 <ChatMessageBubble
                   key={message.id}
+                  onReply={connected && canChat(session) ? () => reply.select(message.id) : undefined}
+                  replyTarget={targets.find((target) => target.id === message.replyTo)}
                   simulated={false}
                   shared
                   removed={
@@ -309,21 +320,21 @@ export function SharedRoom({
                           })
                       : undefined
                   }
-                  message={{
-                    ...message,
-                    own: message.senderId === snapshot.me,
-                  }}
+                  message={message}
                 />
               ))}
             </div>
             <ChatComposer
               {...stickerActions}
+              inputRef={reply.inputRef}
+              replyTarget={reply.target}
+              onCancelReply={reply.clear}
               disabled={
                 !connected || !canChat(session) || shared.pending.length >= 20
               }
               onSendImage={
                 accountsEnabled && account.account?.imagesEnabled
-                  ? async (image, blob) => {
+                  ? async (image, blob, replyTo) => {
                       const response = await fetch(
                         `/api/rooms/${snapshot.roomKey}/media`,
                         {
@@ -342,6 +353,7 @@ export function SharedRoom({
                         );
                       return shared.sendMessage({
                         type: "image",
+                        replyTo,
                         image: { ...image, id: value.id },
                       });
                     }
@@ -355,9 +367,9 @@ export function SharedRoom({
                   now: 0,
                 })
               }
-              onSendText={(text) => shared.sendMessage({ type: "text", text })}
-              onSendSticker={(stickerId) =>
-                shared.sendMessage({ type: "sticker", stickerId })
+              onSendText={(text, replyTo) => shared.sendMessage({ type: "text", text, replyTo })}
+              onSendSticker={(stickerId, replyTo) =>
+                shared.sendMessage({ type: "sticker", stickerId, replyTo })
               }
             />
             <span className="composer-note">

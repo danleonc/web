@@ -63,6 +63,21 @@ La recepción, los tiempos y las decisiones de la guía se pueden probar: pregun
 
 Todo está etiquetado como prototipo. Los cupos y fechas de la maqueta son ilustrativos, y sus salas pueden abrirse sin esperar al horario de ejemplo. La sincronización entre navegadores se prueba únicamente en el laboratorio local separado.
 
+## Respuestas con contexto
+
+En las salas, el chat privado de prueba y los comentarios de La Plaza, toca
+**Responder** para citar un mensaje. En móvil también puedes deslizarlo hacia
+la derecha. La vista previa permite quitar la cita sin borrar el borrador;
+al enviar, la referencia queda asociada a esa respuesta. Tocar la cita vuelve
+al original y lo enfoca. Puedes responder con texto, stickers y, donde ya se
+admiten, imágenes.
+
+Las citas guardan el ID, sin duplicar el contenido original. Si se elimina,
+se bloquea o sale del historial, aparece «Mensaje original no disponible».
+La Plaza y los chats de la demo siguen siendo locales. El piloto de salas
+compartidas valida el origen en servidor y conserva referencias en el historial.
+Diseño y alcance: [Agenda, recepción y respuestas](docs/diseno/Agenda_recepcion_y_respuestas.md).
+
 ## Stickers
 
 Hay **60 stickers en diez colecciones de personajes sin frases**. El selector ofrece búsqueda, colecciones favoritas, estrellas manuales, favoritos por frecuencia de uso, recientes y confirmación antes de enviar. También se puede responder con stickers en **La Plaza**, conservando el borrador de texto. En las salas, abrir el botón de stickers junto al mensaje. Para probarlos también en una conversación individual: **Conexiones → Probar chat privado** (requiere un perfil de prueba). Este chat no implica que alguien haya aceptado una solicitud ni contacta a otras personas.

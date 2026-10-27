@@ -2,32 +2,55 @@ import { ImageView } from "../media/ImageView";
 import type { ImageRef } from "../media/types";
 import { Avatar } from "../components";
 import { getSticker } from "./stickers";
-type Sender = { name: string; own: boolean };
+import { ReplyQuote, ReplyAction, SwipeReplyHint, useSwipeReply } from "./replies";
+import type { ReplyTarget } from "./replies";
+type Sender = { id: string; name: string; own: boolean; replyTo?: string };
 export type ChatMessage = Sender &
   (
     | { type: "text"; text: string }
     | { type: "sticker"; stickerId: string }
     | { type: "image"; image: ImageRef }
   );
+export function chatReplyTarget(message: ChatMessage): ReplyTarget {
+  return {
+    id: message.id,
+    name: message.name,
+    summary: message.type === "text" ? message.text.slice(0, 160)
+      : message.type === "image" ? "Imagen"
+      : `Sticker: ${getSticker(message.stickerId)?.label || "no disponible"}`,
+  };
+}
 export function ChatMessageBubble({
   message,
   simulated = true,
   shared = false,
   removed = false,
   onReport,
+  onReply,
+  replyTarget,
 }: {
   message: ChatMessage;
   simulated?: boolean;
   shared?: boolean;
   removed?: boolean;
   onReport?: () => void;
+  onReply?: () => void;
+  replyTarget?: ReplyTarget;
 }) {
+  const swipe = useSwipeReply(onReply);
   const sticker =
     message.type === "sticker" ? getSticker(message.stickerId) : undefined;
   return (
     <div
-      className={`message ${message.own ? "own" : ""} ${message.type === "sticker" ? "sticker-message" : ""}`}
+      {...swipe.handlers}
+      style={swipe.style}
+      className={`message replyable-message ${message.own ? "own" : ""} ${message.type === "sticker" ? "sticker-message" : ""}`}
+      data-message-id={message.id}
+      tabIndex={-1}
+      role="group"
+      aria-label={`Mensaje de ${message.own ? "ti" : message.name}`}
     >
+      {onReply && <SwipeReplyHint />}
       <Avatar name={message.name} index={message.own ? 4 : 0} small />
       <div>
         <span>
@@ -37,6 +60,7 @@ export function ChatMessageBubble({
               ? `${message.name} · ficticia`
               : message.name}
         </span>
+        {message.replyTo && <ReplyQuote target={replyTarget} />}
         {message.type === "text" ? (
           <p>{message.text}</p>
         ) : message.type === "image" ? (
@@ -57,6 +81,7 @@ export function ChatMessageBubble({
         ) : (
           <p>Sticker no disponible</p>
         )}
+        {onReply && <ReplyAction onReply={onReply} />}
         {onReport && message.type !== "image" && (
           <button className="message-report" onClick={onReport}>
             Reportar mensaje

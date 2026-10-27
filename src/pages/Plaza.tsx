@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { getSticker } from "../chat/stickers";
+import { ReplyContainer, ReplyQuote, ReplyAction, useReplyTarget } from "../chat/replies";
 import { ReplyComposer } from "../plaza/ReplyComposer";
 import type { ReplyContent } from "../plaza/ReplyComposer";
 import type { StickerActions } from "../chat/stickers";
@@ -144,6 +145,11 @@ export function Plaza({
       (c) =>
         c.postId === id && (c.own || !isPlazaPersonBlocked(c.author, blocked)),
     );
+  const replyTargets = (active ? replies(active.id) : []).map((c) => ({
+    id: c.id, name: c.author,
+    summary: c.body ? c.body.slice(0, 160) : c.image ? "Imagen" : `Sticker: ${getSticker(c.stickerId || "")?.label || "no disponible"}`,
+  }));
+  const quote = useReplyTarget<HTMLTextAreaElement>(replyTargets, active?.id || "", !!profile && !!active);
   const saved = (p: PlazaPost) => state.saved.includes(p.id);
   function save(p: PlazaPost) {
     onChange({
@@ -236,6 +242,11 @@ export function Plaza({
     ) {
       releaseImages([content.image], current);
       throw Error("Esta publicación ya no está disponible.");
+    }
+    if (content.replyTo && ![...seedComments, ...current.comments].some((c) =>
+      c.id === content.replyTo && c.postId === postId && (c.own || !isPlazaPersonBlocked(c.author, blocked)))) {
+      releaseImages([content.image], current);
+      throw Error("El comentario original ya no está disponible. Quita la cita e inténtalo de nuevo.");
     }
     const comments = [
       ...current.comments,
@@ -829,13 +840,13 @@ export function Plaza({
             <div className="plaza-replies">
               {replies(active.id).length ? (
                 replies(active.id).map((c) => (
-                  <div
+                  <ReplyContainer
                     className={`plaza-reply ${focusComment === c.id ? "invitation-origin" : ""}`}
                     key={c.id}
-                    ref={focusComment === c.id ? originRef : undefined}
-                    tabIndex={focusComment === c.id ? -1 : undefined}
-                    role="group"
-                    aria-label={`Respuesta de ${c.own ? "ti" : c.author}`}
+                    originRef={focusComment === c.id ? originRef : undefined}
+                    id={c.id}
+                    label={`Respuesta de ${c.own ? "ti" : c.author}`}
+                    onReply={profile ? () => quote.select(c.id) : undefined}
                   >
                     <Avatar name={c.author} index={c.own ? 4 : 1} small />
                     <div>
@@ -848,6 +859,7 @@ export function Plaza({
                             : "respuesta de ejemplo"}
                         </span>
                       </strong>
+                      {c.replyTo && <ReplyQuote target={replyTargets.find((target) => target.id === c.replyTo)} />}
                       {c.body && <p>{c.body}</p>}
                       {c.stickerId && getSticker(c.stickerId) && (
                         <img
@@ -869,6 +881,7 @@ export function Plaza({
                           }
                         />
                       )}
+                      {profile && <ReplyAction onReply={() => quote.select(c.id)} />}
                       {c.own && (
                         <button
                           type="button"
@@ -934,7 +947,7 @@ export function Plaza({
                         </div>
                       )}
                     </div>
-                  </div>
+                  </ReplyContainer>
                 ))
               ) : (
                 <p className="muted small-text">
@@ -947,6 +960,9 @@ export function Plaza({
               <ReplyComposer
                 key={active.id}
                 {...stickerActions}
+                replyTarget={quote.target}
+                inputRef={quote.inputRef}
+                onCancelReply={quote.clear}
                 onReply={(content, blob) =>
                   appendReply(active.id, content, blob)
                 }

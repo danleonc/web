@@ -93,7 +93,7 @@ test("tres navegadores comparten quórum, texto, stickers, decisiones y desconex
       .click();
     for (const page of [a, b, c, tab])
       await expect(
-        page.getByText("Este mensaje llega al grupo", { exact: true }),
+        page.locator(".message > div > p").filter({ hasText: /^Este mensaje llega al grupo$/ }),
       ).toBeVisible();
     await expect(
       b
@@ -101,6 +101,15 @@ test("tres navegadores comparten quórum, texto, stickers, decisiones y desconex
         .filter({ hasText: "Este mensaje llega al grupo" })
         .getByText("Luz", { exact: true }),
     ).toBeVisible();
+    const original = b.getByRole("group", { name: "Mensaje de Luz", exact: true });
+    await original.getByRole("button", { name: "Responder", exact: true }).click();
+    await b.getByLabel("Tu mensaje de prueba").fill("Una respuesta con contexto para el grupo");
+    await b.getByRole("button", { name: "Enviar mensaje de prueba", exact: true }).click();
+    const response = c.getByRole("group", { name: "Mensaje de Sol", exact: true }).filter({ has: c.locator("p").filter({ hasText: "Una respuesta con contexto para el grupo" }) });
+    await expect(response.locator(".reply-quote")).toContainText("Este mensaje llega al grupo");
+    await response.getByRole("button", { name: "Ver mensaje original de Luz", exact: true }).click();
+    await expect(c.getByRole("group", { name: "Mensaje de Luz", exact: true })).toBeFocused();
+    await original.getByRole("button", { name: "Responder", exact: true }).click();
     await b
       .getByRole("button", { name: "Abrir stickers", exact: true })
       .click();
@@ -120,6 +129,7 @@ test("tres navegadores comparten quórum, texto, stickers, decisiones y desconex
     await expect(
       c.getByRole("img", { name: "Sticker: Moka: Saludando", exact: true }),
     ).toBeVisible();
+    await expect(c.locator(".sticker-message .reply-quote")).toContainText("Este mensaje llega al grupo");
     for (const page of [a, b, c])
       await page
         .getByRole("button", { name: "Listo por ahora", exact: true })
@@ -172,7 +182,7 @@ test("tres navegadores comparten quórum, texto, stickers, decisiones y desconex
       a.getByRole("heading", { name: "Ahora hay espacio para conversar." }),
     ).toBeVisible();
     await expect(
-      c.getByText("Este mensaje llega al grupo", { exact: true }),
+      c.locator(".message > div > p").filter({ hasText: /^Este mensaje llega al grupo$/ }),
     ).toBeVisible();
     const audit = await new AxeBuilder({ page: a })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])

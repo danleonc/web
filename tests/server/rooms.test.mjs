@@ -325,3 +325,28 @@ test("el historial se limita a 50 y una sesión vencida pierde acceso", async (t
   assert.equal((await closed)[0], 4001);
   assert.equal(await f.rejected(a.person), 401);
 });
+
+test("una cita no puede apuntar a un mensaje de otra sala ni de quien bloqueó al remitente", async (t) => {
+  const f = await setup(t);
+  const clients = [];
+  for (const alias of ["Primera", "Segunda", "Tercera", "Cuarta"])
+    clients.push(await f.connect(await f.identity(alias)));
+  const [a,b,,fourth] = clients;
+  a.send({type:"start"});
+  await fourth.wait(x=>x.snapshot.session.phase==="question");
+  a.send({ type:"message", clientId:randomUUID(), content:{type:"text",text:"Original"} });
+  await b.wait(x=>x.snapshot.messages.length===1);
+  const original=b.snapshot.messages[0].id;
+  const other=[];
+  for(const alias of ["Otra A","Otra B","Otra C"]) other.push(await f.connect(await f.identity(alias),"crear"));
+  other[0].send({type:"start"});
+  await other[2].wait(x=>x.snapshot.session.phase==="question");
+  other[0].send({type:"message",clientId:randomUUID(),content:{type:"text",text:"De otra sala"}});
+  await other[2].wait(x=>x.snapshot.messages.length===1);
+  b.send({type:"message",clientId:randomUUID(),content:{type:"text",text:"Referencia ajena",replyTo:other[2].snapshot.messages[0].id}});
+  await b.wait(x=>x.events.some(e=>e.code==="invalid_reply"));
+  a.send({type:"block",participantId:fourth.person.id});
+  await fourth.wait(x=>!x.snapshot.messages.some(m=>m.id===original));
+  fourth.send({type:"message",clientId:randomUUID(),content:{type:"text",text:"No debe citar al bloqueado",replyTo:original}});
+  await fourth.wait(x=>x.events.some(e=>e.code==="invalid_reply"));
+});

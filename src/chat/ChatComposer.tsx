@@ -1,4 +1,6 @@
 import { useId, useState } from "react";
+import { ReplyDraft, ReplyHelp } from "./replies";
+import type { ReplyInputRef, ReplyTarget } from "./replies";
 import { ImagePicker } from "../media/ImagePicker";
 import type { ImageRef } from "../media/types";
 import { ImagePlus, Send, Sticker as StickerIcon } from "lucide-react";
@@ -15,12 +17,18 @@ export function ChatComposer({
   onTypingChange,
   onSendImage,
   disabled = false,
+  replyTarget,
+  onCancelReply,
+  inputRef,
 }: StickerActions & {
-  onSendText: (text: string) => void | boolean;
+  onSendText: (text: string, replyTo?: string) => void | boolean;
   onTypingChange?: (active: boolean) => void;
   disabled?: boolean;
-  onSendImage?: (image: ImageRef, blob: Blob) => Promise<boolean | void>;
-  onSendSticker: (id: string) => void | boolean;
+  onSendImage?: (image: ImageRef, blob: Blob, replyTo?: string) => Promise<boolean | void>;
+  onSendSticker: (id: string, replyTo?: string) => void | boolean;
+  replyTarget?: ReplyTarget;
+  onCancelReply?: (id?: string) => void;
+  inputRef?: ReplyInputRef;
 }) {
   const [draft, setDraft] = useState("");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -28,13 +36,15 @@ export function ChatComposer({
   const [imageOpen, setImageOpen] = useState(false);
   return (
     <>
+      {replyTarget && <ReplyDraft target={replyTarget} onCancel={() => onCancelReply?.()} disabled={disabled} />}
       <form
         className="composer"
         onSubmit={(e) => {
           e.preventDefault();
           if (!disabled && draft.trim()) {
-            if (onSendText(draft.trim()) === false) return;
+            if (onSendText(draft.trim(), replyTarget?.id) === false) return;
             setDraft("");
+            if (replyTarget) onCancelReply?.(replyTarget.id);
             onTypingChange?.(false);
           }
         }}
@@ -65,6 +75,7 @@ export function ChatComposer({
           Tu mensaje de prueba
         </label>
         <input
+          ref={inputRef}
           id={inputId}
           maxLength={1000}
           value={draft}
@@ -86,13 +97,17 @@ export function ChatComposer({
           <Send size={18} />
         </button>
       </form>
+      <ReplyHelp />
       {imageOpen && onSendImage && (
         <ImagePicker
           onClose={() => setImageOpen(false)}
           onChoose={async (image, blob) => {
             if (disabled)
               throw Error("La sala no está disponible para enviar imágenes.");
-            return onSendImage(image, blob);
+            const result = await onSendImage(image, blob, replyTarget?.id);
+            if (result === false) throw Error("No se pudo enviar la imagen. Conserva la respuesta e inténtalo de nuevo.");
+            if (replyTarget) onCancelReply?.(replyTarget.id);
+            return result;
           }}
         />
       )}
@@ -104,7 +119,8 @@ export function ChatComposer({
           onClose={() => setPickerOpen(false)}
           onSend={(id) => {
             if (!disabled && getSticker(id)) {
-              if (onSendSticker(id) === false) return;
+              if (onSendSticker(id, replyTarget?.id) === false) return;
+              if (replyTarget) onCancelReply?.(replyTarget.id);
               onStickerUsed(id);
               onTypingChange?.(false);
               setPickerOpen(false);

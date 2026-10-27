@@ -3,6 +3,7 @@ import type { SafetyView, ConductReason, Choice } from "../safety/rules";
 import type { ImageRef } from "../media/types";
 export type SharedMessage = {
   id: string;
+  replyTo?: string;
   clientId: string;
   senderId: string;
   name: string;
@@ -36,8 +37,8 @@ export type SharedCommand =
   | {
       type: "message";
       clientId: string;
-      content:
+      content: { replyTo?: string } & (
         | { type: "text"; text: string }
         | { type: "sticker"; stickerId: string }
-        | { type: "image"; image: ImageRef };
+        | { type: "image"; image: ImageRef });
     };
