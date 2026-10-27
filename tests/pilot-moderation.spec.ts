@@ -154,7 +154,9 @@ test("piloto: imagen compartida, reporte, revisión, baneo apelable y expulsión
         exact: true,
       }),
     ).toBeVisible();
+    await pages[1].getByRole("button", { name: "Personas y seguridad", exact: true }).click();
     await report(pages[1], `Reportar conducta de ${names[0]}`);
+    await pages[1].keyboard.press("Escape");
     await decision(mod, names[0], "ban");
     await expect(
       page.getByRole("heading", {
@@ -197,6 +199,7 @@ test("piloto: imagen compartida, reporte, revisión, baneo apelable y expulsión
       }),
     ).toHaveCount(0, { timeout: 8000 });
     await connect(page);
+    await pages[1].getByRole("button", { name: "Personas y seguridad", exact: true }).click();
     await pages[1].getByText("Cuidar este encuentro", { exact: true }).click();
     await pages[1]
       .getByLabel("Participante", { exact: true })
@@ -207,6 +210,7 @@ test("piloto: imagen compartida, reporte, revisión, baneo apelable y expulsión
         exact: true,
       })
       .click();
+    await page.getByRole("button", { name: "Hay una votación de convivencia. Revisar", exact: true }).click();
     await expect(
       page.getByRole("button", { name: "A favor de retirar", exact: true }),
     ).toBeVisible();

@@ -1,5 +1,4 @@
 import { isPlazaPersonBlocked } from "../plaza/data";
-import { ConductGuide } from "../safety/ConductGuide";
 import { useState, useRef, useEffect } from "react";
 import {
   ArrowLeft,
@@ -9,7 +8,6 @@ import {
   MessageCircle,
   Plus,
   ShieldCheck,
-  Sparkles,
 } from "lucide-react";
 import type { Activity } from "../data";
 import type { Profile, Feedback } from "../store";
@@ -20,12 +18,13 @@ import type { ChatMessage } from "../chat/ChatMessage";
 import { useReplyTarget } from "../chat/replies";
 import type { StickerActions } from "../chat/stickers";
 import { useSession } from "../room/useSession";
-import { canChat, formatTime } from "../room/engine";
+import { canChat, presentPeople, formatTime } from "../room/engine";
+import { RoomCare, RoomTyping, useMutedParticipants } from "../room/RoomCare";
+import { useConversationScroll } from "../room/useConversationScroll";
 import {
   Lobby,
   SessionFallback,
   GuidePanel,
-  Participants,
   DemoControls,
 } from "../room/SessionPanels";
 
@@ -87,6 +86,11 @@ export function Room({
   const [exampleShown, setExampleShown] = useState(false);
   const [stage, setStage] = useState<"room" | "feedback">("room");
   const [safety, setSafety] = useState(false);
+  const [care, setCare] = useState(false);
+  const { muted, toggleMute } = useMutedParticipants(activity.id);
+  useEffect(() => {
+    if (["closed", "insufficient"].includes(session.phase)) setCare(false);
+  }, [session.phase]);
   const [reportName, setReportName] = useState(activity.people[0]);
   const [reportReason, setReportReason] = useState("Contacto no deseado");
   const [safetyResult, setSafetyResult] = useState("");
@@ -94,7 +98,6 @@ export function Room({
   const [reconnect, setReconnect] = useState<string[]>([]);
   const [note, setNote] = useState("");
   const [repeatGroup, setRepeatGroup] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const previousPhase = useRef(session.phase);
   useEffect(() => {
@@ -113,12 +116,22 @@ export function Room({
       (p) => !p.own && p.present && !isPlazaPersonBlocked(p.name, blocked),
     )
     .map((p) => p.name);
-  const visibleMessages = messages.filter((m) => m.own || !isPlazaPersonBlocked(m.name, blocked));
+  const visibleMessages = messages.filter(
+    (m) =>
+      m.own ||
+      (!isPlazaPersonBlocked(m.name, blocked) &&
+        !session.participants.some(
+          (p) => p.name === m.name && muted.includes(p.id),
+        )),
+  );
+  const lastMessage = visibleMessages.at(-1);
+  const scroll = useConversationScroll(lastMessage?.id, lastMessage?.own);
   const replyTargets = visibleMessages.map(chatReplyTarget);
-  const reply = useReplyTarget<HTMLInputElement>(replyTargets, activity.id, canChat(session) && stage === "room");
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [messages]);
+  const reply = useReplyTarget<HTMLInputElement>(
+    replyTargets,
+    activity.id,
+    canChat(session) && stage === "room",
+  );
   function showExample() {
     const name = visiblePeople[0];
     if (!name || !canChat(session)) return;
@@ -273,15 +286,20 @@ export function Room({
           </p>
         </div>
         {session.sessionUntil > 0 && (
-          <button
-            className="button secondary"
-            onClick={() => {
-              dispatch({ type: "close", now: Date.now() });
-              setStage("feedback");
-            }}
-          >
-            <LogOut size={16} /> Finalizar encuentro
-          </button>
+          <div className="room-end">
+            <span className="room-duration">
+              Tiempo del encuentro: {formatTime(session.sessionUntil - now)}
+            </span>
+            <button
+              className="button secondary"
+              onClick={() => {
+                dispatch({ type: "close", now: Date.now() });
+                setStage("feedback");
+              }}
+            >
+              <LogOut size={16} /> Finalizar encuentro
+            </button>
+          </div>
         )}
       </div>
       {session.phase === "lobby" ? (
@@ -305,23 +323,23 @@ export function Room({
           onFeedback={() => setStage("feedback")}
         />
       ) : (
-        <div className="room-layout">
+        <div className="room-layout room-focused-layout">
           <section
-            className="conversation panel"
+            className="conversation panel room-conversation"
             aria-label="Conversación de prueba"
           >
             <div className="room-top">
               <span>
-                <span className="status-dot" /> Simulación local
+                <span className="status-dot" /> Simulación local ·{" "}
+                {presentPeople(session).length} presentes de ejemplo
               </span>
               <button
                 className="button text"
                 onClick={() => {
-                  setSafety(true);
-                  setSafetyResult("");
+                  setCare(true);
                 }}
               >
-                <ShieldCheck size={16} /> Seguridad
+                <ShieldCheck size={16} /> Personas y seguridad
               </button>
             </div>
             <GuidePanel
@@ -329,24 +347,38 @@ export function Room({
               dispatch={dispatch}
               now={now}
               activity={activity}
+              allowGuideToggle
             />
-            <div className="messages">
-              <div className="welcome-message">
-                <span className="welcome-icon">
-                  <MessageCircle size={26} />
-                </span>
-                <h2>Un espacio para conversar.</h2>
-                <p>
-                  Escribe un mensaje o envía un sticker para probar el chat.
-                  Solo tú puedes leerlo; no se envía ni se guarda al salir.
-                </p>
-              </div>
-              {visibleMessages.map((m) => (
+            <div className="room-history">
+              <div
+                className="messages"
+                ref={scroll.ref}
+                onScroll={scroll.onScroll}
+                tabIndex={0}
+                aria-label="Historial de la conversación"
+              >
+                {!visibleMessages.length && (
+                  <div className="welcome-message">
+                    <span className="welcome-icon">
+                      <MessageCircle size={26} />
+                    </span>
+                    <h2>Un espacio para conversar.</h2>
+                    <p>
+                      Escribe un mensaje o envía un sticker para probar el chat.
+                      Solo tú puedes leerlo; no se envía ni se guarda al salir.
+                    </p>
+                  </div>
+                )}
+                {visibleMessages.map((m) => (
                   <ChatMessageBubble
                     key={m.id}
                     message={m}
-                    replyTarget={replyTargets.find((target) => target.id === m.replyTo)}
-                    onReply={canChat(session) ? () => reply.select(m.id) : undefined}
+                    replyTarget={replyTargets.find(
+                      (target) => target.id === m.replyTo,
+                    )}
+                    onReply={
+                      canChat(session) ? () => reply.select(m.id) : undefined
+                    }
                     onReport={
                       !m.own
                         ? () =>
@@ -357,13 +389,35 @@ export function Room({
                     }
                   />
                 ))}
-              {!exampleShown && visiblePeople.length > 0 && (
-                <button className="example-button" onClick={showExample}>
-                  <Plus size={14} /> Mostrar una respuesta ficticia de ejemplo
+                {!exampleShown && visiblePeople.length > 0 && (
+                  <button className="example-button" onClick={showExample}>
+                    <Plus size={14} /> Mostrar una respuesta ficticia de ejemplo
+                  </button>
+                )}
+              </div>
+              {scroll.unread && (
+                <button className="new-messages" onClick={scroll.goToLatest}>
+                  Ver mensajes nuevos
                 </button>
               )}
-              <div ref={bottomRef} />
             </div>
+            {roomSafety.ballot && (
+              <button
+                className="room-ballot-notice"
+                onClick={() => setCare(true)}
+              >
+                Hay una votación de convivencia. Revisar
+              </button>
+            )}
+            {muted.length > 0 && (
+              <button
+                className="muted-messages-note"
+                onClick={() => setCare(true)}
+              >
+                Tienes mensajes silenciados. Revisar participantes
+              </button>
+            )}
+            <RoomTyping session={session} now={now} />
             <ChatComposer
               {...stickerActions}
               disabled={!canChat(session)}
@@ -384,7 +438,14 @@ export function Room({
                 imageIds.current.push(image.id);
                 setMessages((m) => [
                   ...m,
-                  { id: crypto.randomUUID(), type: "image", image, name: profile.alias, own: true, replyTo },
+                  {
+                    id: crypto.randomUUID(),
+                    type: "image",
+                    image,
+                    name: profile.alias,
+                    own: true,
+                    replyTo,
+                  },
                 ]);
                 dispatch({
                   type: "response",
@@ -397,7 +458,14 @@ export function Room({
                 if (!canChat(session)) return false;
                 setMessages((m) => [
                   ...m,
-                  { id: crypto.randomUUID(), type: "text", text, name: profile.alias, own: true, replyTo },
+                  {
+                    id: crypto.randomUUID(),
+                    type: "text",
+                    text,
+                    name: profile.alias,
+                    own: true,
+                    replyTo,
+                  },
                 ]);
                 dispatch({
                   type: "response",
@@ -432,137 +500,152 @@ export function Room({
               datos sensibles
             </span>
           </section>
-          <aside className="room-aside">
-            <Participants session={session} now={now} />
-            <ConductGuide />
-            <RemovalPanel
-              safety={safetyView(roomSafety, "self")}
-              people={session.participants}
-              me="self"
-              now={now}
-              canStart={canChat(session)}
-              onStart={(id, reason) => {
-                setBallotError("");
-                setRoomSafety((s) => {
-                  const next = startRemoval(
-                    s,
-                    "self",
-                    id,
-                    reason,
-                    session.participants
-                      .filter((p) => p.present)
-                      .map((p) => p.id),
-                    Date.now(),
-                    crypto.randomUUID(),
-                  );
-                  if (next === s)
-                    setBallotError(
-                      "Espera dos minutos antes de abrir otra solicitud.",
-                    );
-                  return next;
-                });
-              }}
-              onVote={(id, choice) =>
-                setRoomSafety((s) =>
-                  voteRemoval(
-                    s,
-                    "self",
-                    id,
-                    choice,
-                    session.participants
-                      .filter((p) => p.present)
-                      .map((p) => p.id),
-                    Date.now(),
-                  ),
-                )
-              }
-            />
-            {ballotError && <p role="alert">{ballotError}</p>}
-            {roomSafety.ballot && (
-              <details className="demo-controls safety-demo">
-                <summary>Simular votos de personajes ficticios</summary>
-                <p>
-                  Estos botones representan a otras personas solo en esta
-                  maqueta. En el piloto cada cuenta emite su propio voto.
-                </p>
-                {roomSafety.ballot.eligible
-                  .filter(
-                    (id) => id !== "self" && !roomSafety.ballot!.votes[id],
-                  )
-                  .map((id) => (
-                    <button
-                      className="button secondary"
-                      key={id}
-                      onClick={() =>
-                        setRoomSafety((s) =>
-                          voteRemoval(
-                            s,
-                            id,
-                            s.ballot!.id,
-                            "remove",
-                            session.participants
-                              .filter((p) => p.present)
-                              .map((p) => p.id),
-                            Date.now(),
-                          ),
-                        )
-                      }
-                    >
-                      Simular voto de{" "}
-                      {session.participants.find((p) => p.id === id)?.name}
-                    </button>
-                  ))}
-              </details>
-            )}
-            <div className="host-control panel">
-              <span className="note-icon">
-                <Sparkles size={21} />
-              </span>
-              <h3>Un empujoncito, solo si quieres.</h3>
-              <p>
-                Hasta tres preguntas de guion, con tiempos limitados. La guía no
-                lee mensajes ni inventa respuestas. Tiempo del encuentro:{" "}
-                {formatTime(session.sessionUntil - now)}.
-              </p>
+        </div>
+      )}
+      {care && (
+        <RoomCare
+          session={session}
+          now={now}
+          simulated
+          mutedIds={muted}
+          onToggleMute={toggleMute}
+          onClose={() => setCare(false)}
+          actions={(person) => (
+            <>
               <button
-                className={`toggle-button ${session.guided ? "on" : ""}`}
-                role="switch"
-                aria-checked={session.guided}
+                className="button text"
                 onClick={() =>
-                  dispatch({
-                    type: "guide",
-                    enabled: !session.guided,
-                    now: Date.now(),
-                  })
+                  setReport(`Conducta de ${person.name} en ${activity.title}`)
                 }
               >
-                <span>
-                  {session.guided ? "Guion activado" : "Guion desactivado"}
-                </span>
-                <span className="toggle-track">
-                  <span />
-                </span>
+                Reportar a {person.name}
               </button>
-            </div>
-            <DemoControls
-              session={session}
-              dispatch={dispatch}
-              now={now}
-              unavailable={activity.people.filter(
-                (name) =>
-                  isPlazaPersonBlocked(name, blocked) ||
-                  excluded.includes(name),
-              )}
-            />
-            <p className="small-text muted room-boundaries">
-              <ShieldCheck size={15} /> Tus límites:{" "}
-              {profile.boundaries.length
-                ? profile.boundaries.join(". ") + "."
-                : "Puedes editarlos desde tu perfil."}{" "}
-              En esta simulación no hay interacciones reales.
-            </p>
-          </aside>
-        </div>
+              <button
+                className="button text-danger"
+                onClick={() => {
+                  setReportName(person.name);
+                  setSafetyResult("");
+                  setSafety(true);
+                }}
+              >
+                Bloquear a {person.name}
+              </button>
+            </>
+          )}
+        >
+          <button
+            className="button secondary full"
+            onClick={() => {
+              setSafetyResult("");
+              setSafety(true);
+            }}
+          >
+            Bloquear o guardar un reporte local
+          </button>
+          <RemovalPanel
+            safety={safetyView(roomSafety, "self")}
+            people={session.participants}
+            me="self"
+            now={now}
+            canStart={canChat(session)}
+            onStart={(id, reason) => {
+              setBallotError("");
+              setRoomSafety((s) => {
+                const next = startRemoval(
+                  s,
+                  "self",
+                  id,
+                  reason,
+                  session.participants
+                    .filter((p) => p.present)
+                    .map((p) => p.id),
+                  Date.now(),
+                  crypto.randomUUID(),
+                );
+                if (next === s)
+                  setBallotError(
+                    "Espera dos minutos antes de abrir otra solicitud.",
+                  );
+                return next;
+              });
+            }}
+            onVote={(id, choice) =>
+              setRoomSafety((s) =>
+                voteRemoval(
+                  s,
+                  "self",
+                  id,
+                  choice,
+                  session.participants
+                    .filter((p) => p.present)
+                    .map((p) => p.id),
+                  Date.now(),
+                ),
+              )
+            }
+          />
+          {ballotError && <p role="alert">{ballotError}</p>}
+          {roomSafety.ballot && (
+            <details className="demo-controls safety-demo">
+              <summary>Simular votos de personajes ficticios</summary>
+              <p>
+                Estos botones representan a otras personas solo en esta maqueta.
+                En el piloto cada cuenta emite su propio voto.
+              </p>
+              {roomSafety.ballot.eligible
+                .filter((id) => id !== "self" && !roomSafety.ballot!.votes[id])
+                .map((id) => (
+                  <button
+                    className="button secondary"
+                    key={id}
+                    onClick={() =>
+                      setRoomSafety((s) =>
+                        voteRemoval(
+                          s,
+                          id,
+                          s.ballot!.id,
+                          "remove",
+                          session.participants
+                            .filter((p) => p.present)
+                            .map((p) => p.id),
+                          Date.now(),
+                        ),
+                      )
+                    }
+                  >
+                    Simular voto de{" "}
+                    {session.participants.find((p) => p.id === id)?.name}
+                  </button>
+                ))}
+            </details>
+          )}
+          <button className="button text-danger full" onClick={onLeave}>
+            Salir ahora de la sala
+          </button>
+        </RoomCare>
+      )}
+      {(canChat(session) || session.phase === "paused") && (
+        <aside
+          className="room-aside room-demo-controls"
+          aria-label="Opciones de la simulación"
+        >
+          <DemoControls
+            session={session}
+            dispatch={dispatch}
+            now={now}
+            unavailable={activity.people.filter(
+              (name) =>
+                isPlazaPersonBlocked(name, blocked) || excluded.includes(name),
+            )}
+          />
+          <p className="small-text muted room-boundaries">
+            <ShieldCheck size={15} /> Tus límites:{" "}
+            {profile.boundaries.length
+              ? profile.boundaries.join(". ") + "."
+              : "Puedes editarlos desde tu perfil."}{" "}
+            En esta simulación no hay interacciones reales.
+          </p>
+        </aside>
       )}
       {report && (
         <ReportDialog

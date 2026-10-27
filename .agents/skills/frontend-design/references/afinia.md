@@ -114,6 +114,20 @@ una transición o confirmar una acción.
 
 Las pruebas de Chromium móvil no equivalen a haber probado un iPhone físico.
 
+## Conversación y cuidados
+
+Las salas usan una columna de lectura con historial y compositor como foco.
+La guía permite plegar controles conservando pregunta y reloj; las explicaciones
+quedan en «Cómo funciona la guía». «Personas y seguridad» reutiliza RoomCare y
+Modal para presencia, participación, silenciado reversible, normas y acciones.
+Silenciar es una preferencia efímera de esta vista; conserva bloqueos, votos,
+quórum y entrega a los demás. No lo presentes como audio silenciado ni expulsión.
+
+Conserva el borrador y el foco al abrir/cerrar controles, incluidos reportes
+anidados. El historial no debe arrastrar la página cuando llega un mensaje:
+si la persona lee mensajes anteriores, ofrece volver a los nuevos. Los controles
+ficticios deben distinguirse del chat y seguir disponibles al probar una pausa.
+
 ## Componentes y estructura
 
 Antes de añadir un patrón, revisa `src/components.tsx`, `src/styles.css`,

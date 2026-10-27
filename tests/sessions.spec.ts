@@ -93,9 +93,14 @@ test("rounds have a shared time cap; typing is ephemeral and another question ne
   await page
     .getByRole("button", { name: "Simular escritura: Antonia", exact: true })
     .click();
-  await expect(page.getByText("Escribiendo…", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Antonia está escribiendo…", { exact: true }),
+  ).toBeVisible();
   await page.clock.fastForward("00:05");
-  await expect(page.getByText("Escribiendo…", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByText("Antonia está escribiendo…", { exact: true }),
+  ).toHaveCount(0);
+  await guide.getByText("Cómo funciona la guía", { exact: true }).click();
   await guide
     .getByRole("button", { name: "+30 s para responder", exact: true })
     .click();
@@ -106,9 +111,13 @@ test("rounds have a shared time cap; typing is ephemeral and another question ne
   await expect(
     guide.getByRole("heading", { name: "Ahora hay espacio para conversar." }),
   ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Personas y seguridad", exact: true })
+    .click();
   await expect(
     page.getByText("Sin respuesta en esta ronda", { exact: true }),
   ).toHaveCount(4);
+  await page.keyboard.press("Escape");
   await page.clock.fastForward("00:20");
   await expect(
     guide.getByRole("heading", { name: "Ahora hay espacio para conversar." }),
@@ -241,4 +250,121 @@ test("reception and guided controls are accessible and the page fits a small scr
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+test("plegar la guía conserva pregunta, plazo y borrador; otra pregunta sigue necesitando mayoría", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await start(page);
+  const input = page.getByLabel("Tu mensaje de prueba");
+  await input.fill("Un borrador mientras escucho al grupo");
+  await page.getByRole("button", { name: "Plegar guía", exact: true }).click();
+  await expect(page.locator(".guide-question")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Paso esta pregunta", exact: true }),
+  ).toBeHidden();
+  await page.clock.fastForward("01:31");
+  await expect(
+    page.getByRole("heading", {
+      name: "Ahora hay espacio para conversar.",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(input).toHaveValue("Un borrador mientras escucho al grupo");
+  await page
+    .getByRole("button", { name: "Mostrar controles", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Otra pregunta", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "1 de 3 votos necesarios. Sin mayoría, seguimos conversando.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await page.clock.fastForward("00:30");
+  await expect(page.getByText(/Preguntas 1\/3/)).toBeVisible();
+});
+
+test("silenciar es reversible y personal; citas, borrador, reportes anidados y foco se conservan", async ({
+  page,
+}) => {
+  await start(page);
+  await page
+    .getByRole("button", {
+      name: "Mostrar una respuesta ficticia de ejemplo",
+      exact: true,
+    })
+    .click();
+  const source = page.getByRole("group", {
+    name: "Mensaje de Antonia",
+    exact: true,
+  });
+  await source.getByRole("button", { name: "Responder", exact: true }).click();
+  const input = page.getByLabel("Tu mensaje de prueba");
+  await input.fill("Queda el contexto de nuestra conversación");
+  await page
+    .getByRole("button", { name: "Enviar mensaje de prueba", exact: true })
+    .click();
+  await input.fill("Este borrador sigue aquí");
+  const careButton = page.getByRole("button", {
+    name: "Personas y seguridad",
+    exact: true,
+  });
+  await careButton.click();
+  const care = page.getByRole("dialog", {
+    name: "Personas y seguridad",
+    exact: true,
+  });
+  await care
+    .getByRole("button", { name: "Silenciar mensajes de Antonia", exact: true })
+    .click();
+  await expect(care.getByText(/4 presentes de ejemplo/)).toBeVisible();
+  expect(
+    (
+      await new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
+        .analyze()
+    ).violations,
+  ).toEqual([]);
+  await care
+    .getByRole("button", { name: "Reportar a Antonia", exact: true })
+    .click();
+  await expect(
+    page.getByRole("dialog", {
+      name: "Reportar una conducta o contenido",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(
+    care.getByRole("button", { name: "Reportar a Antonia", exact: true }),
+  ).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(careButton).toBeFocused();
+  await expect(source).toHaveCount(0);
+  await expect(
+    page.getByText("Mensaje original no disponible", { exact: true }),
+  ).toBeVisible();
+  await expect(input).toHaveValue("Este borrador sigue aquí");
+  expect(
+    await page.evaluate(
+      () => JSON.parse(localStorage.getItem("entre.prototype.v1")!).blocked,
+    ),
+  ).toEqual([]);
+  await careButton.click();
+  await care
+    .getByRole("button", { name: "Mostrar mensajes de Antonia", exact: true })
+    .click();
+  await page.keyboard.press("Escape");
+  await expect(source).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Ver mensaje original de Antonia",
+      exact: true,
+    })
+    .click();
+  await expect(source).toBeFocused();
 });

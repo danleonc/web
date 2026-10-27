@@ -1,4 +1,5 @@
-import type { Dispatch } from "react";
+import { useId, useState } from "react";
+import type { Dispatch, ReactNode } from "react";
 import {
   ArrowRight,
   Check,
@@ -51,7 +52,15 @@ export function Lobby({
         Recepción simulada · La guía no cuenta en el quórum
       </p>
       <h2 id="lobby-title">Un grupo pequeño, espacio para cada persona.</h2>
-      <div className="lobby-schedule"><Clock3 size={16} /><span>{dateLabel(activity.startsAt)} · {timeLabel(activity.startsAt)} h · Santiago<br /><small>Horario de ejemplo. Puedes probar la recepción ahora.</small></span></div>
+      <div className="lobby-schedule">
+        <Clock3 size={16} />
+        <span>
+          {dateLabel(activity.startsAt)} · {timeLabel(activity.startsAt)} h ·
+          Santiago
+          <br />
+          <small>Horario de ejemplo. Puedes probar la recepción ahora.</small>
+        </span>
+      </div>
       <div className="quorum-count">
         <strong>{count}</strong>
         <span>
@@ -66,7 +75,10 @@ export function Lobby({
           </span>
         </span>
       </div>
-      <p className={`quorum-status ${count >= session.minimum ? "quorum-ready" : "quorum-waiting"}`} role="status">
+      <p
+        className={`quorum-status ${count >= session.minimum ? "quorum-ready" : "quorum-waiting"}`}
+        role="status"
+      >
         {count >= session.minimum
           ? `Ya hay quórum: ${count} personas. Pueden comenzar sin llenar todos los cupos.`
           : `Faltan ${session.minimum - count} ${session.minimum - count === 1 ? "persona" : "personas"} para comenzar. Tu reserva sigue guardada.`}
@@ -188,7 +200,10 @@ export function GuidePanel({
   dispatch,
   now,
   activity,
-}: PanelProps & { activity: Activity }) {
+  allowGuideToggle = false,
+}: PanelProps & { activity: Activity; allowGuideToggle?: boolean }) {
+  const [expanded, setExpanded] = useState(true);
+  const controlsId = useId();
   const own = session.participants.find((p) => p.own)!;
   if (session.phase === "paused")
     return (
@@ -209,6 +224,16 @@ export function GuidePanel({
           Conversación libre. La guía está desactivada; tus mensajes siguen
           disponibles.
         </span>
+        {allowGuideToggle && (
+          <button
+            className="button secondary"
+            onClick={() =>
+              dispatch({ type: "guide", enabled: true, now: Date.now() })
+            }
+          >
+            Activar guía
+          </button>
+        )}
       </div>
     );
   return (
@@ -227,141 +252,221 @@ export function GuidePanel({
             "Conversación libre"
           )}
         </span>
+        <button
+          className="guide-fold"
+          aria-expanded={expanded}
+          aria-controls={controlsId}
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Plegar guía" : "Mostrar controles"}
+        </button>
       </div>
       {session.phase === "question" ? (
-        <>
-          <p className="guide-question">
-            {activity.questions[session.question]}
-          </p>
-          <div className="round-controls">
-            <button
-              className={`button secondary ${own.status === "ready" ? "marked" : ""}`}
-              aria-pressed={own.status === "ready"}
-              onClick={() =>
-                dispatch({
-                  type: "response",
-                  id: "self",
-                  status: "ready",
-                  now: Date.now(),
-                })
-              }
-            >
-              <Check size={14} /> Listo por ahora
-            </button>
-            <button
-              className={`button secondary ${own.status === "pass" ? "marked" : ""}`}
-              aria-pressed={own.status === "pass"}
-              onClick={() =>
-                dispatch({
-                  type: "response",
-                  id: "self",
-                  status: "pass",
-                  now: Date.now(),
-                })
-              }
-            >
-              Paso esta pregunta
-            </button>
-            <button
-              className="button text"
-              disabled={session.extended}
-              onClick={() => dispatch({ type: "extend", now: Date.now() })}
-            >
-              {session.extended
-                ? "Extensión ya utilizada"
-                : "+30 s para responder"}
-            </button>
-          </div>
-        </>
+        <p className="guide-question">{activity.questions[session.question]}</p>
       ) : (
-        <>
-          <h2>Ahora hay espacio para conversar.</h2>
-          <p className="guide-notice" role="status">
-            {session.notice}
-          </p>
-          {session.question + 1 < session.questionCount ? (
-            <div className="next-question">
+        <h2>Ahora hay espacio para conversar.</h2>
+      )}
+      <div id={controlsId} hidden={!expanded}>
+        {session.phase === "question" ? (
+          <>
+            <div className="round-controls">
               <button
-                className="button secondary"
-                disabled={session.votes.includes("self")}
+                className={`button secondary ${own.status === "ready" ? "marked" : ""}`}
+                aria-pressed={own.status === "ready"}
                 onClick={() =>
-                  dispatch({ type: "vote", id: "self", now: Date.now() })
+                  dispatch({
+                    type: "response",
+                    id: "self",
+                    status: "ready",
+                    now: Date.now(),
+                  })
                 }
               >
-                {session.votes.includes("self")
-                  ? "Tu voto está registrado"
-                  : "Otra pregunta"}
+                <Check size={14} /> Listo por ahora
               </button>
-              <span role="status">
-                {session.votes.length} de {majority(session)} votos necesarios.
-                Sin mayoría, seguimos conversando.
-              </span>
+              <button
+                className={`button secondary ${own.status === "pass" ? "marked" : ""}`}
+                aria-pressed={own.status === "pass"}
+                onClick={() =>
+                  dispatch({
+                    type: "response",
+                    id: "self",
+                    status: "pass",
+                    now: Date.now(),
+                  })
+                }
+              >
+                Paso esta pregunta
+              </button>
             </div>
-          ) : (
-            <p className="small-text muted">
-              Completamos las {session.questionCount} preguntas previstas. No
-              añadiremos más automáticamente.
+          </>
+        ) : (
+          <>
+            <p className="guide-notice" role="status">
+              {session.notice}
             </p>
+            {session.question + 1 < session.questionCount ? (
+              <div className="next-question">
+                <button
+                  className="button secondary"
+                  disabled={session.votes.includes("self")}
+                  onClick={() =>
+                    dispatch({ type: "vote", id: "self", now: Date.now() })
+                  }
+                >
+                  {session.votes.includes("self")
+                    ? "Tu voto está registrado"
+                    : "Otra pregunta"}
+                </button>
+                <span role="status">
+                  {session.votes.length} de {majority(session)} votos
+                  necesarios. Sin mayoría, seguimos conversando.
+                </span>
+              </div>
+            ) : (
+              <p className="small-text muted">
+                Completamos las {session.questionCount} preguntas previstas. No
+                añadiremos más automáticamente.
+              </p>
+            )}
+          </>
+        )}
+        <div className="listen-control">
+          <button
+            className="button text"
+            aria-pressed={own.status === "listen"}
+            onClick={() =>
+              dispatch({
+                type: "response",
+                id: "self",
+                status: own.status === "listen" ? "pending" : "listen",
+                now: Date.now(),
+              })
+            }
+          >
+            <Headphones size={14} />
+            {own.status === "listen" ? "Quiero participar" : "Solo escucho"}
+          </button>
+          <span>
+            Preguntas {Math.max(0, session.question + 1)}/
+            {session.questionCount} · no hay obligación de responder.
+          </span>
+        </div>
+        <details className="guide-explanation">
+          <summary>Cómo funciona la guía</summary>
+          {session.phase === "question" && (
+            <>
+              <button
+                className="button text"
+                disabled={session.extended}
+                onClick={() => dispatch({ type: "extend", now: Date.now() })}
+              >
+                {session.extended
+                  ? "Extensión ya utilizada"
+                  : "+30 s para responder"}
+              </button>
+            </>
           )}
-        </>
-      )}
-      <div className="listen-control">
-        <button
-          className="button text"
-          aria-pressed={own.status === "listen"}
-          onClick={() =>
-            dispatch({
-              type: "response",
-              id: "self",
-              status: own.status === "listen" ? "pending" : "listen",
-              now: Date.now(),
-            })
-          }
-        >
-          <Headphones size={14} />
-          {own.status === "listen" ? "Quiero participar" : "Solo escucho"}
-        </button>
-        <span>
-          Preguntas {Math.max(0, session.question + 1)}/{session.questionCount}{" "}
-          · no hay obligación de responder.
-        </span>
+          <p>
+            90 segundos por pregunta y una extensión de 30 segundos. Si todos
+            eligen listo, pasar o escuchar, la ronda termina antes. Después,
+            otra pregunta necesita mayoría; el silencio y el teclado no deciden
+            el avance.
+          </p>
+          <p>
+            No hay IA leyendo esta conversación. Son preguntas de un guion de
+            ejemplo.
+          </p>
+          {allowGuideToggle && (
+            <button
+              className={`toggle-button ${session.guided ? "on" : ""}`}
+              role="switch"
+              aria-checked={session.guided}
+              onClick={() =>
+                dispatch({
+                  type: "guide",
+                  enabled: !session.guided,
+                  now: Date.now(),
+                })
+              }
+            >
+              <span>
+                {session.guided ? "Guion activado" : "Guion desactivado"}
+              </span>
+              <span className="toggle-track">
+                <span />
+              </span>
+            </button>
+          )}
+        </details>
       </div>
-      <small className="guide-disclosure">
-        No hay IA leyendo esta conversación. Las preguntas son un guion local y
-        el teclado no decide cuándo avanzar.
-      </small>
-      {session.phase === "question" && (
-        <p className="guide-notice" role="status">
-          {session.notice}
-        </p>
-      )}
     </section>
   );
 }
 export function Participants({
   session,
   now,
-}: Pick<PanelProps, "session" | "now">) {
+  simulated = true,
+  mutedIds = [],
+  onToggleMute,
+  actions,
+}: Pick<PanelProps, "session" | "now"> & {
+  simulated?: boolean;
+  mutedIds?: string[];
+  onToggleMute?: (id: string) => void;
+  actions?: (person: Participant) => ReactNode;
+}) {
   return (
-    <div className="panel participants-panel">
+    <section
+      className="participants-panel"
+      aria-label="Participantes del encuentro"
+    >
       <h3>En este encuentro</h3>
       <p className="small-text muted">
-        {presentPeople(session).length} presentes de ejemplo · mínimo{" "}
-        {session.minimum}, máximo {session.maximum}. La guía no cuenta.
+        {presentPeople(session).length} presentes
+        {simulated ? " de ejemplo" : ""} · mínimo {session.minimum}, máximo{" "}
+        {session.maximum}. La guía no cuenta.
       </p>
-      {presentPeople(session).map((p, i) => (
-        <div className="participant" key={p.id}>
-          <Avatar name={p.name} index={p.own ? 4 : i} />
-          <span>
-            {p.name}
-            {p.own ? " · tú" : ""}
-            <small>
-              {p.typingUntil > now ? "Escribiendo…" : responseLabels[p.status]}
-            </small>
-          </span>
+      <p className="small-text muted">
+        {simulated
+          ? "Son personajes ficticios, sin otras personas conectadas."
+          : "La presencia corresponde a sesiones conectadas; no verifica identidad."}
+      </p>
+      {session.participants.map((p, i) => (
+        <div className="care-participant" key={p.id}>
+          <div className="participant">
+            <Avatar name={p.name} index={p.own ? 4 : i} />
+            <span>
+              {p.name}
+              {p.own ? " · tú" : ""}
+              <small>
+                {!p.present
+                  ? "Ausente"
+                  : p.typingUntil > now
+                    ? "Escribiendo…"
+                    : responseLabels[p.status]}
+              </small>
+            </span>
+          </div>
+          {!p.own && (
+            <div className="participant-actions">
+              {onToggleMute && (
+                <button
+                  className="button secondary"
+                  aria-pressed={mutedIds.includes(p.id)}
+                  onClick={() => onToggleMute(p.id)}
+                >
+                  {mutedIds.includes(p.id)
+                    ? `Mostrar mensajes de ${p.name}`
+                    : `Silenciar mensajes de ${p.name}`}
+                </button>
+              )}
+              {actions?.(p)}
+            </div>
+          )}
         </div>
       ))}
-    </div>
+    </section>
   );
 }
 export function DemoControls({

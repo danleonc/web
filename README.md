@@ -63,6 +63,25 @@ La recepción, los tiempos y las decisiones de la guía se pueden probar: pregun
 
 Todo está etiquetado como prototipo. Los cupos y fechas de la maqueta son ilustrativos, y sus salas pueden abrirse sin esperar al horario de ejemplo. La sincronización entre navegadores se prueba únicamente en el laboratorio local separado.
 
+## Conversación y cuidados en las salas
+
+La sala prioriza el historial y el compositor. **Plegar guía** mantiene la
+pregunta visible y el plazo en marcha; **Mostrar controles** recupera listo,
+pasar, escuchar y la solicitud por mayoría de otra pregunta. «Cómo funciona la
+guía» reúne reglas y extensión; en la sala local también permite desactivar el
+guion. No se incorpora IA generativa.
+
+**Personas y seguridad** reúne presencia, participación, normas y votación.
+Silenciar mensajes afecta solo a tu vista hasta salir, con restauración desde
+el mismo panel; no cambia bloqueos, quórum ni votos. Los reportes y bloqueos
+conservan el alcance de cada modo. Una votación activa tiene acceso visible en
+el chat aunque el panel esté cerrado. Abrir controles conserva el borrador.
+
+El historial sigue los mensajes nuevos cuando ya estás al final. Si estás
+leyendo más arriba, ofrece **Ver mensajes nuevos**, sin mover la página.
+El chat público sigue siendo una simulación local; los envíos compartidos se
+prueban en laboratorio o piloto. Diseño: [Conversación y cuidados](docs/diseno/Conversacion_y_cuidados.md).
+
 ## Respuestas con contexto
 
 En las salas, el chat privado de prueba y los comentarios de La Plaza, toca

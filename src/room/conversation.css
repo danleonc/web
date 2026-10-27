@@ -1,0 +1,405 @@
+/* A quiet reading space; care controls stay one action away. */
+.room-focused-layout {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 900px;
+  margin-inline: auto;
+}
+.room-page .room-heading {
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.room-page .room-heading h1 {
+  font-size: clamp(26px, 3vw, 34px);
+}
+.room-page .room-heading p:last-child {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.room-page .room-heading .button {
+  min-height: 44px;
+  font-size: 13px;
+}
+.room-conversation.conversation {
+  min-height: 0;
+}
+.room-conversation .room-top {
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 18px;
+  background: #fafbf6;
+}
+.room-conversation .room-top > span {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.room-conversation .room-top .button {
+  min-height: 44px;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.room-conversation .guide-panel {
+  padding: 16px 20px;
+  border-bottom-color: #dfe6d5;
+}
+.room-conversation .guide-title {
+  flex-wrap: wrap;
+  gap: 6px 14px;
+}
+.room-conversation .guide-title > span:first-child {
+  font-size: 12px;
+  flex: 1;
+}
+.room-conversation .guide-title .time-pill {
+  font-size: 12px;
+  background: #f9fbf5;
+  padding: 6px 8px;
+}
+.guide-fold {
+  min-height: 44px;
+  padding: 8px;
+  color: #34533d;
+  font-size: 12px;
+  border-radius: 6px;
+}
+.guide-fold:hover {
+  background: #dde8d3;
+}
+.room-conversation .guide-question {
+  margin: 8px 0 4px;
+  font-size: clamp(21px, 2.4vw, 25px);
+  line-height: 1.4;
+}
+.room-conversation .guide-panel h2 {
+  font-size: 24px;
+  margin: 8px 0;
+}
+.room-conversation .round-controls {
+  margin: 10px 0 2px;
+  gap: 8px;
+}
+.room-conversation .round-controls .button,
+.room-conversation .listen-control .button,
+.room-conversation .next-question .button {
+  min-height: 44px;
+  font-size: 13px;
+  padding: 8px 10px;
+}
+.room-conversation .listen-control {
+  margin: 4px 0;
+}
+.room-conversation .listen-control > span,
+.room-conversation .next-question > span,
+.room-conversation .guide-notice {
+  font-size: 12px;
+  line-height: 1.7;
+}
+.room-conversation .guide-notice {
+  margin-top: 8px;
+}
+.guide-explanation {
+  color: #435e3c;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.guide-explanation summary {
+  min-height: 44px;
+  padding-block: 10px;
+  cursor: pointer;
+}
+.guide-explanation p {
+  max-width: 70ch;
+  margin: 4px 0 12px;
+  font-size: 13px;
+}
+.guide-explanation .toggle-button {
+  min-height: 44px;
+  max-width: 350px;
+}
+.room-conversation .guide-off {
+  font-size: 13px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.room-conversation .messages {
+  height: clamp(240px, 44dvh, 520px);
+  min-height: 0;
+  max-height: none;
+  padding: 20px;
+  overscroll-behavior-y: contain;
+  overflow-anchor: none;
+}
+.room-conversation .messages:focus-visible {
+  outline: 2px solid #a46743;
+  outline-offset: -3px;
+}
+.room-conversation .welcome-message {
+  margin: 8px auto 20px;
+  max-width: 380px;
+}
+.room-conversation .welcome-message h2 {
+  font-size: 24px;
+}
+.room-conversation .welcome-message p {
+  font-size: 14px;
+  line-height: 1.7;
+}
+.room-conversation .welcome-icon {
+  margin-bottom: 10px;
+}
+.room-conversation .message {
+  margin-block: 16px;
+  gap: 10px;
+}
+.room-conversation .message > div {
+  max-width: min(80%, 66ch);
+}
+.room-conversation .message p {
+  font-size: 15px;
+  line-height: 1.65;
+  padding: 11px 14px;
+  color: #293e35;
+  background: #f1f2e9;
+}
+.room-conversation .message.own p {
+  background: #e3eddc;
+}
+.room-conversation .message > div > span {
+  font-size: 12px;
+}
+.room-conversation .message-report {
+  min-height: 44px;
+  padding: 8px;
+  font-size: 12px;
+}
+.room-conversation .example-button {
+  min-height: 44px;
+  font-size: 12px;
+  padding: 10px;
+}
+.room-conversation .composer {
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fffefa;
+}
+.room-conversation .composer input {
+  padding-block: 12px;
+  font-size: 16px;
+}
+.room-conversation .composer-note {
+  font-size: 12px;
+  line-height: 1.6;
+  flex-wrap: wrap;
+}
+.room-conversation .reply-help {
+  margin-block: 0 8px;
+}
+.room-typing {
+  min-height: 24px;
+  padding: 0 20px;
+  color: #52634a;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.new-messages,
+.muted-messages-note,
+.room-ballot-notice {
+  min-height: 44px;
+  padding: 10px 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #365741;
+  background: #eff3e6;
+  text-align: center;
+  border-top: 1px solid #dfe6d5;
+}
+.room-history {
+  position: relative;
+  min-width: 0;
+}
+.room-history .new-messages {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 24px);
+  width: max-content;
+  border: 1px solid #bacbad;
+  border-radius: 8px;
+  font-weight: 600;
+  box-shadow: 0 2px 8px #293e3512;
+}
+.room-care {
+  padding: 0 24px 24px;
+}
+.room-care .participants-panel {
+  padding: 8px 0 0;
+}
+.room-care .participants-panel h3 {
+  font-size: 21px;
+  margin: 8px 0;
+}
+.room-care .small-text,
+.room-care .care-mute-note {
+  font-size: 13px;
+  line-height: 1.75;
+  color: #52634a;
+}
+.care-participant {
+  border-top: 1px solid #e2e7dc;
+  padding: 16px 0;
+}
+.room-care .participant {
+  margin: 0;
+}
+.room-care .participant > span:last-child {
+  font-size: 15px;
+  font-weight: 600;
+}
+.room-care .participant small {
+  font-size: 13px;
+  line-height: 1.6;
+  font-weight: 400;
+  color: #52634a;
+}
+.participant-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  margin-top: 10px;
+}
+.room-care .button {
+  min-height: 44px;
+  font-size: 13px;
+  line-height: 1.5;
+  white-space: normal;
+}
+.room-care .conduct-guide {
+  margin-block: 18px;
+}
+.room-care .conduct-guide summary,
+.room-care .removal-panel summary,
+.room-care .safety-demo summary {
+  min-height: 44px;
+  padding-block: 10px;
+  font-size: 14px;
+}
+.room-care .conduct-guide p,
+.room-care .conduct-guide li,
+.room-care .removal-panel p,
+.room-care .safety-demo p {
+  font-size: 13px;
+  line-height: 1.75;
+}
+.room-care .removal-panel {
+  margin-block: 18px;
+}
+.room-care .field-label {
+  font-size: 14px;
+}
+.room-care .text-input {
+  font-size: 16px;
+}
+.room-care > .text-danger {
+  margin-top: 12px;
+}
+.room-demo-controls.room-aside {
+  display: block;
+  max-width: 900px;
+  margin: 20px auto 0;
+}
+.room-demo-controls .demo-people {
+  margin: 0;
+}
+.room-demo-controls .room-boundaries {
+  font-size: 12px;
+  margin: 14px 0;
+  line-height: 1.7;
+}
+@media (max-width: 700px) {
+  .room-page .room-heading {
+    gap: 12px;
+    align-items: stretch;
+  }
+  .room-page .room-heading h1 {
+    margin-bottom: 8px;
+  }
+  .room-page .room-heading .eyebrow {
+    font-size: 10px;
+  }
+  .room-conversation .room-top {
+    padding: 8px 12px;
+    gap: 4px;
+  }
+  .room-conversation .room-top > span {
+    flex: 1 1 130px;
+  }
+  .room-conversation .room-top .button {
+    font-size: 12px;
+    padding: 8px;
+  }
+  .room-conversation .guide-panel {
+    padding: 12px;
+  }
+  .room-conversation .guide-fold {
+    margin-left: auto;
+  }
+  .room-conversation .messages {
+    height: clamp(220px, 40dvh, 420px);
+    padding: 14px 12px;
+  }
+  .room-conversation .message > div {
+    max-width: calc(100% - 40px);
+  }
+  .room-conversation .composer {
+    padding: 8px;
+    gap: 4px;
+  }
+  .room-conversation .composer input {
+    width: 0;
+  }
+  .room-conversation .composer-note {
+    padding: 0 12px 10px;
+  }
+  .room-care {
+    padding: 0 18px 20px;
+  }
+  .participant-actions {
+    gap: 4px 8px;
+  }
+  .room-typing {
+    padding-inline: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .room-conversation .messages {
+    scroll-behavior: auto;
+  }
+}
+
+.room-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.room-duration {
+  font-size: 12px;
+  line-height: 1.7;
+  color: #52634a;
+}
+.room-care > .button:first-child {
+  margin-top: 8px;
+}
+.room-care section[tabindex],
+.room-care div[tabindex] {
+  scroll-margin-block: 14px;
+}
+@media (max-width: 700px) {
+  .room-end {
+    align-items: stretch;
+  }
+}
+
+.room-conversation .guide-explanation .button { min-height: 44px; font-size: 13px; }
+.modal:has(> .room-care) .modal-head .icon-button { min-width: 44px; min-height: 44px; }

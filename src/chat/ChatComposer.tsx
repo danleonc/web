@@ -85,7 +85,7 @@ export function ChatComposer({
           }}
           onBlur={() => onTypingChange?.(false)}
           disabled={disabled}
-          placeholder="Un mensaje o un sticker, como prefieras…"
+          placeholder="Escribe un mensaje…"
           autoComplete="off"
         />
         <button

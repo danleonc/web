@@ -56,14 +56,13 @@ test("complete journey: profile, reservation, local chat, feedback and private r
   await page
     .getByRole("button", { name: "Comenzar encuentro de prueba", exact: true })
     .click();
-  await expect(
-    page.getByText("No hay IA leyendo esta conversación."),
-  ).toBeVisible();
+  await page.getByText("Cómo funciona la guía", { exact: true }).click();
+  await expect(page.getByText(/No hay IA leyendo esta conversación/)).toBeVisible();
   await page.getByRole("switch").click();
   await expect(
-    page.getByText("No hay IA leyendo esta conversación."),
+    page.getByText(/No hay IA leyendo esta conversación/),
   ).toHaveCount(0);
-  await page.getByRole("switch").click();
+  await page.getByRole("button", { name: "Activar guía", exact: true }).click();
   await page
     .getByLabel("Tu mensaje de prueba")
     .fill("Me alegra probar este espacio.");
@@ -145,7 +144,8 @@ test("blocking hides messages and excludes participant from reconnection", async
   await page
     .getByRole("button", { name: "Mostrar una respuesta ficticia de ejemplo" })
     .click();
-  await page.getByRole("button", { name: "Seguridad", exact: true }).click();
+  await page.getByRole("button", { name: "Personas y seguridad", exact: true }).click();
+  await page.getByRole("button", { name: "Bloquear a Antonia", exact: true }).click();
   await page
     .getByRole("button", { name: "Bloquear participante de prueba" })
     .click();
@@ -154,7 +154,8 @@ test("blocking hides messages and excludes participant from reconnection", async
   ).toBeVisible();
   await page.getByRole("button", { name: "Simular denuncia" }).click();
   await expect(page.getByText(/No fue enviada ni guardada/)).toBeVisible();
-  await page.getByRole("button", { name: "Cerrar ventana" }).click();
+  await page.getByRole("dialog", { name: "Tu seguridad va primero", exact: true }).getByRole("button", { name: "Cerrar ventana" }).click();
+  await page.keyboard.press("Escape");
   await expect(
     page.getByText(/Respuesta de ejemplo escrita de antemano/),
   ).toHaveCount(0);

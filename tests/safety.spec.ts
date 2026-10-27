@@ -223,6 +223,7 @@ test("sala local: adjuntar imagen y simular mayoría retira solo del encuentro, 
   await expect(
     page.getByAltText("Mi primer dibujo de un paisaje"),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Personas y seguridad", exact: true }).click();
   await page.getByText("Cuidar este encuentro", { exact: true }).click();
   await page
     .getByLabel("Participante", { exact: true })
@@ -248,6 +249,7 @@ test("sala local: adjuntar imagen y simular mayoría retira solo del encuentro, 
       () => JSON.parse(localStorage.getItem("entre.prototype.v1")!).blocked,
     ),
   ).toEqual([]);
+  await page.keyboard.press("Escape");
   await page.locator(".room-aside .demo-people > summary").click();
   await expect(
     page.getByRole("checkbox", { name: "Antonia", exact: true }),

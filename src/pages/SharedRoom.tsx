@@ -1,6 +1,5 @@
-import { ConductGuide } from "../safety/ConductGuide";
 import { useState, useEffect } from "react";
-import { LockKeyhole, Radio, Users } from "lucide-react";
+import { LockKeyhole, Radio, Users, ShieldCheck } from "lucide-react";
 import { featuredActivities } from "../data";
 import type { Profile } from "../store";
 import type { StickerActions } from "../chat/stickers";
@@ -9,13 +8,15 @@ import { useReplyTarget } from "../chat/replies";
 import { ChatMessageBubble, chatReplyTarget } from "../chat/ChatMessage";
 import { useSharedRoom } from "../shared/useSharedRoom";
 import { canChat, formatTime, presentPeople } from "../room/engine";
-import { GuidePanel, responseLabels } from "../room/SessionPanels";
+import { GuidePanel } from "../room/SessionPanels";
 import { accountsEnabled } from "../shared/mode";
 import { useAccount } from "../shared/accounts";
 import { AccountPanel } from "../shared/AccountPanel";
 
 import { RemovalPanel } from "../safety/RemovalPanel";
 import { ReportDialog } from "../safety/ReportDialog";
+import { RoomCare, RoomTyping, useMutedParticipants } from "../room/RoomCare";
+import { useConversationScroll } from "../room/useConversationScroll";
 
 export function SharedRoom({
   profile,
@@ -29,6 +30,7 @@ export function SharedRoom({
   } | null>(null);
   const [activityId, setActivityId] = useState("cafe");
   const [active, setActive] = useState(false);
+  const [care, setCare] = useState(false);
   const [aware, setAware] = useState(false);
   const account = useAccount();
   useEffect(() => {
@@ -48,9 +50,23 @@ export function SharedRoom({
   );
   const { session, snapshot, status } = shared;
   const connected = status === "connected" && !!session;
-  const messages = (snapshot?.messages || []).map((m) => ({ ...m, own: m.senderId === snapshot?.me }));
+  const { muted, toggleMute } = useMutedParticipants(
+    active ? snapshot?.roomKey || "" : "",
+  );
+  useEffect(() => {
+    if (!active || status === "blocked") setCare(false);
+  }, [active, status]);
+  const messages = (snapshot?.messages || [])
+    .filter((m) => m.senderId === snapshot?.me || !muted.includes(m.senderId))
+    .map((m) => ({ ...m, own: m.senderId === snapshot?.me }));
+  const lastMessage = messages.at(-1);
+  const scroll = useConversationScroll(lastMessage?.id, lastMessage?.own);
   const targets = messages.map(chatReplyTarget);
-  const reply = useReplyTarget<HTMLInputElement>(targets, snapshot?.roomKey || "", connected && !!session && canChat(session));
+  const reply = useReplyTarget<HTMLInputElement>(
+    targets,
+    snapshot?.roomKey || "",
+    connected && !!session && canChat(session),
+  );
   return (
     <div className="page-content shared-lab">
       <p className="eyebrow">
@@ -223,9 +239,9 @@ export function SharedRoom({
         />
       )}
       {session && snapshot && (
-        <div className="room-layout shared-layout">
+        <div className="room-layout shared-layout room-focused-layout">
           <section
-            className="conversation panel"
+            className="conversation panel room-conversation"
             aria-label="Sala compartida de desarrollo"
           >
             <div className="room-top">
@@ -234,6 +250,9 @@ export function SharedRoom({
                 {presentPeople(session).length} personas conectadas · mínimo{" "}
                 {session.minimum}, máximo {session.maximum}
               </span>
+              <button className="button text" onClick={() => setCare(true)}>
+                <ShieldCheck size={16} /> Personas y seguridad
+              </button>
             </div>
             {!connected && (
               <p className="small-text shared-offline" role="status">
@@ -292,38 +311,74 @@ export function SharedRoom({
                 />
               )}
             </fieldset>
-            <div className="messages" aria-label="Mensajes compartidos">
-              {!snapshot.messages.length && (
-                <p className="muted small-text">
-                  Los mensajes aparecerán aquí cuando el grupo alcance quórum e
-                  inicie el encuentro.
-                </p>
+            <div className="room-history">
+              <div
+                className="messages"
+                ref={scroll.ref}
+                onScroll={scroll.onScroll}
+                tabIndex={0}
+                aria-label="Mensajes compartidos"
+              >
+                {!snapshot.messages.length && (
+                  <p className="muted small-text">
+                    Los mensajes aparecerán aquí cuando el grupo alcance quórum
+                    e inicie el encuentro.
+                  </p>
+                )}
+                {messages.map((message) => (
+                  <ChatMessageBubble
+                    key={message.id}
+                    onReply={
+                      connected && canChat(session)
+                        ? () => reply.select(message.id)
+                        : undefined
+                    }
+                    replyTarget={targets.find(
+                      (target) => target.id === message.replyTo,
+                    )}
+                    simulated={false}
+                    shared
+                    removed={
+                      message.type === "image" &&
+                      snapshot.hiddenImages.includes(message.image.id)
+                    }
+                    onReport={
+                      accountsEnabled && message.senderId !== snapshot.me
+                        ? () =>
+                            setReport({
+                              targetId: message.senderId,
+                              subject: `Mensaje de ${message.name}`,
+                              messageId: message.id,
+                            })
+                        : undefined
+                    }
+                    message={message}
+                  />
+                ))}
+              </div>
+              {scroll.unread && (
+                <button className="new-messages" onClick={scroll.goToLatest}>
+                  Ver mensajes nuevos
+                </button>
               )}
-              {messages.map((message) => (
-                <ChatMessageBubble
-                  key={message.id}
-                  onReply={connected && canChat(session) ? () => reply.select(message.id) : undefined}
-                  replyTarget={targets.find((target) => target.id === message.replyTo)}
-                  simulated={false}
-                  shared
-                  removed={
-                    message.type === "image" &&
-                    snapshot.hiddenImages.includes(message.image.id)
-                  }
-                  onReport={
-                    accountsEnabled && message.senderId !== snapshot.me
-                      ? () =>
-                          setReport({
-                            targetId: message.senderId,
-                            subject: `Mensaje de ${message.name}`,
-                            messageId: message.id,
-                          })
-                      : undefined
-                  }
-                  message={message}
-                />
-              ))}
             </div>
+            {snapshot.safety.ballot && (
+              <button
+                className="room-ballot-notice"
+                onClick={() => setCare(true)}
+              >
+                Hay una votación de convivencia. Revisar
+              </button>
+            )}
+            {muted.length > 0 && (
+              <button
+                className="muted-messages-note"
+                onClick={() => setCare(true)}
+              >
+                Tienes mensajes silenciados. Revisar participantes
+              </button>
+            )}
+            <RoomTyping session={session} now={shared.now} />
             <ChatComposer
               {...stickerActions}
               inputRef={reply.inputRef}
@@ -367,7 +422,9 @@ export function SharedRoom({
                   now: 0,
                 })
               }
-              onSendText={(text, replyTo) => shared.sendMessage({ type: "text", text, replyTo })}
+              onSendText={(text, replyTo) =>
+                shared.sendMessage({ type: "text", text, replyTo })
+              }
               onSendSticker={(stickerId, replyTo) =>
                 shared.sendMessage({ type: "sticker", stickerId, replyTo })
               }
@@ -405,66 +462,30 @@ export function SharedRoom({
               </div>
             )}
           </section>
-          <aside className="room-aside">
-            <ConductGuide />
-            <RemovalPanel
-              safety={snapshot.safety}
-              people={snapshot.session.participants}
-              me={snapshot.me}
+          {care && (
+            <RoomCare
+              session={session}
               now={shared.now}
-              canStart={connected && canChat(session)}
-              onStart={(targetId, reason) => {
-                if (
-                  confirm(
-                    "Tu solicitud inicia una votación con tu voto a favor de retirar. Solo afecta a este encuentro. ¿Continuar?",
-                  )
-                )
-                  shared.send({ type: "open-removal", targetId, reason });
-              }}
-              onVote={(ballotId, choice) =>
-                shared.send({ type: "removal-vote", ballotId, choice })
-              }
-            />
-            {accountsEnabled && !account.account?.imagesEnabled && (
-              <p className="small-text muted">
-                Las imágenes se habilitan cuando el responsable configura una
-                cuenta de moderación.
-              </p>
-            )}
-            <section className="panel participants-panel">
-              <h3>Personas de esta prueba</h3>
-              <p className="small-text muted">
-                {accountsEnabled
-                  ? "Cuentas conectadas. No hay verificación de identidad."
-                  : "Sesiones de desarrollo, sin verificación de identidad."}
-              </p>
-              {snapshot.session.participants.map((p) => (
-                <div className="shared-participant" key={p.id}>
-                  <strong>
-                    {p.name}
-                    {p.id === snapshot.me ? " · tú" : ""}
-                  </strong>
-                  <span>
-                    {!p.present
-                      ? "Desconectado"
-                      : p.typingUntil > shared.now
-                        ? "Escribiendo…"
-                        : responseLabels[p.status]}
-                  </span>
-                  {accountsEnabled && p.id !== snapshot.me && (
+              simulated={false}
+              mutedIds={muted}
+              onToggleMute={toggleMute}
+              onClose={() => setCare(false)}
+              actions={(person) => (
+                <>
+                  {accountsEnabled && (
                     <button
                       className="button text"
                       onClick={() =>
                         setReport({
-                          targetId: p.id,
-                          subject: `Conducta de ${p.name}`,
+                          targetId: person.id,
+                          subject: `Conducta de ${person.name}`,
                         })
                       }
                     >
-                      Reportar conducta de {p.name}
+                      Reportar conducta de {person.name}
                     </button>
                   )}
-                  {p.id !== snapshot.me && p.present && (
+                  {person.present && (
                     <button
                       className="button text-danger"
                       disabled={!connected}
@@ -476,7 +497,10 @@ export function SharedRoom({
                               : "Bloquear registra esta decisión en tu sesión de desarrollo y te saca de la sala. ¿Continuar?",
                           )
                         ) {
-                          shared.send({ type: "block", participantId: p.id });
+                          shared.send({
+                            type: "block",
+                            participantId: person.id,
+                          });
                           account.clearHistory();
                         }
                       }}
@@ -484,10 +508,41 @@ export function SharedRoom({
                       Bloquear y salir
                     </button>
                   )}
-                </div>
-              ))}
-            </section>
-          </aside>
+                </>
+              )}
+            >
+              <RemovalPanel
+                safety={snapshot.safety}
+                people={snapshot.session.participants}
+                me={snapshot.me}
+                now={shared.now}
+                canStart={connected && canChat(session)}
+                onStart={(targetId, reason) => {
+                  if (
+                    confirm(
+                      "Tu solicitud inicia una votación con tu voto a favor de retirar. Solo afecta a este encuentro. ¿Continuar?",
+                    )
+                  )
+                    shared.send({ type: "open-removal", targetId, reason });
+                }}
+                onVote={(ballotId, choice) =>
+                  shared.send({ type: "removal-vote", ballotId, choice })
+                }
+              />
+              {accountsEnabled && !account.account?.imagesEnabled && (
+                <p className="small-text muted">
+                  Las imágenes se habilitan cuando el responsable configura una
+                  cuenta de moderación.
+                </p>
+              )}
+              <button
+                className="button text-danger full"
+                onClick={() => setActive(false)}
+              >
+                Salir de la sala compartida
+              </button>
+            </RoomCare>
+          )}
         </div>
       )}
     </div>
