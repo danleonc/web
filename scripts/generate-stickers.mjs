@@ -75,7 +75,7 @@ function lines(text) {
   return [words.slice(0, best).join(" "), words.slice(best).join(" ")];
 }
 let count = 0;
-for (const p of packs)
+for (const p of packs.filter((p) => !p.format || p.format === "svg"))
   for (const [i, label] of p.labels.entries()) {
     const id = `${p.id}-${i + 1}`;
     const caption = lines(label);

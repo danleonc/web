@@ -1,10 +1,235 @@
 [
   {
+    "id": "moka",
+    "name": "Moka",
+    "color": "#e6c7ae",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "cafe",
+      "agotamiento",
+      "criatura",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Moka: Saludando",
+      "Moka: Muerto de risa",
+      "Moka: Abrazo con cariño",
+      "Moka: Qué sorpresa",
+      "Moka: Modo descanso",
+      "Moka: No doy más"
+    ]
+  },
+  {
+    "id": "pipo",
+    "name": "Pipo",
+    "color": "#f5ca77",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "hamster",
+      "raton",
+      "tierno",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Pipo: Saludando",
+      "Pipo: Muerto de risa",
+      "Pipo: Abrazo con cariño",
+      "Pipo: Qué sorpresa",
+      "Pipo: Modo descanso",
+      "Pipo: No doy más"
+    ]
+  },
+  {
+    "id": "tuerca",
+    "name": "Tuerca",
+    "color": "#9cd4a4",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "cerebro",
+      "engranaje",
+      "confusion",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Tuerca: Saludando",
+      "Tuerca: Muerto de risa",
+      "Tuerca: Abrazo con cariño",
+      "Tuerca: Qué sorpresa",
+      "Tuerca: Modo descanso",
+      "Tuerca: No doy más"
+    ]
+  },
+  {
+    "id": "orbita",
+    "name": "Órbita",
+    "color": "#b6c5e6",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "alien",
+      "espacio",
+      "existencial",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Órbita: Saludando",
+      "Órbita: Muerto de risa",
+      "Órbita: Abrazo con cariño",
+      "Órbita: Qué sorpresa",
+      "Órbita: Modo descanso",
+      "Órbita: No doy más"
+    ]
+  },
+  {
+    "id": "lila",
+    "name": "Lila",
+    "color": "#be9ce6",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "morado",
+      "burbuja",
+      "entusiasmo",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Lila: Saludando",
+      "Lila: Muerto de risa",
+      "Lila: Abrazo con cariño",
+      "Lila: Qué sorpresa",
+      "Lila: Modo descanso",
+      "Lila: No doy más"
+    ]
+  },
+  {
+    "id": "gota",
+    "name": "Gota",
+    "color": "#8cd7e4",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "agua",
+      "frio",
+      "nervios",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Gota: Saludando",
+      "Gota: Muerto de risa",
+      "Gota: Abrazo con cariño",
+      "Gota: Qué sorpresa",
+      "Gota: Modo descanso",
+      "Gota: No doy más"
+    ]
+  },
+  {
+    "id": "michi-rosa",
+    "name": "Michi Rosa",
+    "color": "#eda0ca",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "gato",
+      "gatito",
+      "drama",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Michi Rosa: Saludando",
+      "Michi Rosa: Muerto de risa",
+      "Michi Rosa: Abrazo con cariño",
+      "Michi Rosa: Qué sorpresa",
+      "Michi Rosa: Modo descanso",
+      "Michi Rosa: No doy más"
+    ]
+  },
+  {
+    "id": "nico",
+    "name": "Nico",
+    "color": "#9bc8bb",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "humano",
+      "creativo",
+      "trabajo",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Nico: Saludando",
+      "Nico: Muerto de risa",
+      "Nico: Abrazo con cariño",
+      "Nico: Qué sorpresa",
+      "Nico: Modo descanso",
+      "Nico: No doy más"
+    ]
+  },
+  {
+    "id": "flama",
+    "name": "Flama",
+    "color": "#f5a260",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "fuego",
+      "enojo",
+      "energia",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Flama: Saludando",
+      "Flama: Muerto de risa",
+      "Flama: Abrazo con cariño",
+      "Flama: Qué sorpresa",
+      "Flama: Modo descanso",
+      "Flama: No doy más"
+    ]
+  },
+  {
+    "id": "babu",
+    "name": "Babú",
+    "color": "#b3d477",
+    "motif": "character",
+    "format": "webp",
+    "tags": [
+      "babosa",
+      "bicho",
+      "humor",
+      "sin texto",
+      "personaje"
+    ],
+    "labels": [
+      "Babú: Saludando",
+      "Babú: Muerto de risa",
+      "Babú: Abrazo con cariño",
+      "Babú: Qué sorpresa",
+      "Babú: Modo descanso",
+      "Babú: No doy más"
+    ]
+  },
+  {
     "id": "conversar",
     "name": "Entre nos",
     "motif": "bubble",
     "color": "#93bfa6",
-    "tags": ["saludo", "conversacion", "hola", "respuesta"],
+    "tags": [
+      "saludo",
+      "conversacion",
+      "hola",
+      "respuesta"
+    ],
     "labels": [
       "¡Hola!",
       "¿Cómo va?",
@@ -25,7 +250,13 @@
     "name": "Michis",
     "motif": "cat",
     "color": "#e6b878",
-    "tags": ["gato", "gatos", "animales", "michi", "tierno"],
+    "tags": [
+      "gato",
+      "gatos",
+      "animales",
+      "michi",
+      "tierno"
+    ],
     "labels": [
       "Miau, hola",
       "Modo curioso",
@@ -46,7 +277,13 @@
     "name": "Perritos",
     "motif": "dog",
     "color": "#c89b7a",
-    "tags": ["perro", "perros", "animales", "cachorro", "mascota"],
+    "tags": [
+      "perro",
+      "perros",
+      "animales",
+      "cachorro",
+      "mascota"
+    ],
     "labels": [
       "¡Llegué!",
       "Vamos juntos",
@@ -67,7 +304,13 @@
     "name": "Un empujoncito",
     "motif": "star",
     "color": "#f1cb6d",
-    "tags": ["animo", "apoyo", "energia", "fuerza", "estrella"],
+    "tags": [
+      "animo",
+      "apoyo",
+      "energia",
+      "fuerza",
+      "estrella"
+    ],
     "labels": [
       "¡Tú puedes!",
       "Paso a paso",
@@ -88,7 +331,13 @@
     "name": "Vida cotidiana",
     "motif": "cup",
     "color": "#99bdbd",
-    "tags": ["cafe", "te", "comida", "rutina", "mañana"],
+    "tags": [
+      "cafe",
+      "te",
+      "comida",
+      "rutina",
+      "mañana"
+    ],
     "labels": [
       "Cafecito",
       "Un té y hablamos",
@@ -109,7 +358,13 @@
     "name": "A celebrar",
     "motif": "gift",
     "color": "#dfa0b5",
-    "tags": ["fiesta", "felicitar", "cumpleaños", "celebracion", "regalo"],
+    "tags": [
+      "fiesta",
+      "felicitar",
+      "cumpleaños",
+      "celebracion",
+      "regalo"
+    ],
     "labels": [
       "¡Felicitaciones!",
       "Eso merece fiesta",
@@ -130,7 +385,13 @@
     "name": "Así me siento",
     "motif": "face",
     "color": "#ebc187",
-    "tags": ["emocion", "reaccion", "risa", "asombro", "sorpresa"],
+    "tags": [
+      "emocion",
+      "reaccion",
+      "risa",
+      "asombro",
+      "sorpresa"
+    ],
     "labels": [
       "Me encanta",
       "Jajaja",
@@ -151,7 +412,13 @@
     "name": "Con calma",
     "motif": "cloud",
     "color": "#b2b5d9",
-    "tags": ["tranquilidad", "pausa", "descanso", "escuchar", "nube"],
+    "tags": [
+      "tranquilidad",
+      "pausa",
+      "descanso",
+      "escuchar",
+      "nube"
+    ],
     "labels": [
       "Sin apuro",
       "Hoy escucho",
@@ -172,7 +439,13 @@
     "name": "Humor cósmico",
     "motif": "planet",
     "color": "#b8a5d4",
-    "tags": ["humor", "gracioso", "risa", "planeta", "espacio"],
+    "tags": [
+      "humor",
+      "gracioso",
+      "risa",
+      "planeta",
+      "espacio"
+    ],
     "labels": [
       "Fuera de órbita",
       "Mi cerebro cargando",
@@ -193,7 +466,14 @@
     "name": "Cuidarnos",
     "motif": "heart",
     "color": "#e6a292",
-    "tags": ["afecto", "abrazo", "gracias", "apoyo", "cariño", "corazon"],
+    "tags": [
+      "afecto",
+      "abrazo",
+      "gracias",
+      "apoyo",
+      "cariño",
+      "corazon"
+    ],
     "labels": [
       "Gracias por estar",
       "Abrazo virtual",
@@ -214,7 +494,13 @@
     "name": "A mi ritmo",
     "motif": "calendar",
     "color": "#91b6aa",
-    "tags": ["limites", "respeto", "consentimiento", "pasar", "comodidad"],
+    "tags": [
+      "limites",
+      "respeto",
+      "consentimiento",
+      "pasar",
+      "comodidad"
+    ],
     "labels": [
       "Prefiero pasar",
       "Hoy no me acomoda",
@@ -235,7 +521,14 @@
     "name": "Pequeños planes",
     "motif": "plant",
     "color": "#b1c784",
-    "tags": ["actividad", "plan", "encuentro", "volver", "grupo", "invitacion"],
+    "tags": [
+      "actividad",
+      "plan",
+      "encuentro",
+      "volver",
+      "grupo",
+      "invitacion"
+    ],
     "labels": [
       "¿Repetimos?",
       "Me gustó compartir",

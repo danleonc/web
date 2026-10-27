@@ -17,7 +17,11 @@ import {
   Sparkles,
   Users,
   X,
+  Sticker as StickerIcon,
 } from "lucide-react";
+import { StickerPicker } from "../chat/StickerPicker";
+import { getSticker } from "../chat/stickers";
+import type { StickerActions } from "../chat/stickers";
 import { Avatar, Empty, Modal } from "../components";
 import { featuredActivities, dateLabel, timeLabel } from "../data";
 import type { Profile } from "../store";
@@ -51,7 +55,7 @@ type Draft = {
   editingId?: string;
 };
 export const blankDraft: Draft = { title: "", body: "", topic: "cultura" };
-type Props = {
+type Props = StickerActions & {
   profile: Profile | null;
   blocked: string[];
   state: PlazaState;
@@ -84,6 +88,7 @@ export function Plaza({
   onInvite,
   onNotice,
   onBlock,
+  ...stickerActions
 }: Props) {
   const [topic, setTopic] = useState("todos");
   const [search, setSearch] = useState("");
@@ -97,6 +102,7 @@ export function Plaza({
   const [composeError, setComposeError] = useState("");
   const [prepare, setPrepare] = useState(false);
   const [comment, setComment] = useState("");
+  const [stickerPicker, setStickerPicker] = useState(false);
   const [invite, setInvite] = useState<PlazaPost | null>(null);
   const listRef = useRef<HTMLElement>(null);
   const allPosts = [...state.posts, ...seedPosts].filter(
@@ -767,7 +773,33 @@ export function Plaza({
                             : "respuesta de ejemplo"}
                         </span>
                       </strong>
-                      <p>{c.body}</p>
+                      {c.body && <p>{c.body}</p>}
+                      {c.stickerId && getSticker(c.stickerId) && (
+                        <img
+                          className="sent-sticker"
+                          src={getSticker(c.stickerId)!.src}
+                          alt={`Sticker: ${getSticker(c.stickerId)!.label}`}
+                          width="150"
+                          height="150"
+                          loading="lazy"
+                        />
+                      )}
+                      {c.own && (
+                        <button
+                          type="button"
+                          className="message-report"
+                          onClick={() =>
+                            onChange({
+                              ...state,
+                              comments: state.comments.filter(
+                                (reply) => reply.id !== c.id,
+                              ),
+                            })
+                          }
+                        >
+                          Eliminar mi respuesta
+                        </button>
+                      )}
                       {!c.own && (
                         <button
                           className="message-report"
@@ -832,6 +864,15 @@ export function Plaza({
                   <span>
                     No hay otras personas conectadas a esta conversación.
                   </span>
+                  <button
+                    type="button"
+                    className="sticker-trigger"
+                    aria-label="Abrir stickers"
+                    aria-haspopup="dialog"
+                    onClick={() => setStickerPicker(true)}
+                  >
+                    <StickerIcon size={22} />
+                  </button>
                   <button className="button primary" disabled={!comment.trim()}>
                     Guardar respuesta <Send size={15} />
                   </button>
@@ -972,6 +1013,36 @@ export function Plaza({
             </div>
           </div>
         </Modal>
+      )}
+      {stickerPicker && active && profile && (
+        <StickerPicker
+          preferences={stickerActions.stickerPreferences}
+          onToggleFavorite={stickerActions.onToggleFavorite}
+          onToggleFavoritePack={stickerActions.onToggleFavoritePack}
+          onClose={() => setStickerPicker(false)}
+          onSend={(id) => {
+            if (!getSticker(id)) return;
+            onChange({
+              ...state,
+              comments: [
+                ...state.comments,
+                {
+                  id: crypto.randomUUID(),
+                  postId: active.id,
+                  author: profile.alias,
+                  body: "",
+                  own: true,
+                  stickerId: id,
+                },
+              ].slice(-100),
+            });
+            stickerActions.onStickerUsed(id);
+            setStickerPicker(false);
+            onNotice(
+              "Sticker guardado en esta conversación de prueba, solo en tu navegador.",
+            );
+          }}
+        />
       )}
       {imagePicker && (
         <ImagePicker

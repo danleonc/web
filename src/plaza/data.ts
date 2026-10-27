@@ -44,6 +44,7 @@ export type PlazaComment = {
   body: string;
   author: string;
   own: boolean;
+  stickerId?: string;
 };
 export type PlazaInvitation = {
   personId: string;

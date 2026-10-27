@@ -1,4 +1,4 @@
-import { validStickerIds } from "./chat/stickers";
+import { validStickerIds, stickerPacks, getSticker } from "./chat/stickers";
 import {
   emptyPlaza,
   plazaTopics,
@@ -28,6 +28,8 @@ export type LocalState = {
   blocked: string[];
   stickerFavorites: string[];
   stickerRecent: string[];
+  stickerUsage: Record<string, number>;
+  stickerFavoritePacks: string[];
   plaza: PlazaState;
 };
 export const storageKey = "entre.prototype.v1";
@@ -38,6 +40,8 @@ export const emptyState: LocalState = {
   blocked: [],
   stickerFavorites: [],
   stickerRecent: [],
+  stickerUsage: {},
+  stickerFavoritePacks: [],
   plaza: emptyPlaza,
 };
 const strings = (v: unknown): v is string[] =>
@@ -79,7 +83,14 @@ function loadPlaza(value: unknown, blocked: string[]): PlazaState {
               short(c.id, 80) &&
               short(c.postId, 80) &&
               c.own === true &&
-              short(c.body, 700) &&
+              typeof c.body === "string" &&
+              c.body.length <= 700 &&
+              (short(c.body, 700) ||
+                (typeof c.stickerId === "string" &&
+                  !!getSticker(c.stickerId))) &&
+              (c.stickerId === undefined ||
+                (typeof c.stickerId === "string" &&
+                  !!getSticker(c.stickerId))) &&
               short(c.author, 30),
           )
           .slice(-100)
@@ -149,6 +160,26 @@ export function loadState(): LocalState {
       stickerRecent: validStickerIds(
         strings(v.stickerRecent) ? v.stickerRecent : [],
       ).slice(0, 24),
+      stickerUsage: Object.fromEntries(
+        Object.entries(
+          v.stickerUsage && typeof v.stickerUsage === "object"
+            ? v.stickerUsage
+            : {},
+        )
+          .filter(
+            ([id, count]) =>
+              getSticker(id) &&
+              typeof count === "number" &&
+              Number.isSafeInteger(count) &&
+              count > 0,
+          )
+          .map(([id, count]) => [id, Math.min(count as number, 1_000_000)]),
+      ),
+      stickerFavoritePacks: [
+        ...new Set<string>(
+          strings(v.stickerFavoritePacks) ? v.stickerFavoritePacks : [],
+        ),
+      ].filter((id) => stickerPacks.some((p) => p.id === id)),
       plaza: loadPlaza(v.plaza, v.blocked),
     };
   } catch {

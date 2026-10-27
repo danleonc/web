@@ -109,13 +109,16 @@ test("tres navegadores comparten quórum, texto, stickers, decisiones y desconex
       exact: true,
     });
     await picker
-      .getByRole("button", { name: "Seleccionar sticker: ¡Hola!", exact: true })
+      .getByRole("button", {
+        name: "Seleccionar sticker: Moka: Saludando",
+        exact: true,
+      })
       .click();
     await picker
       .getByRole("button", { name: "Enviar sticker", exact: true })
       .click();
     await expect(
-      c.getByRole("img", { name: "Sticker: ¡Hola!", exact: true }),
+      c.getByRole("img", { name: "Sticker: Moka: Saludando", exact: true }),
     ).toBeVisible();
     for (const page of [a, b, c])
       await page

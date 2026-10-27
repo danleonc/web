@@ -29,7 +29,7 @@ import { Connections } from "./pages/Connections";
 import { Room } from "./pages/Room";
 import { SharedRoom } from "./pages/SharedRoom";
 import { accountsEnabled, sharedEnabled } from "./shared/mode";
-import { getSticker } from "./chat/stickers";
+import { getSticker, stickerPacks } from "./chat/stickers";
 import type { StickerActions } from "./chat/stickers";
 import { clearImages } from "./media/local";
 import { clearHiddenImages } from "./media/ImageView";
@@ -228,6 +228,8 @@ function App() {
     stickerPreferences: {
       favorites: state.stickerFavorites,
       recent: state.stickerRecent,
+      usage: state.stickerUsage,
+      favoritePacks: state.stickerFavoritePacks,
     },
     onToggleFavorite: (id) => {
       if (!getSticker(id)) return;
@@ -238,10 +240,23 @@ function App() {
           : [...s.stickerFavorites, id],
       }));
     },
+    onToggleFavoritePack: (id) => {
+      if (!stickerPacks.some((p) => p.id === id)) return;
+      setState((s) => ({
+        ...s,
+        stickerFavoritePacks: s.stickerFavoritePacks.includes(id)
+          ? s.stickerFavoritePacks.filter((p) => p !== id)
+          : [...s.stickerFavoritePacks, id],
+      }));
+    },
     onStickerUsed: (id) => {
       if (!getSticker(id)) return;
       setState((s) => ({
         ...s,
+        stickerUsage: {
+          ...s.stickerUsage,
+          [id]: Math.min(1_000_000, (s.stickerUsage[id] || 0) + 1),
+        },
         stickerRecent: [id, ...s.stickerRecent.filter((x) => x !== id)].slice(
           0,
           24,
@@ -458,6 +473,7 @@ function App() {
         <main id="main-content" ref={mainRef} tabIndex={-1}>
           {page === "plaza" && (
             <Plaza
+              {...stickerActions}
               profile={state.profile}
               blocked={state.blocked}
               state={state.plaza}

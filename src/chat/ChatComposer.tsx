@@ -10,6 +10,7 @@ export function ChatComposer({
   onSendSticker,
   stickerPreferences,
   onToggleFavorite,
+  onToggleFavoritePack,
   onStickerUsed,
   onTypingChange,
   onSendImage,
@@ -99,6 +100,7 @@ export function ChatComposer({
         <StickerPicker
           preferences={stickerPreferences}
           onToggleFavorite={onToggleFavorite}
+          onToggleFavoritePack={onToggleFavoritePack}
           onClose={() => setPickerOpen(false)}
           onSend={(id) => {
             if (!disabled && getSticker(id)) {
