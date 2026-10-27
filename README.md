@@ -4,6 +4,16 @@ Prototipo navegable con **La Plaza, Conexiones y Encuentros**. **Afinia es el no
 
 La entrada es La Plaza: publicaciones y respuestas locales, filtros, guardados, invitaciones de ejemplo y enlaces a encuentros relacionados. Conexiones distingue afinidades e invitaciones pendientes; «Seguir conversando» en una respuesta conserva el comentario de origen y permite volver a él o explorar un encuentro relacionado. Encuentros mantiene reservas, recepción y dinámica grupal. **Los espacios nuevos no conectan con personas reales**; están separados del backend de cuentas y salas persistentes. Alcance y próximos pasos: [docs/ECOSISTEMA.md](docs/ECOSISTEMA.md).
 
+## Diseño y UI
+
+El repositorio incluye la skill `frontend-design` de Anthropic en
+[`.agents/skills/frontend-design/SKILL.md`](.agents/skills/frontend-design/SKILL.md),
+con un [brief de Afinia](.agents/skills/frontend-design/references/afinia.md).
+[`AGENTS.md`](AGENTS.md) indica utilizarla en las tareas de interfaz. La copia de
+origen, su revisión y licencia se describen en
+[UPSTREAM.md](.agents/skills/frontend-design/UPSTREAM.md). La instalación es local
+al proyecto y no requiere conectar 21st.dev ni contratar servicios adicionales.
+
 ## Ejecutar
 
 **Nuevo: cuentas y persistencia.** `npm run build:pilot` prepara una compilación separada; `ENTRE_PUBLIC_ORIGIN=http://127.0.0.1:8788 npm start` sirve la web y API con SQLite persistente. La sección **Mi cuenta y encuentros** permite registrar/iniciar/recuperar cuenta, reservar y conservar historial. El modo público estático y el laboratorio anterior siguen separados. Instrucciones, límites y preparación para HostGator: [docs/CUENTAS_Y_DESPLIEGUE.md](docs/CUENTAS_Y_DESPLIEGUE.md).
