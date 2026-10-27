@@ -1,12 +1,8 @@
 import { validStickerIds, stickerPacks, getSticker } from "./chat/stickers";
-import {
-  emptyPlaza,
-  plazaTopics,
-  plazaPeople,
-  isPlazaPersonBlocked,
-} from "./plaza/data";
+import { emptyPlaza, plazaTopics } from "./plaza/data";
 import { validImageRef } from "./media/types";
 import type { PlazaState } from "./plaza/data";
+import { normalizeInvitation } from "./plaza/invitations";
 export type Profile = {
   alias: string;
   interests: string[];
@@ -112,19 +108,14 @@ function loadPlaza(value: unknown, blocked: string[]): PlazaState {
     saved: strings(v.saved) ? v.saved.slice(0, 50) : [],
     hidden: strings(v.hidden) ? v.hidden.slice(0, 50) : [],
     invitations: Array.isArray(v.invitations)
-      ? v.invitations
-          .filter(
-            (i) =>
-              i &&
-              plazaPeople.some(
-                (p) =>
-                  p.id === i.personId && !isPlazaPersonBlocked(p.name, blocked),
-              ) &&
-              short(i.postId, 80) &&
-              typeof i.note === "string" &&
-              i.note.length <= 180,
-          )
-          .slice(0, 3)
+      ? [
+          ...new Map(
+            v.invitations.flatMap((i) => {
+              const valid = normalizeInvitation(i, blocked);
+              return valid ? [[valid.personId, valid] as const] : [];
+            }),
+          ).values(),
+        ].slice(0, 3)
       : [],
   };
 }

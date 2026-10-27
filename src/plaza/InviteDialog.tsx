@@ -3,10 +3,17 @@ import { ArrowRight, LockKeyhole } from "lucide-react";
 import { Avatar, Modal } from "../components";
 import { plazaPeople } from "./data";
 import type { PlazaInvitation } from "./data";
+import type { PlazaPost } from "./data";
+import { invitationSource } from "./invitations";
+import { InvitationContext } from "./InvitationContext";
 import type { Profile } from "../store";
 export function InviteDialog({
   personId,
   postId,
+  commentId,
+  posts = [],
+  blocked = [],
+  onMeet,
   profile,
   onProfile,
   onClose,
@@ -14,6 +21,10 @@ export function InviteDialog({
 }: {
   personId: string;
   postId: string;
+  commentId?: string;
+  posts?: PlazaPost[];
+  blocked?: string[];
+  onMeet?: (activityId: string) => void;
   profile: Profile | null;
   onProfile: () => void;
   onClose: () => void;
@@ -21,6 +32,11 @@ export function InviteDialog({
 }) {
   const [note, setNote] = useState("");
   const person = plazaPeople.find((p) => p.id === personId)!;
+  const source = invitationSource(
+    { personId, postId, commentId },
+    posts,
+    blocked,
+  );
   return (
     <Modal title={`Un punto en común con ${person.name}`} onClose={onClose}>
       <div className="modal-content invitation-dialog">
@@ -35,6 +51,7 @@ export function InviteDialog({
           Una conversación puede empezar con algo que compartieron. Tú eliges si
           quieres dar ese paso.
         </p>
+        <InvitationContext source={source} />
         <div className="inline-notice">
           <LockKeyhole size={18} />
           <span>
@@ -47,7 +64,12 @@ export function InviteDialog({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              onSave({ personId, postId, note: note.trim() });
+              onSave({
+                personId,
+                postId,
+                note: note.trim(),
+                ...(commentId ? { commentId } : {}),
+              });
               onClose();
             }}
           >
@@ -59,7 +81,11 @@ export function InviteDialog({
               className="text-input"
               rows={3}
               maxLength={180}
-              placeholder="Me dio curiosidad lo que compartiste sobre…"
+              placeholder={
+                commentId
+                  ? "Me gustó lo que comentaste sobre…"
+                  : "Me dio curiosidad lo que compartiste sobre…"
+              }
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
@@ -92,6 +118,22 @@ export function InviteDialog({
               Preparar mi perfil <ArrowRight size={16} />
             </button>
           </>
+        )}
+        {source && onMeet && (
+          <div className="invitation-group-option">
+            <p>También pueden descubrir este tema en un grupo pequeño.</p>
+            <button
+              type="button"
+              className="button text"
+              onClick={() => {
+                onClose();
+                onMeet(source.topic.activityId);
+              }}
+            >
+              Ver encuentro relacionado <ArrowRight size={15} />
+            </button>
+            <span>La reserva la decide cada persona.</span>
+          </div>
         )}
       </div>
     </Modal>

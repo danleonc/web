@@ -1,5 +1,5 @@
 import { ConductGuide } from "../safety/ConductGuide";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Bookmark,
@@ -34,6 +34,7 @@ import {
   seedPosts,
   seedComments,
   isPlazaPersonBlocked,
+  plazaPeople,
 } from "../plaza/data";
 import type {
   PlazaInvitation,
@@ -67,8 +68,10 @@ type Props = StickerActions & {
   onEncounters: () => void;
   onMeet: (id: string) => void;
   activePost: string | null;
+  focusComment?: string | null;
   onOpenPost: (id: string | null) => void;
   onInvite: (i: PlazaInvitation) => void;
+  onPrepareInvitation: (source: Omit<PlazaInvitation, "note">) => void;
   onNotice: (message: string) => void;
   onBlock: (name: string) => void;
 };
@@ -84,8 +87,10 @@ export function Plaza({
   onEncounters,
   onMeet,
   activePost,
+  focusComment,
   onOpenPost,
   onInvite,
+  onPrepareInvitation,
   onNotice,
   onBlock,
   ...stickerActions
@@ -103,7 +108,18 @@ export function Plaza({
   const [prepare, setPrepare] = useState(false);
   const latestState = useRef(state);
   latestState.current = state;
-  const [invite, setInvite] = useState<PlazaPost | null>(null);
+  const [invite, setInvite] = useState<Omit<PlazaInvitation, "note"> | null>(
+    null,
+  );
+  const originRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!activePost || !focusComment) return;
+    const frame = requestAnimationFrame(() => {
+      originRef.current?.scrollIntoView({ block: "center" });
+      originRef.current?.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [activePost, focusComment]);
   const listRef = useRef<HTMLElement>(null);
   const allPosts = [...state.posts, ...seedPosts].filter(
     (p) => p.own || !isPlazaPersonBlocked(p.author, blocked),
@@ -781,12 +797,14 @@ export function Plaza({
                 <button
                   className="button secondary"
                   onClick={() => {
-                    onOpenPost(null);
                     state.invitations.some(
                       (i) => i.personId === active.personId,
                     )
                       ? onConnections()
-                      : setInvite(active);
+                      : setInvite({
+                          personId: active.personId,
+                          postId: active.id,
+                        });
                   }}
                 >
                   {state.invitations.some((i) => i.personId === active.personId)
@@ -813,7 +831,14 @@ export function Plaza({
             <div className="plaza-replies">
               {replies(active.id).length ? (
                 replies(active.id).map((c) => (
-                  <div className="plaza-reply" key={c.id}>
+                  <div
+                    className={`plaza-reply ${focusComment === c.id ? "invitation-origin" : ""}`}
+                    key={c.id}
+                    ref={focusComment === c.id ? originRef : undefined}
+                    tabIndex={focusComment === c.id ? -1 : undefined}
+                    role="group"
+                    aria-label={`Respuesta de ${c.own ? "ti" : c.author}`}
+                  >
                     <Avatar name={c.author} index={c.own ? 4 : 1} small />
                     <div>
                       <strong>
@@ -865,16 +890,50 @@ export function Plaza({
                         </button>
                       )}
                       {!c.own && (
-                        <button
-                          className="message-report"
-                          onClick={() =>
-                            setReport(
-                              `Respuesta de ${c.author}: ${c.body.slice(0, 120)}`,
-                            )
-                          }
-                        >
-                          Reportar respuesta
-                        </button>
+                        <div className="reply-continuation-actions">
+                          {c.personId &&
+                            plazaPeople.some(
+                              (p) =>
+                                p.id === c.personId &&
+                                !isPlazaPersonBlocked(p.name, blocked),
+                            ) && (
+                              <button
+                                type="button"
+                                className="button text"
+                                onClick={() => {
+                                  if (
+                                    state.invitations.some(
+                                      (i) => i.personId === c.personId,
+                                    )
+                                  )
+                                    onConnections();
+                                  else
+                                    setInvite({
+                                      personId: c.personId!,
+                                      postId: active.id,
+                                      commentId: c.id,
+                                    });
+                                }}
+                              >
+                                {state.invitations.some(
+                                  (i) => i.personId === c.personId,
+                                )
+                                  ? "Ver mi invitación"
+                                  : "Seguir conversando"}
+                                <ArrowRight size={14} />
+                              </button>
+                            )}
+                          <button
+                            className="message-report"
+                            onClick={() =>
+                              setReport(
+                                `Respuesta de ${c.author}: ${c.body.slice(0, 120)}`,
+                              )
+                            }
+                          >
+                            Reportar respuesta
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1063,9 +1122,13 @@ export function Plaza({
       {invite && (
         <InviteDialog
           personId={invite.personId}
-          postId={invite.id}
+          postId={invite.postId}
+          commentId={invite.commentId}
+          posts={state.posts}
+          blocked={blocked}
+          onMeet={onMeet}
           profile={profile}
-          onProfile={onProfile}
+          onProfile={() => onPrepareInvitation(invite)}
           onClose={() => setInvite(null)}
           onSave={(i) => {
             onInvite(i);

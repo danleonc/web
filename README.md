@@ -2,7 +2,7 @@
 
 Prototipo navegable con **La Plaza, Conexiones y Encuentros**. **Afinia es el nombre de trabajo de la interfaz, sin validación de marca**; los identificadores técnicos de Entre se conservan para proteger datos existentes. Construido con React, TypeScript y Vite. Interfaz adaptable en español; fechas de ejemplo en la zona `America/Santiago`.
 
-La entrada es La Plaza: publicaciones y respuestas locales, filtros, guardados, invitaciones de ejemplo y enlaces a encuentros relacionados. Conexiones distingue afinidades e invitaciones pendientes. Encuentros mantiene reservas, recepción y dinámica grupal. **Los espacios nuevos no conectan con personas reales**; están separados del backend de cuentas y salas persistentes. Alcance y próximos pasos: [docs/ECOSISTEMA.md](docs/ECOSISTEMA.md).
+La entrada es La Plaza: publicaciones y respuestas locales, filtros, guardados, invitaciones de ejemplo y enlaces a encuentros relacionados. Conexiones distingue afinidades e invitaciones pendientes; «Seguir conversando» en una respuesta conserva el comentario de origen y permite volver a él o explorar un encuentro relacionado. Encuentros mantiene reservas, recepción y dinámica grupal. **Los espacios nuevos no conectan con personas reales**; están separados del backend de cuentas y salas persistentes. Alcance y próximos pasos: [docs/ECOSISTEMA.md](docs/ECOSISTEMA.md).
 
 ## Ejecutar
 

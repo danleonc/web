@@ -17,6 +17,8 @@ import { stickers } from "../chat/stickers";
 import { plazaPeople, isPlazaPersonBlocked } from "../plaza/data";
 import type { PlazaInvitation } from "../plaza/data";
 import { InviteDialog } from "../plaza/InviteDialog";
+import { invitationSource } from "../plaza/invitations";
+import { InvitationContext } from "../plaza/InvitationContext";
 
 export function Connections({
   state,
@@ -26,7 +28,9 @@ export function Connections({
   onWithdrawGroup,
   onPlaza,
   onPlazaInvite,
+  onPrepareInvitation,
   onWithdrawPlaza,
+  onMeet,
   ...stickerActions
 }: StickerActions & {
   state: LocalState;
@@ -34,8 +38,10 @@ export function Connections({
   onWithdrawGroup: (activityId: string) => void;
   onDiscover: () => void;
   onWithdraw: (activityId: string, name: string) => void;
-  onPlaza: (postId?: string) => void;
+  onPlaza: (postId?: string, commentId?: string) => void;
+  onMeet: (activityId: string) => void;
   onPlazaInvite: (invitation: PlazaInvitation) => void;
+  onPrepareInvitation: (source: Omit<PlazaInvitation, "note">) => void;
   onWithdrawPlaza: (personId: string) => void;
 }) {
   const [chatOpen, setChatOpen] = useState(false);
@@ -225,6 +231,11 @@ export function Connections({
               <div className="connections-grid">
                 {state.plaza.invitations.map((i) => {
                   const p = plazaPeople.find((p) => p.id === i.personId)!;
+                  const source = invitationSource(
+                    i,
+                    state.plaza.posts,
+                    state.blocked,
+                  );
                   return (
                     <article
                       className="connection-card panel"
@@ -234,8 +245,13 @@ export function Connections({
                       <Avatar name={p.name} index={plazaPeople.indexOf(p)} />
                       <span className="fiction-label">PERSONA FICTICIA</span>
                       <h3>{p.name} · La Plaza</h3>
-                      <p>Un interés compartido puede ser el comienzo.</p>
-                      {i.note && <blockquote>{i.note}</blockquote>}
+                      <InvitationContext source={source} />
+                      {i.note && (
+                        <div className="invitation-note">
+                          <span>Tu mensaje para empezar</span>
+                          <blockquote>{i.note}</blockquote>
+                        </div>
+                      )}
                       <span className="pending-pill">
                         <Clock3 size={13} /> Esperando aceptación · ejemplo
                       </span>
@@ -245,10 +261,22 @@ export function Connections({
                       </p>
                       <button
                         className="button secondary full"
-                        onClick={() => onPlaza(i.postId)}
+                        disabled={!source}
+                        onClick={() => onPlaza(i.postId, i.commentId)}
                       >
-                        Volver a la conversación
+                        {i.commentId
+                          ? "Volver al comentario"
+                          : "Volver a la conversación"}
                       </button>
+                      {source && (
+                        <button
+                          type="button"
+                          className="button secondary full"
+                          onClick={() => onMeet(source.topic.activityId)}
+                        >
+                          Ver encuentro relacionado <ArrowRight size={15} />
+                        </button>
+                      )}
                       <button
                         className="button text full"
                         onClick={() => onWithdrawPlaza(i.personId)}
@@ -370,7 +398,15 @@ export function Connections({
           personId={invite}
           postId={plazaPeople.find((p) => p.id === invite)!.postId}
           profile={state.profile}
-          onProfile={onProfile}
+          posts={state.plaza.posts}
+          blocked={state.blocked}
+          onMeet={onMeet}
+          onProfile={() =>
+            onPrepareInvitation({
+              personId: invite,
+              postId: plazaPeople.find((p) => p.id === invite)!.postId,
+            })
+          }
           onClose={() => setInvite(null)}
           onSave={(i) => {
             onPlazaInvite(i);

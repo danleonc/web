@@ -38,6 +38,8 @@ import { Plaza, blankDraft } from "./pages/Plaza";
 import { activities } from "./data";
 import { plazaPeople } from "./plaza/data";
 import type { PlazaInvitation } from "./plaza/data";
+import { normalizeInvitation } from "./plaza/invitations";
+import { InviteDialog } from "./plaza/InviteDialog";
 type Page =
   | "plaza"
   | "discover"
@@ -72,6 +74,18 @@ function App() {
   const [profileReturn, setProfileReturn] = useState<Page>("plaza");
   const [plazaDraft, setPlazaDraft] = useState(blankDraft);
   const [plazaThread, setPlazaThread] = useState<string | null>(null);
+  const [plazaComment, setPlazaComment] = useState<string | null>(null);
+  const [pendingInvitation, setPendingInvitation] = useState<Omit<
+    PlazaInvitation,
+    "note"
+  > | null>(null);
+  const [resumedInvitation, setResumedInvitation] = useState<Omit<
+    PlazaInvitation,
+    "note"
+  > | null>(null);
+  useEffect(() => {
+    if (page !== "profile") setPendingInvitation(null);
+  }, [page]);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [isMobile, setIsMobile] = useState(
     () => matchMedia("(max-width: 700px)").matches,
@@ -118,6 +132,7 @@ function App() {
   }, [page]);
   function navigate(next: Page) {
     setPlazaThread(null);
+    setPlazaComment(null);
     setPage(next);
     location.hash = next;
     setMobileMenu(false);
@@ -126,23 +141,35 @@ function App() {
     setProfileReturn(returnTo);
     navigate("profile");
   }
-  function openPlaza(postId?: string) {
+  function prepareInvitation(source: Omit<PlazaInvitation, "note">) {
+    setPendingBooking(null);
+    setPendingInvitation(source);
+    prepareProfile("plaza");
+  }
+  function openPlaza(postId?: string, commentId?: string) {
     navigate("plaza");
     setPlazaThread(postId || null);
+    setPlazaComment(commentId || null);
   }
   function saveInvitation(invitation: PlazaInvitation) {
-    setState((s) => ({
-      ...s,
-      plaza: {
-        ...s.plaza,
-        invitations: [
-          ...s.plaza.invitations.filter(
-            (i) => i.personId !== invitation.personId,
-          ),
-          invitation,
-        ],
-      },
-    }));
+    if (!state.profile || !normalizeInvitation(invitation, state.blocked))
+      return;
+    setState((s) => {
+      const valid = normalizeInvitation(invitation, s.blocked);
+      if (
+        !s.profile ||
+        !valid ||
+        s.plaza.invitations.some((i) => i.personId === valid.personId)
+      )
+        return s;
+      return {
+        ...s,
+        plaza: {
+          ...s.plaza,
+          invitations: [...s.plaza.invitations, valid].slice(0, 3),
+        },
+      };
+    });
     setToast(
       "Invitación de prueba guardada. Nadie la recibe ni acepta automáticamente.",
     );
@@ -174,6 +201,13 @@ function App() {
       setPendingBooking(null);
       navigate("agenda");
       setToast("Perfil y reserva de ejemplo guardados.");
+    } else if (pendingInvitation) {
+      openPlaza(pendingInvitation.postId, pendingInvitation.commentId);
+      setResumedInvitation(pendingInvitation);
+      setPendingInvitation(null);
+      setToast(
+        "Tu perfil está listo. Revisa la invitación antes de guardarla.",
+      );
     } else {
       navigate(profileReturn);
       setToast(
@@ -487,8 +521,13 @@ function App() {
                 setDetail(activities.find((a) => a.id === id) || null)
               }
               activePost={plazaThread}
-              onOpenPost={setPlazaThread}
+              focusComment={plazaComment}
+              onOpenPost={(id) => {
+                setPlazaThread(id);
+                setPlazaComment(null);
+              }}
               onInvite={saveInvitation}
+              onPrepareInvitation={prepareInvitation}
               onBlock={(name) => {
                 setState((s) => ({
                   ...s,
@@ -531,6 +570,7 @@ function App() {
               onSave={saveProfile}
               onCancel={() => {
                 setPendingBooking(null);
+                setPendingInvitation(null);
                 navigate(profileReturn);
               }}
               onPrivacy={() => setShowPrivacy(true)}
@@ -557,6 +597,10 @@ function App() {
               onProfile={() => prepareProfile("connections")}
               onPlaza={openPlaza}
               onPlazaInvite={saveInvitation}
+              onPrepareInvitation={prepareInvitation}
+              onMeet={(id) =>
+                setDetail(activities.find((a) => a.id === id) || null)
+              }
               onWithdrawPlaza={(personId) =>
                 setState((s) => ({
                   ...s,
@@ -855,6 +899,25 @@ function App() {
             </div>
           </div>
         </Modal>
+      )}
+      {resumedInvitation && state.profile && (
+        <InviteDialog
+          {...resumedInvitation}
+          posts={state.plaza.posts}
+          blocked={state.blocked}
+          profile={state.profile}
+          onProfile={() => prepareProfile("plaza")}
+          onClose={() => setResumedInvitation(null)}
+          onSave={(i) => {
+            saveInvitation(i);
+            setResumedInvitation(null);
+            navigate("connections");
+          }}
+          onMeet={(id) => {
+            setResumedInvitation(null);
+            setDetail(activities.find((a) => a.id === id) || null);
+          }}
+        />
       )}
       {toast && (
         <div className="toast" role="status">

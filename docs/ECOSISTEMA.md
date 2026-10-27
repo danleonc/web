@@ -41,3 +41,13 @@ Las publicaciones y las respuestas admiten una imagen comprimida y una descripci
 Validar la comprensión y los recorridos con la maqueta. Después, si se decide avanzar, conectar Plaza al backend con autenticación, permisos, persistencia y moderación; a continuación invitaciones con aceptación real y chat privado autorizado.
 
 La conversación aportada incluía IA generativa, MiroFish, fotografías progresivas, publicidad y comunidades creadas por usuarios. No se incorporan como decisiones automáticas. Demanda, captación y rentabilidad continúan pendientes de validación.
+
+## Continuidad desde los comentarios
+
+Las respuestas de otras personas incluyen «Seguir conversando». El destinatario se identifica por el ID explícito del autor del comentario, no por el alias ni por el autor de la publicación. La invitación muestra la publicación y cita del comentario como contexto, permite un mensaje opcional de hasta 180 caracteres y requiere confirmación. Una invitación por persona evita duplicar solicitudes desde distintos puntos; una intención pendiente conserva su origen y el botón lleva a revisarla.
+
+Conexiones muestra estado pendiente, contexto y mensaje propio, con retirada y retorno al comentario original resaltado y enfocado. Si el origen ya no está disponible o su autor está bloqueado, no se muestra ese contenido ni se habilita el retorno. «Ver encuentro relacionado» muestra una experiencia del tema amplio; cada persona decide si reserva y no se inscribe a nadie por invitar. Un invitado sin perfil vuelve a la revisión de la invitación después de preparar su perfil, sin guardar solicitudes ni recuperar reservas abandonadas automáticamente.
+
+El modelo añade `commentId` opcional a la invitación; las anteriores sin ese campo siguen funcionando. La carga valida que comentario, publicación y destinatario correspondan, elimina duplicados y datos de estado no reconocidos y respeta bloqueos. No se guarda una copia privada del historial: el contexto se resuelve desde la fuente pública de la maqueta. La preparación del perfil conserva la intención solo en memoria.
+
+Esta etapa no implementa recepción, aceptación/rechazo remoto ni chat privado entre cuentas reales. Las invitaciones locales permanecen pendientes; el chat individual de demostración continúa separado. Conectar esos pasos al backend requiere autenticación y autorización en servidor, persistencia, controles de contacto y bloqueo y moderación operativa antes de abrirlos a una comunidad.

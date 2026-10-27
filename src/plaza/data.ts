@@ -46,11 +46,13 @@ export type PlazaComment = {
   own: boolean;
   stickerId?: string;
   image?: ImageRef;
+  personId?: string;
 };
 export type PlazaInvitation = {
   personId: string;
   postId: string;
   note: string;
+  commentId?: string;
 };
 export type PlazaState = {
   posts: PlazaPost[];
@@ -135,6 +137,7 @@ export const seedPosts: PlazaPost[] = [
 export const seedComments: PlazaComment[] = [
   {
     id: "ejemplo-cancion",
+    personId: "javiera",
     postId: "cancion",
     author: "Javiera",
     body: "Las canciones de los viajes en familia. Siempre termino recordando el paisaje antes que la letra.",
@@ -142,6 +145,7 @@ export const seedComments: PlazaComment[] = [
   },
   {
     id: "ejemplo-crear",
+    personId: "antonia",
     postId: "crear-sin-prisa",
     author: "Antonia",
     body: "Me pasa con escribir. A veces una página sin corregir nada ya es un buen comienzo.",
