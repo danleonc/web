@@ -88,6 +88,13 @@ Incluye tamaños de texto largos, desplazamiento del diálogo y navegación infe
 Los botones deben resultar cómodos al tacto; apunta a 44 píxeles para acciones
 principales e iconos interactivos y evita objetivos superpuestos.
 
+Los campos editables de móvil y dispositivos táctiles tienen un mínimo de 16 px
+antes y después del foco, aplicado al final de la cascada en
+`src/mobile-inputs.css`. Esto evita el zoom automático de campos pequeños en
+Safari de iPhone. Conserva el zoom manual: no añadas `user-scalable=no`, límites
+de escala ni cambios de tamaño solo al enfocar. Revisa también diálogos anidados,
+buscador de stickers, contraseñas y formularios de cuenta.
+
 Conserva foco visible, etiquetas accesibles, navegación con teclado y semántica
 adecuada. Reutiliza `Modal` para apertura, Escape y retorno del foco, incluidas
 las capas anidadas. Considera teclado móvil, ampliación de imágenes y orientación

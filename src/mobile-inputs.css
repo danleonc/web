@@ -1,0 +1,23 @@
+/* Safari on iPhone can zoom focused fields when their font is below 16px.
+   Apply this before focus, including nested dialogs and account forms. Keep
+   pinch zoom available; do not constrain the viewport's maximum scale. */
+@media (max-width: 1100px), (any-pointer: coarse) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  #root :is(
+    input:not([type="checkbox"], [type="radio"], [type="range"],
+      [type="color"], [type="hidden"], [type="file"], [type="button"],
+      [type="submit"], [type="reset"], [type="image"]),
+    textarea,
+    select,
+    [contenteditable="true"],
+    [contenteditable=""]
+  ) {
+    font-size: max(16px, 1rem);
+    min-inline-size: 0;
+    max-inline-size: 100%;
+  }
+}
