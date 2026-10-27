@@ -26,7 +26,7 @@ export const stickers: Sticker[] = packs.flatMap((pack) =>
       ...pack.tags,
       ...(pack.motif === "character" ? expressionTags[i] || [] : []),
     ],
-    src: `${import.meta.env.BASE_URL}stickers/${pack.id}-${i + 1}.${pack.format}`,
+    src: `${import.meta.env.BASE_URL}stickers/${pack.assets[i]}`,
   })),
 );
 const byId = new Map(stickers.map((s) => [s.id, s]));

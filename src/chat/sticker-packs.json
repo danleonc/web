@@ -19,6 +19,14 @@
       "Moka: Qué sorpresa",
       "Moka: Modo descanso",
       "Moka: No doy más"
+    ],
+    "assets": [
+      "moka-1.4d03e5a0fa14.webp",
+      "moka-2.5e9eed6869db.webp",
+      "moka-3.a5b7603ff4f9.webp",
+      "moka-4.4eef2c1beabf.webp",
+      "moka-5.c755fe3d5302.webp",
+      "moka-6.c8c759c89cc7.webp"
     ]
   },
   {
@@ -41,6 +49,14 @@
       "Pipo: Qué sorpresa",
       "Pipo: Modo descanso",
       "Pipo: No doy más"
+    ],
+    "assets": [
+      "pipo-1.d68d58e7bb3e.webp",
+      "pipo-2.f08c4781a180.webp",
+      "pipo-3.34d00456c447.webp",
+      "pipo-4.7d2e93921e8b.webp",
+      "pipo-5.26a052630e45.webp",
+      "pipo-6.1bb3d4ba506a.webp"
     ]
   },
   {
@@ -63,6 +79,14 @@
       "Tuerca: Qué sorpresa",
       "Tuerca: Modo descanso",
       "Tuerca: No doy más"
+    ],
+    "assets": [
+      "tuerca-1.8cd7b7c4145f.webp",
+      "tuerca-2.e732b907b22b.webp",
+      "tuerca-3.5552c634b3aa.webp",
+      "tuerca-4.a8f3a20d388b.webp",
+      "tuerca-5.c374d4829835.webp",
+      "tuerca-6.f2731196b858.webp"
     ]
   },
   {
@@ -85,6 +109,14 @@
       "Órbita: Qué sorpresa",
       "Órbita: Modo descanso",
       "Órbita: No doy más"
+    ],
+    "assets": [
+      "orbita-1.b20d68fdeaf4.webp",
+      "orbita-2.3b2b2f250124.webp",
+      "orbita-3.c5d37a84dec9.webp",
+      "orbita-4.77c8ab1254d3.webp",
+      "orbita-5.41a3a9d28a27.webp",
+      "orbita-6.e0ce598d8cb2.webp"
     ]
   },
   {
@@ -107,6 +139,14 @@
       "Lila: Qué sorpresa",
       "Lila: Modo descanso",
       "Lila: No doy más"
+    ],
+    "assets": [
+      "lila-1.10cc466c80bd.webp",
+      "lila-2.ab2bd4d1940f.webp",
+      "lila-3.19722aad885d.webp",
+      "lila-4.147deb4a4ee1.webp",
+      "lila-5.2d6205597901.webp",
+      "lila-6.4ada06791c36.webp"
     ]
   },
   {
@@ -129,6 +169,14 @@
       "Gota: Qué sorpresa",
       "Gota: Modo descanso",
       "Gota: No doy más"
+    ],
+    "assets": [
+      "gota-1.b221783e4267.webp",
+      "gota-2.b5b4bf97cede.webp",
+      "gota-3.83ef9b865265.webp",
+      "gota-4.71c2592a3c97.webp",
+      "gota-5.92dbfcc53464.webp",
+      "gota-6.a970af744155.webp"
     ]
   },
   {
@@ -151,6 +199,14 @@
       "Michi Rosa: Qué sorpresa",
       "Michi Rosa: Modo descanso",
       "Michi Rosa: No doy más"
+    ],
+    "assets": [
+      "michi-rosa-1.5184347edbb2.webp",
+      "michi-rosa-2.0418e50975c3.webp",
+      "michi-rosa-3.d49e06f91a6f.webp",
+      "michi-rosa-4.a304daa118aa.webp",
+      "michi-rosa-5.15f42aeb72bc.webp",
+      "michi-rosa-6.eb9b7c8a17db.webp"
     ]
   },
   {
@@ -173,6 +229,14 @@
       "Nico: Qué sorpresa",
       "Nico: Modo descanso",
       "Nico: No doy más"
+    ],
+    "assets": [
+      "nico-1.ec0f398cb40a.webp",
+      "nico-2.e04288259f0e.webp",
+      "nico-3.e0b57f998b7b.webp",
+      "nico-4.995212f95cfb.webp",
+      "nico-5.22e69b20d067.webp",
+      "nico-6.7be44218b0a3.webp"
     ]
   },
   {
@@ -195,6 +259,14 @@
       "Flama: Qué sorpresa",
       "Flama: Modo descanso",
       "Flama: No doy más"
+    ],
+    "assets": [
+      "flama-1.76bb8bf103ee.webp",
+      "flama-2.566304fc070c.webp",
+      "flama-3.eda688bd23ef.webp",
+      "flama-4.4b14b3af246e.webp",
+      "flama-5.a42ade488d0e.webp",
+      "flama-6.91610675b4c1.webp"
     ]
   },
   {
@@ -217,6 +289,14 @@
       "Babú: Qué sorpresa",
       "Babú: Modo descanso",
       "Babú: No doy más"
+    ],
+    "assets": [
+      "babu-1.ac4f6861debd.webp",
+      "babu-2.75f4d5c2cd1e.webp",
+      "babu-3.18a5fa330d83.webp",
+      "babu-4.aa140d071261.webp",
+      "babu-5.cd7fd9aeece6.webp",
+      "babu-6.aff5bf341576.webp"
     ]
   }
 ]
