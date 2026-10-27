@@ -1,0 +1,33 @@
+{
+  "kind": "AI-generated illustrative scene",
+  "created": "2026-10-27",
+  "source": "image_gen",
+  "composition": "Tres adultos en espacios separados usando portátiles; no es una captura del producto ni una fotografía de miembros.",
+  "sourceSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "assets": [
+    {
+      "path": "src/assets/encuentros-online-480.webp",
+      "width": 480,
+      "height": 320,
+      "bytes": 24528,
+      "sha256": "06e3300733565deb9616a4872c6611beb249b0fd0e7794d3c3bac89d41ea5faa"
+    },
+    {
+      "path": "src/assets/encuentros-online-768.webp",
+      "width": 768,
+      "height": 512,
+      "bytes": 47248,
+      "sha256": "0d11f599591403afc70eceac0fe6ca6f107ee07ffbc40be74c1530df161cccb6"
+    },
+    {
+      "path": "src/assets/encuentros-online-1280.webp",
+      "width": 1280,
+      "height": 853,
+      "bytes": 96676,
+      "sha256": "6e7faa6330cbcb169b30bdd64ed514f5f724115081d17c17a416b5f241bc1d16"
+    }
+  ]
+}

@@ -19,7 +19,9 @@ import type { Activity } from "../data";
 import type { Profile } from "../store";
 import { Avatar, Empty } from "../components";
 import { Illustration } from "../Illustration";
-import { GroupIllustration } from "../GroupIllustration";
+import encounterPhoto480 from "../assets/encuentros-online-480.webp";
+import encounterPhoto768 from "../assets/encuentros-online-768.webp";
+import encounterPhoto1280 from "../assets/encuentros-online-1280.webp";
 
 export function Discover({
   profile,
@@ -73,7 +75,7 @@ export function Discover({
           <MapPin size={15} /> Desde donde estés{" "}
         </span>
       </div>
-      <section className="hero renewed-hero">
+      <section className="hero renewed-hero encounter-photo-hero">
         <div className="hero-copy">
           <span className="hero-label">
             <span className="status-dot" /> Un grupo pequeño. Algo por compartir.
@@ -104,10 +106,19 @@ export function Discover({
             ritmo
           </span>
         </div>
-        <GroupIllustration />
-        <span className="hero-sticker">
-          <Sparkles size={15} /> La afinidad también se descubre haciendo.
-        </span>
+        <figure className="encounter-hero-photo">
+          <img
+            src={encounterPhoto1280}
+            srcSet={`${encounterPhoto480} 480w, ${encounterPhoto768} 768w, ${encounterPhoto1280} 1280w`}
+            sizes="(max-width: 700px) calc(100vw - 38px), (max-width: 1200px) calc(100vw - 256px), calc(55vw - 163px)"
+            width="1280"
+            height="853"
+            alt="Tres personas adultas usando sus portátiles desde espacios distintos, en una escena ilustrativa de conexión online."
+            fetchPriority="high"
+            decoding="async"
+          />
+          <figcaption>Escena ilustrativa · creada con IA</figcaption>
+        </figure>
       </section>
       <section
         id="activities"

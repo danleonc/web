@@ -21,6 +21,13 @@ También pidió reforzar su atractivo visual. La identidad vigente combina una
 marca floral, verde profundo, fondos crema, acentos de albaricoque y lavanda,
 tipografía editorial y personajes expresivos.
 
+El banner principal de Encuentros usa una escena de apariencia fotográfica para
+comunicar cercanía humana: adultos participando desde espacios separados, luz
+natural y colores cálidos. La escena generada se identifica como ilustrativa;
+no representa miembros reales ni una captura de funciones de vídeo. El primer
+cambio se documenta en `docs/diseno/Banner_fotografico_encuentros.md`. Los
+personajes expresivos siguen teniendo su lugar en los stickers.
+
 Parte de los patrones que la skill cita como posibles lugares comunes ya forma
 parte de una dirección explícita del producto. Mantén esas decisiones mientras
 resuelves jerarquía, legibilidad y composición con intención. Puedes proponer
