@@ -1,0 +1,36 @@
+{
+  "kind": "AI-generated illustrative scene",
+  "created": "2026-10-27",
+  "source": "image_gen",
+  "composition": "Dos adultos en espacios separados compartiendo intereses cotidianos desde teléfono y portátil.",
+  "sourceSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "assets": [
+    {
+      "path": "src/assets/plaza-online-480.webp",
+      "width": 480,
+      "height": 320,
+      "bytes": 26486,
+      "quality": 82,
+      "sha256": "814e1845458c0568f090f231c2d3e1ab52418bce0d99136b1cb7a490fd2a67ef"
+    },
+    {
+      "path": "src/assets/plaza-online-768.webp",
+      "width": 768,
+      "height": 512,
+      "bytes": 48456,
+      "quality": 82,
+      "sha256": "4e1ac0998487d312653243e3af8f5b1ce4479a778e96e56a2cf71766d4f20576"
+    },
+    {
+      "path": "src/assets/plaza-online-1280.webp",
+      "width": 1280,
+      "height": 853,
+      "bytes": 94480,
+      "quality": 82,
+      "sha256": "c6096aa8b5d276be37d5fc8d5e495135bdbe37b319a5f08dd0fba20b6dbb92ad"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "kind": "AI-generated illustrative scene",
+  "created": "2026-10-27",
+  "source": "image_gen",
+  "composition": "Dos adultas leyendo mensajes desde espacios separados, con expresiones naturales de atención y cercanía.",
+  "sourceSize": {
+    "width": 1536,
+    "height": 1024
+  },
+  "assets": [
+    {
+      "path": "src/assets/conexiones-online-480.webp",
+      "width": 480,
+      "height": 320,
+      "bytes": 23722,
+      "quality": 82,
+      "sha256": "603ce27ec5d108e6c33895f592192727347945df631397c9dff097e5c8339c14"
+    },
+    {
+      "path": "src/assets/conexiones-online-768.webp",
+      "width": 768,
+      "height": 512,
+      "bytes": 48558,
+      "quality": 82,
+      "sha256": "c1ae724c4726659d14ba763055a6f7b13b4f374518e3a95ee33200d17afcb71b"
+    },
+    {
+      "path": "src/assets/conexiones-online-1280.webp",
+      "width": 1280,
+      "height": 853,
+      "bytes": 92362,
+      "quality": 78,
+      "sha256": "db35bbdcc2ff6e03b200ecc4233aea10dc6d8581b270761fc18c6be797bf3f38"
+    }
+  ]
+}

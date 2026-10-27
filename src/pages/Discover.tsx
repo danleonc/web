@@ -19,9 +19,8 @@ import type { Activity } from "../data";
 import type { Profile } from "../store";
 import { Avatar, Empty } from "../components";
 import { Illustration } from "../Illustration";
-import encounterPhoto480 from "../assets/encuentros-online-480.webp";
-import encounterPhoto768 from "../assets/encuentros-online-768.webp";
-import encounterPhoto1280 from "../assets/encuentros-online-1280.webp";
+import { HeroPhoto } from "../HeroPhoto";
+import { encountersHeroPhoto } from "../heroPhotos";
 
 export function Discover({
   profile,
@@ -106,19 +105,11 @@ export function Discover({
             ritmo
           </span>
         </div>
-        <figure className="encounter-hero-photo">
-          <img
-            src={encounterPhoto1280}
-            srcSet={`${encounterPhoto480} 480w, ${encounterPhoto768} 768w, ${encounterPhoto1280} 1280w`}
-            sizes="(max-width: 700px) calc(100vw - 38px), (max-width: 1200px) calc(100vw - 256px), calc(55vw - 163px)"
-            width="1280"
-            height="853"
-            alt="Tres personas adultas usando sus portátiles desde espacios distintos, en una escena ilustrativa de conexión online."
-            fetchPriority="high"
-            decoding="async"
-          />
-          <figcaption>Escena ilustrativa · creada con IA</figcaption>
-        </figure>
+        <HeroPhoto
+          className="encounter-hero-photo"
+          images={encountersHeroPhoto}
+          alt="Tres personas adultas usando sus portátiles desde espacios distintos, en una escena ilustrativa de conexión online."
+        />
       </section>
       <section
         id="activities"

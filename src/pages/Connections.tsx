@@ -11,6 +11,8 @@ import {
 import { activities } from "../data";
 import type { LocalState } from "../store";
 import { Avatar, Empty } from "../components";
+import { HeroPhoto } from "../HeroPhoto";
+import { connectionsHeroPhoto } from "../heroPhotos";
 import { PrivateChatDemo } from "../chat/PrivateChatDemo";
 import type { StickerActions } from "../chat/stickers";
 import { stickers } from "../chat/stickers";
@@ -68,8 +70,8 @@ export function Connections({
     .flatMap((f) => activities.find((a) => a.id === f.activityId) || []);
   return (
     <div className="page-content connections-page">
-      <section className="connections-hero">
-        <div>
+      <section className="connections-hero connections-photo-hero">
+        <div className="connections-hero-copy">
           <p className="eyebrow">Conexiones · Sin prisa, sin etiquetas</p>
           <h1>
             Algo en común.
@@ -84,19 +86,10 @@ export function Connections({
             Encontrar una conversación <ArrowRight size={16} />
           </button>
         </div>
-        <div className="connections-hero-art" aria-hidden="true">
-          <span className="connection-orbit" />
-          <span className="connection-flower">✳</span>
-          {availablePeople.map((p, i) => (
-            <span className={`orbit-person orbit-person-${i}`} key={p.id}>
-              <Avatar name={p.name} index={i} />
-              <small>{p.interests[0]}</small>
-            </span>
-          ))}
-          <span className="orbit-caption">
-            <Sparkles size={15} /> La afinidad se descubre compartiendo.
-          </span>
-        </div>
+        <HeroPhoto
+          images={connectionsHeroPhoto}
+          alt="Dos adultas leen mensajes en sus teléfonos desde hogares distintos, en una escena de conversación cercana y tranquila."
+        />
       </section>
       <div className="connections-tabs" aria-label="Explorar conexiones">
         <button

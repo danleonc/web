@@ -27,6 +27,8 @@ import { Avatar, Empty, Modal } from "../components";
 import { featuredActivities, dateLabel, timeLabel } from "../data";
 import type { Profile } from "../store";
 import { PlazaArt } from "../plaza/Art";
+import { HeroPhoto } from "../HeroPhoto";
+import { plazaHeroPhoto } from "../heroPhotos";
 import { InviteDialog } from "../plaza/InviteDialog";
 import {
   emptyPlaza,
@@ -277,7 +279,7 @@ export function Plaza({
   const culture = featuredActivities[0];
   return (
     <div className="page-content plaza-page">
-      <section className="plaza-welcome" aria-labelledby="plaza-title">
+      <section className="plaza-welcome plaza-photo-hero" aria-labelledby="plaza-title">
         <div className="plaza-welcome-copy">
           <p className="eyebrow">
             <span className="little-spark">✳</span> La Plaza · A tu ritmo
@@ -304,12 +306,10 @@ export function Plaza({
             participar.
           </span>
         </div>
-        <div className="plaza-welcome-picture">
-          <PlazaArt />
-          <span className="illustration-caption">
-            <span /> Lo cotidiano también nos conecta.
-          </span>
-        </div>
+        <HeroPhoto
+          images={plazaHeroPhoto}
+          alt="Dos personas adultas comparten intereses cotidianos desde sus propios espacios, con un teléfono, libros, música y un portátil."
+        />
       </section>
       <div className="ecosystem-paths" aria-label="Tres formas de conectar">
         <span>

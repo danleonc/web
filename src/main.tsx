@@ -6,6 +6,7 @@ import "./ecosystem.css";
 import "./safety.css";
 import "./spaces.css";
 import "./chat/replies.css";
+import "./photo-banners.css";
 import "./encounter-banner.css";
 import "./mobile-inputs.css";
 
