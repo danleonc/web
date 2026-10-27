@@ -57,7 +57,7 @@ export function Discover({
       <div className="page-heading">
         <div>
           <p className="eyebrow">
-            ENCUENTROS · COMPARTIR TIEMPO, DESCUBRIR PERSONAS
+            Encuentros · Compartir tiempo
           </p>
           <h1>
             {profile
@@ -76,15 +76,13 @@ export function Discover({
       <section className="hero renewed-hero">
         <div className="hero-copy">
           <span className="hero-label">
-            <span className="status-dot" /> UN GRUPO PEQUEÑO. ALGO POR
-            COMPARTIR.
+            <span className="status-dot" /> Un grupo pequeño. Algo por compartir.
           </span>
           <h2>
-            Conoce gente con quien quieras <em>volver a compartir.</em>
+            Conoce personas <em>compartiendo.</em>
           </h2>
           <p>
-            Una experiencia para empezar, espacio para conversar y la libertad
-            de decidir qué viene después.
+            Elige un tema y comparte una conversación, sin presión.
           </p>
           <div className="hero-actions">
             <button
@@ -112,41 +110,6 @@ export function Discover({
         </span>
       </section>
       <section
-        className="experience-method"
-        aria-label="Cómo es la experiencia"
-      >
-        <div>
-          <span>01</span>
-          <h3>Comparte un punto de partida</h3>
-          <p>Una temática abierta y una dinámica para romper el hielo.</p>
-        </div>
-        <div>
-          <span>02</span>
-          <h3>Encuentra tu forma de participar</h3>
-          <p>Conversar, pasar, escuchar o enviar un sticker. Tú eliges.</p>
-        </div>
-        <div>
-          <span>03</span>
-          <h3>Decide si quieres volver</h3>
-          <p>Continuar es opcional y necesita interés recíproco.</p>
-        </div>
-      </section>
-      <div className="encounters-open-door">
-        <span>
-          <MessageCircle size={19} />
-        </span>
-        <div>
-          <strong>La conversación no tiene que esperar.</strong>
-          <p>
-            Mientras llega un encuentro, pasa por La Plaza. Puedes compartir
-            algo y volver cuando te acomode.
-          </p>
-        </div>
-        <button className="button secondary" onClick={onPlaza}>
-          Visitar La Plaza <ArrowRight size={16} />
-        </button>
-      </div>
-      <section
         id="activities"
         className="activities-section"
         aria-labelledby="activities-title"
@@ -154,13 +117,11 @@ export function Discover({
         <div className="section-heading">
           <div>
             <div className="section-kicker">
-              <span className="short-line" /> POCAS CONVOCATORIAS. MÁS ESPACIO
-              PARA COINCIDIR.
+              <span className="short-line" /> Temas amplios para coincidir.
             </div>
             <h2 id="activities-title">Tres maneras de empezar.</h2>
             <p>
-              Temas amplios en una franja compartida de ejemplo. Los intereses
-              específicos aparecen al conversar.
+              Elige una temática. Los intereses específicos surgen al conversar.
             </p>
           </div>
           <span className="virtual-label">
@@ -248,9 +209,44 @@ export function Discover({
           />
         )}
       </section>
+      <section
+        className="experience-method"
+        aria-label="Cómo es la experiencia"
+      >
+        <div>
+          <span>01</span>
+          <h3>Comparte un punto de partida</h3>
+          <p>Una temática abierta y una dinámica para romper el hielo.</p>
+        </div>
+        <div>
+          <span>02</span>
+          <h3>Encuentra tu forma de participar</h3>
+          <p>Conversar, pasar, escuchar o enviar un sticker. Tú eliges.</p>
+        </div>
+        <div>
+          <span>03</span>
+          <h3>Decide si quieres volver</h3>
+          <p>Continuar es opcional y necesita interés recíproco.</p>
+        </div>
+      </section>
+      <div className="encounters-open-door">
+        <span>
+          <MessageCircle size={19} />
+        </span>
+        <div>
+          <strong>La conversación no tiene que esperar.</strong>
+          <p>
+            Mientras llega un encuentro, pasa por La Plaza. Puedes compartir
+            algo y volver cuando te acomode.
+          </p>
+        </div>
+        <button className="button secondary" onClick={onPlaza}>
+          Visitar La Plaza <ArrowRight size={16} />
+        </button>
+      </div>
       <section className="principles">
         <div className="principle-intro">
-          <span className="eyebrow">AQUÍ, LO IMPORTANTE ERES TÚ</span>
+          <span className="eyebrow">Aquí, lo importante eres tú</span>
           <h2>
             Conectar se siente mejor
             <br />
@@ -324,9 +320,15 @@ function ActivityCard({
         </span>
       </button>
       <div className="card-content">
+        {reserved && (
+          <span className="encounter-reserved">
+            <Check size={14} /> Tu lugar está reservado
+          </span>
+        )}
         <div className="card-date">
           {dateLabel(a.startsAt)} <span>·</span> {timeLabel(a.startsAt)} h
         </div>
+        <span className="card-timezone">Horario de Santiago · ejemplo</span>
         <h3>
           <button onClick={onOpen}>{a.title}</button>
         </h3>
@@ -348,9 +350,7 @@ function ActivityCard({
               ))}
             </span>
             <span>
-              {reserved
-                ? "Tu lugar está reservado"
-                : `${a.minimum}–${a.capacity} personas · simulación`}
+              {a.minimum}–{a.capacity} personas · simulación
             </span>
           </div>
           <button
@@ -358,7 +358,8 @@ function ActivityCard({
             aria-label={`${reserved ? "Ver reserva" : "Conocer encuentro"}: ${a.title}`}
             onClick={onOpen}
           >
-            {reserved ? <Check size={19} /> : <ArrowRight size={19} />}
+            {reserved ? "Ver reserva" : "Conocer encuentro"}
+            {reserved ? <Check size={17} /> : <ArrowRight size={17} />}
           </button>
         </div>
       </div>

@@ -726,7 +726,7 @@ function App() {
             <Illustration scene={detail.scene} />
             <span className="tag overlay-tag">{detail.category}</span>
           </div>
-          <div className="detail-body">
+          <div className="detail-body encounter-detail">
             <p className="eyebrow">ENCUENTRO VIRTUAL · DATOS FICTICIOS</p>
             <h3>{detail.title}</h3>
             <p className="detail-description">{detail.description}</p>

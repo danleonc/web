@@ -70,15 +70,15 @@ export function Connections({
     <div className="page-content connections-page">
       <section className="connections-hero">
         <div>
-          <p className="eyebrow">CONEXIONES · SIN PRISA, SIN ETIQUETAS</p>
+          <p className="eyebrow">Conexiones · Sin prisa, sin etiquetas</p>
           <h1>
             Algo en común.
             <br />
             <em>Un nuevo comienzo.</em>
           </h1>
           <p>
-            Detrás de una historia puede haber alguien con quien te guste
-            conversar. El siguiente paso siempre lo eligen ambos.
+            Descubre afinidades y revisa tus invitaciones. Continuar siempre
+            requiere que ambos quieran.
           </p>
           <button className="button primary" onClick={() => onPlaza()}>
             Encontrar una conversación <ArrowRight size={16} />
@@ -133,7 +133,7 @@ export function Connections({
                   : "Explora intereses de ejemplo. Tu perfil puede ayudarte a encontrar puntos en común."}
               </p>
             </div>
-            <span className="small-label">PERSONAS FICTICIAS</span>
+            <span className="small-label">Personas ficticias</span>
           </div>
           <div className="affinity-grid">
             {[...availablePeople]
@@ -166,7 +166,7 @@ export function Connections({
                       <Avatar name={p.name} index={index} />
                     </div>
                     <div className="affinity-content">
-                      <span className="small-label">PERFIL DE EJEMPLO</span>
+                      <span className="small-label">Perfil de ejemplo</span>
                       <h3>{p.name}</h3>
                       <p>{p.description}</p>
                       <div className="affinity-interests">
@@ -227,7 +227,7 @@ export function Connections({
               className="plaza-pending-section"
               aria-label="Invitaciones desde La Plaza"
             >
-              <h2>Un paso que puedes dejar abierto.</h2>
+              <h2>Tus invitaciones desde La Plaza</h2>
               <div className="connections-grid">
                 {state.plaza.invitations.map((i) => {
                   const p = plazaPeople.find((p) => p.id === i.personId)!;
@@ -243,15 +243,8 @@ export function Connections({
                       aria-label={`Invitación para ${p.name}`}
                     >
                       <Avatar name={p.name} index={plazaPeople.indexOf(p)} />
-                      <span className="fiction-label">PERSONA FICTICIA</span>
+                      <span className="fiction-label">Persona ficticia</span>
                       <h3>{p.name} · La Plaza</h3>
-                      <InvitationContext source={source} />
-                      {i.note && (
-                        <div className="invitation-note">
-                          <span>Tu mensaje para empezar</span>
-                          <blockquote>{i.note}</blockquote>
-                        </div>
-                      )}
                       <span className="pending-pill">
                         <Clock3 size={13} /> Esperando aceptación · ejemplo
                       </span>
@@ -259,8 +252,15 @@ export function Connections({
                         Tu intención está guardada. Nadie recibió la invitación
                         y aún no hay un contacto habilitado.
                       </p>
+                      <InvitationContext source={source} />
+                      {i.note && (
+                        <div className="invitation-note">
+                          <span>Tu mensaje para empezar</span>
+                          <blockquote>{i.note}</blockquote>
+                        </div>
+                      )}
                       <button
-                        className="button secondary full"
+                        className="button primary full"
                         disabled={!source}
                         onClick={() => onPlaza(i.postId, i.commentId)}
                       >
@@ -291,7 +291,7 @@ export function Connections({
           )}
           {groupRequests.length > 0 && (
             <section className="group-continuity panel">
-              <p className="eyebrow">VOLVER A COMPARTIR · INTERÉS DE PRUEBA</p>
+              <p className="eyebrow">Volver a compartir · Interés de prueba</p>
               <h2>Un próximo momento, si el grupo también quiere.</h2>
               {groupRequests.map((a) => (
                 <div className="group-request" key={a.id}>
@@ -321,7 +321,7 @@ export function Connections({
                   key={`${activity.id}-${name}`}
                 >
                   <Avatar name={name} index={i} />
-                  <span className="fiction-label">PERSONA FICTICIA</span>
+                  <span className="fiction-label">Persona ficticia</span>
                   <h2>{name}</h2>
                   <p>
                     Compartieron el encuentro
@@ -368,7 +368,7 @@ export function Connections({
           <MessageCircle size={23} />
         </span>
         <div>
-          <p className="eyebrow">PRUEBA INDIVIDUAL · PERSONA FICTICIA</p>
+          <p className="eyebrow">Prueba individual · Persona ficticia</p>
           <h2 id="private-chat-title">
             También puedes decirlo con un sticker.
           </h2>

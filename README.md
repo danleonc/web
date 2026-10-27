@@ -15,6 +15,8 @@ origen, su revisión y licencia se describen en
 al proyecto y no requiere conectar 21st.dev ni contratar servicios adicionales.
 La primera aplicación y su comparación visual se documentan en la
 [auditoría de La Plaza](docs/diseno/Auditoria_La_Plaza.md).
+La continuación cubre [Conexiones y Encuentros](docs/diseno/Conexiones_y_Encuentros.md),
+con estados, acciones y composición móvil más claros.
 
 ## Ejecutar
 
