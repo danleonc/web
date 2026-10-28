@@ -36,7 +36,7 @@ export class Storage {
       "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;",
     );
     const version = this.db.prepare("PRAGMA user_version").get()!.user_version;
-    if (version !== 0 && version !== 1 && version !== 2)
+    if (version !== 0 && version !== 1 && version !== 2 && version !== 3)
       throw new Error("Unsupported database version");
     if (version === 0)
       this.db.exec(`
@@ -56,7 +56,7 @@ export class Storage {
       PRAGMA user_version=1;
       COMMIT;
     `);
-    if (version !== 2)
+    if (version < 2)
       this.db.exec(`BEGIN IMMEDIATE;
       ALTER TABLE rooms ADD COLUMN safety_json TEXT NOT NULL DEFAULT '{"ballot":null,"expelled":[],"cooldownUntil":0,"notice":""}';
       CREATE TABLE moderators(user_id TEXT PRIMARY KEY REFERENCES accounts(id));
@@ -66,6 +66,20 @@ export class Storage {
       CREATE TABLE appeals(id TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES accounts(id),action_id TEXT NOT NULL,note TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',review_note TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,UNIQUE(user_id,action_id));
       CREATE TABLE media(id TEXT PRIMARY KEY,room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,owner_id TEXT NOT NULL REFERENCES accounts(id),client_id TEXT NOT NULL,body BLOB NOT NULL,created_at INTEGER NOT NULL,hidden INTEGER NOT NULL DEFAULT 0,UNIQUE(room_id,owner_id,client_id));
       PRAGMA user_version=2;COMMIT;`);
+    if (version < 3)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE account_emails(
+        user_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE,
+        email TEXT NOT NULL,
+        verified_at INTEGER,
+        adult_declared_at INTEGER NOT NULL,
+        code_hash TEXT,
+        code_until INTEGER NOT NULL DEFAULT 0,
+        last_sent INTEGER NOT NULL DEFAULT 0,
+        attempts INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE UNIQUE INDEX confirmed_email ON account_emails(email) WHERE verified_at IS NOT NULL;
+      PRAGMA user_version=3; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");
@@ -155,6 +169,27 @@ export class Storage {
           .all(userId) as { id: string }[]
       ).map((r) => r.id),
     );
+  }
+  emailStatus(id: string) {
+    return this.db
+      .prepare(
+        "SELECT email, verified_at AS verifiedAt, adult_declared_at AS adultDeclaredAt, code_hash AS codeHash, code_until AS codeUntil, last_sent AS lastSent, attempts FROM account_emails WHERE user_id=?",
+      )
+      .get(id) as
+      | {
+          email: string;
+          verifiedAt: number | null;
+          adultDeclaredAt: number;
+          codeHash: string | null;
+          codeUntil: number;
+          lastSent: number;
+          attempts: number;
+        }
+      | undefined;
+  }
+  canParticipate(id: string) {
+    const status = this.emailStatus(id);
+    return status?.verifiedAt != null && status.adultDeclaredAt > 0;
   }
   offering(id: string, startsAt: number) {
     this.db
@@ -299,6 +334,11 @@ export class Storage {
   prune(now: number) {
     this.db.prepare("DELETE FROM sessions WHERE expires_at<=?").run(now);
     this.db.prepare("DELETE FROM auth_limits WHERE until_at<=?").run(now);
+    this.db
+      .prepare(
+        "UPDATE account_emails SET code_hash=NULL, code_until=0 WHERE code_until<=? AND code_hash IS NOT NULL",
+      )
+      .run(now);
     this.db
       .prepare(
         "DELETE FROM rooms WHERE archived_at IS NOT NULL AND archived_at<?",

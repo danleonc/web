@@ -24,6 +24,8 @@ import {
 import type { RoomSafety } from "../src/safety/rules.ts";
 import { validImageRef } from "../src/media/types.ts";
 import { ModerationStore } from "./moderation.ts";
+import { EmailConfirmation } from "./email.ts";
+import type { SendVerificationEmail } from "./email.ts";
 import { handleFeatures } from "./features.ts";
 
 type Identity = {
@@ -54,6 +56,7 @@ type Connection = {
   expires: number;
 };
 type Options = {
+  sendVerificationEmail?: SendVerificationEmail;
   allowedOrigins?: string[];
   now?: () => number;
   databasePath?: string;
@@ -84,6 +87,9 @@ export function createRoomServer(options: Options = {}) {
     : null;
   const auth = storage
     ? new Auth(storage, options.secureCookies ?? false, now)
+    : null;
+  const confirmation = storage
+    ? new EmailConfirmation(storage, now, options.sendVerificationEmail)
     : null;
   const enforceSchedule = options.enforceSchedule ?? !!storage;
   const moderation = storage ? new ModerationStore(storage, now) : null;
@@ -218,6 +224,31 @@ export function createRoomServer(options: Options = {}) {
     }
     const identity = authenticated(req);
     if (
+      storage &&
+      identity &&
+      !path.startsWith("/api/auth/") &&
+      path !== "/api/session" &&
+      path !== "/api/activities" &&
+      path !== "/api/appeals" &&
+      !storage.canParticipate(identity.id)
+    ) {
+      req.resume();
+      json(res, 403, { error: "email_confirmation_required" });
+      return;
+    }
+    if (
+      storage &&
+      identity &&
+      moderation?.restriction(identity.id) &&
+      !path.startsWith("/api/auth/") &&
+      path !== "/api/appeals" &&
+      req.method !== "GET"
+    ) {
+      req.resume();
+      json(res, 403, { error: "account_restricted" });
+      return;
+    }
+    if (
       await handleFeatures(
         {
           storage,
@@ -333,7 +364,7 @@ export function createRoomServer(options: Options = {}) {
       );
       return;
     }
-    const authPath = storage && path.match(/^\/api\/auth\/([a-z]+)$/);
+    const authPath = storage && path.match(/^\/api\/auth\/([a-z-]+)$/);
     if (authPath && req.method !== "POST") {
       json(res, 405, { error: "method_not_allowed" });
       return;
@@ -354,6 +385,19 @@ export function createRoomServer(options: Options = {}) {
               moderator: moderation?.moderator(identity.id) || false,
               restriction: moderation?.restriction(identity.id) || null,
               imagesEnabled: moderation?.hasModerators() || false,
+              ...(storage
+                ? {
+                    email: storage.emailStatus(identity.id)?.email || "",
+                    emailConfirmed:
+                      storage.emailStatus(identity.id)?.verifiedAt != null,
+                    adultDeclared: !!storage.emailStatus(identity.id)
+                      ?.adultDeclaredAt,
+                    canParticipate:
+                      storage.canParticipate(identity.id) &&
+                      !moderation?.restriction(identity.id),
+                    emailDeliveryAvailable: !!options.sendVerificationEmail,
+                  }
+                : {}),
             }
           : { error: "session_required" },
       );
@@ -395,6 +439,24 @@ export function createRoomServer(options: Options = {}) {
       if (authPath && auth) {
         if (!record(value)) {
           json(res, 422, { error: "invalid_fields" });
+          return;
+        }
+        if (
+          ["email-code", "confirm-email"].includes(authPath[1]) &&
+          confirmation
+        ) {
+          const currentIdentity = authenticated(req);
+          if (!currentIdentity) {
+            json(res, 401, { error: "session_required" });
+            return;
+          }
+          const result = await confirmation.action(
+            authPath[1],
+            value,
+            currentIdentity.id,
+            req,
+          );
+          json(res, result.status, result.body);
           return;
         }
         const result = await auth.action(authPath[1], value, req, res);
@@ -490,8 +552,10 @@ export function createRoomServer(options: Options = {}) {
         const reverseBlocks = storage
           ? storage.blocks(message.senderId)
           : identitiesById(message.senderId)?.blocks;
-        visible.set(message.senderId,
-          !ownBlocks.has(message.senderId) && !reverseBlocks?.has(viewer.id));
+        visible.set(
+          message.senderId,
+          !ownBlocks.has(message.senderId) && !reverseBlocks?.has(viewer.id),
+        );
       }
       return visible.get(message.senderId)!;
     });
@@ -564,6 +628,10 @@ export function createRoomServer(options: Options = {}) {
     const identity = authenticated(req);
     if (!identity) {
       reject(socket, 401);
+      return;
+    }
+    if (storage && !storage.canParticipate(identity.id)) {
+      reject(socket, 403);
       return;
     }
     if (moderation?.restriction(identity.id)) {
@@ -709,6 +777,10 @@ export function createRoomServer(options: Options = {}) {
       });
       ws.on("error", () => {});
       ws.on("message", (raw) => {
+        if (storage && !storage.canParticipate(identity.id)) {
+          ws.close(4001, "Confirma tu correo");
+          return;
+        }
         if (moderation?.restriction(identity.id)) {
           ws.close(4004, "Cuenta restringida");
           return;
@@ -872,10 +944,17 @@ export function createRoomServer(options: Options = {}) {
           }
           const content = value.content;
           if (content.replyTo !== undefined) {
-            const original = typeof content.replyTo === "string" && content.replyTo.length <= 80
-              ? joined.messages.find((m) => m.id === content.replyTo) : undefined;
+            const original =
+              typeof content.replyTo === "string" &&
+              content.replyTo.length <= 80
+                ? joined.messages.find((m) => m.id === content.replyTo)
+                : undefined;
             if (!original || !visibleMessages([original], identity).length) {
-              error(c, "invalid_reply", "El mensaje original ya no está disponible en esta sala. Descarta ese envío pendiente y vuelve a enviarlo sin cita.");
+              error(
+                c,
+                "invalid_reply",
+                "El mensaje original ya no está disponible en esta sala. Descarta ese envío pendiente y vuelve a enviarlo sin cita.",
+              );
               return;
             }
           }
@@ -936,7 +1015,8 @@ export function createRoomServer(options: Options = {}) {
             error(c, "invalid_message", "Texto o sticker no válido.");
             return;
           }
-          if (typeof content.replyTo === "string") message.replyTo = content.replyTo;
+          if (typeof content.replyTo === "string")
+            message.replyTo = content.replyTo;
           joined.messages.push(message);
           joined.messages = joined.messages.slice(-50);
           joined.seen.set(idempotency, message.id);

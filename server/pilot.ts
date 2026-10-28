@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { smtpMailer } from "./email.ts";
 import { createRoomServer } from "./app.ts";
 const publicOrigin = process.env.ENTRE_PUBLIC_ORIGIN;
 if (!publicOrigin)
@@ -25,6 +26,7 @@ if (
 )
   throw new Error("Run npm run build:pilot before npm start");
 const app = createRoomServer({
+  sendVerificationEmail: smtpMailer(),
   databasePath:
     process.env.ENTRE_DATABASE_PATH || resolve(".data/entre.sqlite"),
   staticRoot: root,

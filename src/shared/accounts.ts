@@ -1,9 +1,23 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  createContext,
+  createElement,
+  useContext,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
 import { accountsEnabled } from "./mode";
 import type { SharedMessage } from "./protocol";
 export type AccountView = {
   id: string;
   alias: string;
+  email?: string;
+  emailConfirmed?: boolean;
+  adultDeclared?: boolean;
+  canParticipate?: boolean;
+  emailDeliveryAvailable?: boolean;
   moderator?: boolean;
   imagesEnabled?: boolean;
   restriction?: {
@@ -27,6 +41,21 @@ export type Offering = {
 };
 export type HistoryRoom = { id: string; activityId: string; phase: string };
 const errors: Record<string, string> = {
+  email_confirmation_required: "Confirma tu correo para participar.",
+  account_restricted:
+    "Tu cuenta tiene una restricción. Revisa el motivo y la apelación.",
+  invalid_email_declaration:
+    "Indica un correo válido y declara tu mayoría de edad.",
+  email_unavailable:
+    "El envío de correos aún no está habilitado. Puedes seguir explorando.",
+  email_delivery_failed:
+    "No se pudo enviar el código. Espera un minuto e inténtalo de nuevo.",
+  email_unavailable_for_account:
+    "No se puede usar este correo para esta cuenta.",
+  email_already_confirmed: "Tu correo ya está confirmado.",
+  email_rate_limited: "Espera antes de volver a solicitar o probar un código.",
+  invalid_confirmation_code:
+    "Código incorrecto, caducado o sin intentos disponibles. Solicita uno nuevo.",
   invalid_credentials:
     "El usuario, la contraseña o la clave de recuperación no coinciden.",
   invalid_credentials_format:
@@ -45,7 +74,7 @@ const errors: Record<string, string> = {
   leave_room_first: "Sal de la sala antes de cancelar la reserva.",
   session_required: "Tu sesión terminó. Vuelve a iniciar sesión.",
 };
-export function useAccount() {
+function useAccountState() {
   const [account, setAccount] = useState<AccountView | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [activities, setActivities] = useState<Offering[]>([]);
@@ -77,7 +106,7 @@ export function useAccount() {
       if (!response.ok) throw Error("El servidor no pudo consultar tu sesión.");
       const user = (await response.json()) as AccountView;
       setAccount(user);
-      if (user.restriction) {
+      if (user.restriction || !user.canParticipate) {
         setActivities([]);
         setRooms([]);
         setMessages([]);
@@ -197,4 +226,17 @@ export function useAccount() {
     },
     dismissRecovery: () => setRecovery(""),
   };
+}
+
+const AccountContext = createContext<ReturnType<typeof useAccountState> | null>(
+  null,
+);
+export function AccountProvider({ children }: { children: ReactNode }) {
+  const state = useAccountState();
+  return createElement(AccountContext.Provider, { value: state }, children);
+}
+export function useAccount() {
+  const state = useContext(AccountContext);
+  if (!state) throw Error("AccountProvider is required");
+  return state;
 }

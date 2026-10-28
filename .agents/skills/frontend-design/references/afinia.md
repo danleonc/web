@@ -114,6 +114,15 @@ una transición o confirmar una acción.
 
 Las pruebas de Chromium móvil no equivalen a haber probado un iPhone físico.
 
+## Acceso y confianza
+
+La exploración es abierta. La participación real del piloto requiere cuenta,
+correo confirmado y declaración de mayoría de edad. No se solicitan documentos
+ni biometría, ni se muestran insignias de identidad o edad verificadas. El alias
+es público y el correo privado. Distingue pendiente, código enviado/inválido o
+caducado, correo confirmado y cuenta restringida. Conserva la página al abrir
+la cuenta. La maqueta estática solo explica el acceso y no simula envíos.
+
 ## Conversación y cuidados
 
 Las salas usan una columna de lectura con historial y compositor como foco.

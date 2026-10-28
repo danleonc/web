@@ -19,9 +19,11 @@ async function fixture(t, extra = {}) {
   let app;
   let base;
   let counter = 0;
+  const mails = new Map();
   async function start() {
     app = createRoomServer({
       databasePath: path,
+      sendVerificationEmail: async (email, code) => { mails.set(email,code); },
       allowedOrigins: [origin],
       now: () => clock,
       startAt: startsAt,
@@ -67,6 +69,9 @@ async function fixture(t, extra = {}) {
       password,
     });
     assert.equal(r.status, 201);
+    const email = `${username}@example.test`;
+    assert.equal((await request("/api/auth/email-code", "POST", { email, adult: true }, r.cookie)).status, 200);
+    assert.equal((await request("/api/auth/confirm-email", "POST", { code: mails.get(email) }, r.cookie)).status, 200);
     return { ...r.body, cookie: r.cookie, username };
   }
   async function socket(person) {

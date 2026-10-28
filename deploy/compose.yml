@@ -5,6 +5,11 @@ services:
     init: true
     environment:
       ENTRE_PUBLIC_ORIGIN: ${ENTRE_PUBLIC_ORIGIN:?Set the HTTPS origin first}
+      ENTRE_SMTP_HOST: ${ENTRE_SMTP_HOST:-}
+      ENTRE_SMTP_PORT: ${ENTRE_SMTP_PORT:-465}
+      ENTRE_SMTP_USER: ${ENTRE_SMTP_USER:-}
+      ENTRE_SMTP_PASSWORD: ${ENTRE_SMTP_PASSWORD:-}
+      ENTRE_MAIL_FROM: ${ENTRE_MAIL_FROM:-}
     ports:
       - "127.0.0.1:8788:8788"
     volumes:

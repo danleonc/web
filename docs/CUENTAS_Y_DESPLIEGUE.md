@@ -20,7 +20,7 @@ npm run build:pilot
 ENTRE_PUBLIC_ORIGIN=http://127.0.0.1:8788 npm start
 ```
 
-El servidor sirve la web compilada y `/api` en el mismo origen. Escucha en loopback por defecto. No requiere claves de IA ni un proveedor de correo. Node SQLite sigue teniendo APIs experimentales en esta versión; el proyecto fija Node 24 y comprueba copias y restauraciones. Es una arquitectura de una sola instancia para un piloto pequeño, no un clúster horizontal.
+El servidor sirve la web compilada y `/api` en el mismo origen. Escucha en loopback por defecto. No requiere claves de IA. Para participar requiere correo confirmado mediante SMTP configurable; sin configuración se conserva la exploración y se bloquea la participación. Ver [Acceso y correo](ACCESO_Y_CORREO.md). Node SQLite sigue teniendo APIs experimentales en esta versión; el proyecto fija Node 24 y comprueba copias y restauraciones. Es una arquitectura de una sola instancia para un piloto pequeño, no un clúster horizontal.
 
 | Variable | Valor/uso |
 | --- | --- |
@@ -61,7 +61,7 @@ Se incorporan imágenes normalizadas de acceso privado, votaciones de expulsión
 
 ## Copias y restauración
 
-La base usa claves foráneas, migración automática v1 → `user_version=2`, WAL y transacciones. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
+La base usa claves foráneas, migración automática v1/v2 → `user_version=3`, WAL y transacciones. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
 
 ```sh
 node scripts/backup-db.mjs .data/entre.sqlite backups/entre-fecha-unica.sqlite

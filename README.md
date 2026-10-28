@@ -20,7 +20,7 @@ con estados, acciones y composición móvil más claros.
 
 ## Ejecutar
 
-**Nuevo: cuentas y persistencia.** `npm run build:pilot` prepara una compilación separada; `ENTRE_PUBLIC_ORIGIN=http://127.0.0.1:8788 npm start` sirve la web y API con SQLite persistente. La sección **Mi cuenta y encuentros** permite registrar/iniciar/recuperar cuenta, reservar y conservar historial. El modo público estático y el laboratorio anterior siguen separados. Instrucciones, límites y preparación para HostGator: [docs/CUENTAS_Y_DESPLIEGUE.md](docs/CUENTAS_Y_DESPLIEGUE.md).
+**Nuevo: cuentas y persistencia.** `npm run build:pilot` prepara una compilación separada; `ENTRE_PUBLIC_ORIGIN=http://127.0.0.1:8788 npm start` sirve la web y API con SQLite persistente. La sección **Mi cuenta y encuentros** permite registrar/iniciar/recuperar cuenta y confirmar correo antes de reservar o conversar. El envío real requiere configurar SMTP; no se solicita documento ni biometría. El modo público estático y el laboratorio anterior siguen separados. Instrucciones, límites y preparación para HostGator: [docs/CUENTAS_Y_DESPLIEGUE.md](docs/CUENTAS_Y_DESPLIEGUE.md).
 
 Requisitos: Node.js 24.19.0 (versión utilizada), npm 11 y, para las pruebas, Chromium. La maqueta y el laboratorio no requieren cuentas de proveedores, claves de IA ni servicios externos. El piloto usa SQLite incluido en Node y requiere `ENTRE_PUBLIC_ORIGIN`; ver la guía anterior.
 
@@ -62,6 +62,17 @@ Las fotos de galería o cámara se reducen automáticamente antes de compartir. 
 La recepción, los tiempos y las decisiones de la guía se pueden probar: preguntas de 90 segundos, una extensión de 30 segundos, pasar/escuchar/listo, mayoría para otra pregunta y contingencias por falta de quórum. El banco tiene hasta tres preguntas por temática. Detalles: [docs/GUIA_SALAS.md](docs/GUIA_SALAS.md).
 
 Todo está etiquetado como prototipo. Los cupos y fechas de la maqueta son ilustrativos, y sus salas pueden abrirse sin esperar al horario de ejemplo. La sincronización entre navegadores se prueba únicamente en el laboratorio local separado.
+
+## Acceso y confianza
+
+Exploración abierta y participación del piloto con cuenta, correo confirmado y
+declaración 18+. La confirmación no acredita identidad ni edad. Se conserva el
+alias público y la dirección queda privada. La demo estática explica el flujo
+desde **Acceso** y conserva sus pruebas locales; no simula cuentas o envío real.
+
+Configuración SMTP, protección de códigos, migración v3 y límites:
+[Acceso y correo](docs/ACCESO_Y_CORREO.md). El acceso directo con Google sigue
+pendiente; esta primera vía admite direcciones Gmail mediante correo confirmado.
 
 ## Conversación y cuidados en las salas
 

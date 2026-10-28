@@ -1,3 +1,4 @@
+import { confirmTestEmail } from "./pilot-email";
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 async function register(page: Page, username: string) {
@@ -31,6 +32,7 @@ async function register(page: Page, username: string) {
   await page
     .getByRole("button", { name: "Ya guardé mi clave", exact: true })
     .click();
+  await confirmTestEmail(page, username);
   return code;
 }
 async function reserve(page: Page) {

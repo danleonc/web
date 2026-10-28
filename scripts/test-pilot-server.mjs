@@ -1,8 +1,8 @@
 // Isolated browser-test service: dates are bypassed only in this fixture.
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdir, writeFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { Storage, digest } from "../server/storage.ts";
 import { passwordHash } from "../server/auth.ts";
 import { ModerationStore } from "../server/moderation.ts";
@@ -20,10 +20,26 @@ setup.createAccount(
   },
   Date.now(),
 );
+const moderator = setup.account("moderator_fixture");
+setup.db
+  .prepare(
+    "INSERT INTO account_emails(user_id,email,verified_at,adult_declared_at) VALUES(?,?,?,?)",
+  )
+  .run(moderator.id, "moderator@example.test", Date.now(), Date.now());
+const mailbox = join(tmpdir(), "afinia-test-pilot-mailbox");
+await rm(mailbox, { recursive: true, force: true });
+await mkdir(mailbox, { mode: 0o700 });
 new ModerationStore(setup, Date.now).role("moderator_fixture", true);
 setup.close();
 const app = createRoomServer({
   databasePath: join(directory, "test.sqlite"),
+  sendVerificationEmail: async (email, code) => {
+    await writeFile(
+      join(mailbox, createHash("sha256").update(email).digest("hex") + ".json"),
+      JSON.stringify({ code }),
+      { mode: 0o600 },
+    );
+  },
   staticRoot: resolve("dist-pilot"),
   allowedOrigins: ["http://127.0.0.1:4190"],
   enforceSchedule: false,
@@ -36,5 +52,6 @@ for (const signal of ["SIGTERM", "SIGINT"])
     void app
       .close()
       .then(() => rm(directory, { recursive: true, force: true }))
+      .then(() => rm(mailbox, { recursive: true, force: true }))
       .then(() => process.exit(0));
   });

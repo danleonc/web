@@ -37,11 +37,11 @@ export function SharedRoom({
     setActive(false);
   }, [account.account?.id]);
   useEffect(() => {
-    if (account.account?.restriction) {
+    if (account.account && !account.account.canParticipate) {
       setActive(false);
       setReport(null);
     }
-  }, [account.account?.restriction?.actionId]);
+  }, [account.account?.canParticipate, account.account?.restriction?.actionId]);
   const activity = featuredActivities.find((a) => a.id === activityId)!;
   const shared = useSharedRoom(
     activityId,
@@ -109,6 +109,7 @@ export function SharedRoom({
       )}
       {accountsEnabled &&
       (!account.account ||
+        !account.account.canParticipate ||
         account.account.restriction) ? null : !accountsEnabled && !profile ? (
         <section className="panel shared-connect">
           <h2>Prepara primero un perfil de prueba.</h2>
@@ -158,8 +159,9 @@ export function SharedRoom({
                 disabled={
                   !aware ||
                   (accountsEnabled &&
-                    (!account.activities.find((a) => a.id === activityId)
-                      ?.mine ||
+                    (!account.account?.canParticipate ||
+                      !account.activities.find((a) => a.id === activityId)
+                        ?.mine ||
                       !account.activities.find((a) => a.id === activityId)
                         ?.accessible ||
                       !!account.activities.find((a) => a.id === activityId)

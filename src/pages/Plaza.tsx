@@ -67,6 +67,7 @@ type Props = StickerActions & {
   onDraft: (draft: Draft) => void;
   onChange: (state: PlazaState) => void;
   onProfile: () => void;
+  onAccess?: () => void;
   onConnections: () => void;
   onEncounters: () => void;
   onMeet: (id: string) => void;
@@ -86,6 +87,7 @@ export function Plaza({
   onDraft,
   onChange,
   onProfile,
+  onAccess,
   onConnections,
   onEncounters,
   onMeet,
@@ -164,6 +166,7 @@ export function Plaza({
   function startSharing() {
     setComposeError("");
     if (profile) setComposer(true);
+    else if (onAccess) onAccess();
     else setPrepare(true);
   }
   function openPost(id: string) {
@@ -174,6 +177,7 @@ export function Plaza({
     listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function publish() {
+    if (!profile && onAccess) { onAccess(); return; }
     if (
       !profile ||
       draft.title.trim().length < 3 ||

@@ -28,6 +28,8 @@ import { Agenda } from "./pages/Agenda";
 import { Connections } from "./pages/Connections";
 import { Room } from "./pages/Room";
 import { SharedRoom } from "./pages/SharedRoom";
+import { useAccount } from "./shared/accounts";
+import { AccountPanel } from "./shared/AccountPanel";
 import { accountsEnabled, sharedEnabled } from "./shared/mode";
 import { getSticker, stickerPacks } from "./chat/stickers";
 import type { StickerActions } from "./chat/stickers";
@@ -62,7 +64,25 @@ const getPage = (): Page =>
     ? (location.hash.slice(1) as Page)
     : "plaza";
 function App() {
+  const account = useAccount();
+  const [accessOpen, setAccessOpen] = useState(false);
+  function requireParticipation() {
+    if (!accountsEnabled || account.account?.canParticipate) return true;
+    setAccessOpen(true);
+    return false;
+  }
   const [state, setState] = useState<LocalState>(loadState);
+  const participationProfile: Profile | null = accountsEnabled
+    ? account.account?.canParticipate
+      ? {
+          alias: account.account.alias,
+          interests: state.profile?.interests || [],
+          boundaries: state.profile?.boundaries || [],
+          availability: state.profile?.availability || "Sin preferencia",
+          adult: true,
+        }
+      : null
+    : state.profile;
   const [page, setPage] = useState<Page>(getPage);
   const [detail, setDetail] = useState<Activity | null>(null);
   const [room, setRoom] = useState<Activity | null>(null);
@@ -138,6 +158,7 @@ function App() {
     setMobileMenu(false);
   }
   function prepareProfile(returnTo: Page) {
+    if (!requireParticipation()) return;
     setProfileReturn(returnTo);
     navigate("profile");
   }
@@ -152,12 +173,16 @@ function App() {
     setPlazaComment(commentId || null);
   }
   function saveInvitation(invitation: PlazaInvitation) {
-    if (!state.profile || !normalizeInvitation(invitation, state.blocked))
+    if (!requireParticipation()) return;
+    if (
+      !participationProfile ||
+      !normalizeInvitation(invitation, state.blocked)
+    )
       return;
     setState((s) => {
       const valid = normalizeInvitation(invitation, s.blocked);
       if (
-        !s.profile ||
+        !participationProfile ||
         !valid ||
         s.plaza.invitations.some((i) => i.personId === valid.personId)
       )
@@ -175,8 +200,9 @@ function App() {
     );
   }
   function reserve(activity: Activity) {
+    if (!requireParticipation()) return;
     setDetail(null);
-    if (!state.profile) {
+    if (!participationProfile) {
       setPendingBooking(activity);
       setProfileReturn(page);
       navigate("profile");
@@ -190,6 +216,7 @@ function App() {
     setToast("Reserva de ejemplo guardada. No se ha contactado a nadie.");
   }
   function saveProfile(profile: Profile) {
+    if (!requireParticipation()) return;
     setState((s) => ({
       ...s,
       profile,
@@ -216,11 +243,13 @@ function App() {
     }
   }
   function enterRoom(activity: Activity) {
+    if (!requireParticipation()) return;
     setRoom(activity);
     setDetail(null);
     navigate("room");
   }
   function finish(feedback: Feedback) {
+    if (!requireParticipation()) return;
     setState((s) => ({
       ...s,
       feedback: [
@@ -477,11 +506,21 @@ function App() {
               <span /> Prototipo interactivo
             </span>
             <button
+              className="button text access-trigger"
+              onClick={() => setAccessOpen(true)}
+            >
+              {accountsEnabled
+                ? account.account
+                  ? "Mi cuenta"
+                  : "Entrar"
+                : "Acceso"}
+            </button>
+            <button
               className="top-avatar"
               aria-label="Editar mi perfil"
               onClick={() => prepareProfile("plaza")}
             >
-              <Avatar name={state.profile?.alias || "T"} />
+              <Avatar name={participationProfile?.alias || "T"} />
             </button>
           </div>
         </header>
@@ -508,13 +547,16 @@ function App() {
           {page === "plaza" && (
             <Plaza
               {...stickerActions}
-              profile={state.profile}
+              profile={participationProfile}
               blocked={state.blocked}
               state={state.plaza}
               draft={plazaDraft}
               onDraft={setPlazaDraft}
-              onChange={(plaza) => setState((s) => ({ ...s, plaza }))}
+              onChange={(plaza) => {
+                if (requireParticipation()) setState((s) => ({ ...s, plaza }));
+              }}
               onProfile={() => prepareProfile("plaza")}
+              onAccess={accountsEnabled ? () => setAccessOpen(true) : undefined}
               onConnections={() => navigate("connections")}
               onEncounters={() => navigate("discover")}
               onMeet={(id) =>
@@ -549,36 +591,44 @@ function App() {
           {sharedEnabled && page === "shared" && (
             <SharedRoom
               {...stickerActions}
-              profile={state.profile}
+              profile={participationProfile}
               onProfile={() => prepareProfile("shared")}
             />
           )}
           {page === "discover" && (
             <Discover
-              profile={state.profile}
+              profile={participationProfile}
               reservations={state.reservations}
               onOpen={setDetail}
               onProfile={() => prepareProfile("discover")}
               onPlaza={() => navigate("plaza")}
             />
           )}
-          {page === "profile" && (
-            <ProfileForm
-              key={state.profile ? "edit" : "new"}
-              profile={state.profile}
-              pending={!!pendingBooking}
-              onSave={saveProfile}
-              onCancel={() => {
-                setPendingBooking(null);
-                setPendingInvitation(null);
-                navigate(profileReturn);
-              }}
-              onPrivacy={() => setShowPrivacy(true)}
-            />
-          )}
+          {page === "profile" &&
+            (accountsEnabled && !account.account?.canParticipate ? (
+              <AccountPanel
+                state={account}
+                active={false}
+                compact
+                onLogout={() => {}}
+              />
+            ) : (
+              <ProfileForm
+                key={state.profile ? "edit" : "new"}
+                profile={participationProfile}
+                pending={!!pendingBooking}
+                onSave={saveProfile}
+                onCancel={() => {
+                  setPendingBooking(null);
+                  setPendingInvitation(null);
+                  navigate(profileReturn);
+                }}
+                onPrivacy={() => setShowPrivacy(true)}
+              />
+            ))}
           {page === "agenda" && (
             <Agenda
-              state={state}
+              state={{ ...state, profile: participationProfile }}
               onDiscover={() => navigate("discover")}
               onOpen={setDetail}
               onEnter={enterRoom}
@@ -612,7 +662,7 @@ function App() {
                   },
                 }))
               }
-              state={state}
+              state={{ ...state, profile: participationProfile }}
               onDiscover={() => navigate("discover")}
               onWithdrawGroup={(activityId) =>
                 setState((s) => ({
@@ -640,12 +690,14 @@ function App() {
             />
           )}
           {page === "room" &&
-            (room && state.reservations.includes(room.id) && state.profile ? (
+            (room &&
+            state.reservations.includes(room.id) &&
+            participationProfile ? (
               <Room
                 {...stickerActions}
                 key={room.id}
                 activity={room}
-                profile={state.profile}
+                profile={participationProfile}
                 blocked={state.blocked}
                 onBlock={(name) =>
                   setState((s) => ({
@@ -716,6 +768,58 @@ function App() {
           ))}
         </nav>
       </div>
+      {accessOpen && (
+        <Modal
+          title={
+            accountsEnabled ? "Tu cuenta en Afinia" : "Explorar y participar"
+          }
+          onClose={() => setAccessOpen(false)}
+        >
+          {accountsEnabled ? (
+            <>
+              <AccountPanel
+                state={account}
+                active={false}
+                compact
+                onLogout={() => {}}
+              />
+              {account.account?.canParticipate && (
+                <div className="modal-content">
+                  <button
+                    className="button primary full"
+                    onClick={() => setAccessOpen(false)}
+                  >
+                    Continuar en Afinia
+                  </button>
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="modal-content access-preview">
+              <h3>Explora primero, participa con tu cuenta.</h3>
+              <p>
+                En la versión con cuentas podrás iniciar sesión, confirmar tu
+                correo y declarar que eres mayor de 18 años para publicar,
+                comentar y conversar.
+              </p>
+              <p>
+                Tu alias será público. El correo confirmado no verifica
+                identidad ni edad. No solicitamos cédula ni biometría.
+              </p>
+              <p className="inline-notice">
+                Esta demo guarda las interacciones de prueba en tu navegador. No
+                crea cuentas reales ni envía correos.
+              </p>
+              <button
+                className="button primary"
+                onClick={() => setAccessOpen(false)}
+              >
+                Seguir explorando la demo
+              </button>
+            </div>
+          )}
+        </Modal>
+      )}
       {detail && (
         <Modal
           title="Tu próximo encuentro"
@@ -905,7 +1009,7 @@ function App() {
           {...resumedInvitation}
           posts={state.plaza.posts}
           blocked={state.blocked}
-          profile={state.profile}
+          profile={participationProfile}
           onProfile={() => prepareProfile("plaza")}
           onClose={() => setResumedInvitation(null)}
           onSave={(i) => {

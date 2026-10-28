@@ -1,0 +1,101 @@
+.access-trigger {
+  min-height: 44px;
+  font-size: 13px;
+}
+.email-confirmation {
+  margin-block: 20px;
+  padding: 20px;
+  border: 1px solid #d8e1ce;
+  border-radius: 12px;
+  background: #f0f4e8;
+}
+.email-confirmation h3 {
+  font-family: var(--serif);
+  font-size: 25px;
+  margin: 0 0 12px;
+}
+.email-confirmation p,
+.account-panel .account-access-explainer,
+.access-preview p {
+  font-size: 14px;
+  line-height: 1.75;
+}
+.email-confirmation form {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+}
+.email-confirmation label {
+  font-size: 14px;
+  line-height: 1.6;
+}
+.email-confirmation input:not([type="checkbox"]) {
+  width: 100%;
+  min-width: 0;
+  font-size: 16px;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid #afbda5;
+  border-radius: 7px;
+  background: #fffefa;
+}
+.email-confirmation .checkbox-row input {
+  flex-shrink: 0;
+}
+.email-confirmation .button,
+.access-preview .button {
+  min-height: 44px;
+  font-size: 14px;
+}
+.email-confirmation.confirmed {
+  background: #edf3e8;
+}
+.email-confirmation.confirmed strong {
+  color: #285d4c;
+  font-size: 15px;
+}
+.email-confirmation.confirmed p {
+  overflow-wrap: anywhere;
+  margin: 8px 0 0;
+}
+.access-preview h3 {
+  font-family: var(--serif);
+  font-size: 29px;
+  line-height: 1.2;
+}
+@media (max-width: 700px) {
+  .email-confirmation {
+    padding: 16px;
+  }
+  .access-trigger {
+    padding-inline: 8px;
+  }
+}
+
+@media (max-width: 700px) {
+  .topbar-right {
+    gap: 6px;
+  }
+  .topbar-right .demo-badge {
+    display: none;
+  }
+  .topbar-right .access-trigger {
+    padding: 8px;
+  }
+}
+
+.account-panel .button {
+  min-height: 44px;
+  font-size: 14px;
+}
+.account-panel .account-form label {
+  font-size: 14px;
+}
+.account-panel .account-form input {
+  min-height: 44px;
+  font-size: 16px;
+}
+.modal:has(.account-panel) .button { min-height: 44px; font-size: 14px; }
+.modal:has(.account-panel) .modal-head .icon-button,
+.modal:has(.access-preview) .modal-head .icon-button { min-width: 44px; min-height: 44px; }
+.account-heading h2 { min-width: 0; overflow-wrap: anywhere; }

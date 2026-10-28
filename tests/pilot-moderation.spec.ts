@@ -1,3 +1,4 @@
+import { confirmTestEmail } from "./pilot-email";
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
@@ -20,6 +21,7 @@ async function register(page: Page, name: string, topic: string) {
   await page
     .getByRole("button", { name: "Ya guardé mi clave", exact: true })
     .click();
+  await confirmTestEmail(page, name);
   await page
     .getByRole("button", { name: `Reservar ${topic}`, exact: true })
     .click();
