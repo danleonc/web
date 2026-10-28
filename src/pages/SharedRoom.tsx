@@ -34,6 +34,10 @@ export function SharedRoom({
   const [aware, setAware] = useState(false);
   const account = useAccount();
   useEffect(() => {
+    account.setActiveRoom(active);
+    return () => account.setActiveRoom(false);
+  }, [active, account.setActiveRoom]);
+  useEffect(() => {
     setActive(false);
   }, [account.account?.id]);
   useEffect(() => {

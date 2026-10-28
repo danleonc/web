@@ -36,7 +36,13 @@ export class Storage {
       "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;",
     );
     const version = this.db.prepare("PRAGMA user_version").get()!.user_version;
-    if (version !== 0 && version !== 1 && version !== 2 && version !== 3)
+    if (
+      version !== 0 &&
+      version !== 1 &&
+      version !== 2 &&
+      version !== 3 &&
+      version !== 4
+    )
       throw new Error("Unsupported database version");
     if (version === 0)
       this.db.exec(`
@@ -80,6 +86,11 @@ export class Storage {
       );
       CREATE UNIQUE INDEX confirmed_email ON account_emails(email) WHERE verified_at IS NOT NULL;
       PRAGMA user_version=3; COMMIT;`);
+    if (version < 4)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE account_google(user_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE, subject TEXT NOT NULL UNIQUE, profile_complete INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
+      CREATE TABLE google_flows(state_hash TEXT PRIMARY KEY, browser_hash TEXT NOT NULL, verifier TEXT NOT NULL, nonce_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, intent TEXT NOT NULL, session_hash TEXT, account_id TEXT, return_to TEXT NOT NULL);
+      PRAGMA user_version=4; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");
@@ -170,6 +181,20 @@ export class Storage {
       ).map((r) => r.id),
     );
   }
+  accountById(id: string) {
+    return this.db
+      .prepare(
+        "SELECT id,username,alias,password_hash AS passwordHash,recovery_hash AS recoveryHash FROM accounts WHERE id=?",
+      )
+      .get(id) as Account | undefined;
+  }
+  googleIdentity(id: string) {
+    return this.db
+      .prepare(
+        "SELECT subject,profile_complete AS profileComplete FROM account_google WHERE user_id=?",
+      )
+      .get(id) as { subject: string; profileComplete: number } | undefined;
+  }
   emailStatus(id: string) {
     return this.db
       .prepare(
@@ -189,7 +214,11 @@ export class Storage {
   }
   canParticipate(id: string) {
     const status = this.emailStatus(id);
-    return status?.verifiedAt != null && status.adultDeclaredAt > 0;
+    return (
+      status?.verifiedAt != null &&
+      status.adultDeclaredAt > 0 &&
+      this.googleIdentity(id)?.profileComplete !== 0
+    );
   }
   offering(id: string, startsAt: number) {
     this.db
@@ -333,6 +362,7 @@ export class Storage {
   }
   prune(now: number) {
     this.db.prepare("DELETE FROM sessions WHERE expires_at<=?").run(now);
+    this.db.prepare("DELETE FROM google_flows WHERE expires_at<=?").run(now);
     this.db.prepare("DELETE FROM auth_limits WHERE until_at<=?").run(now);
     this.db
       .prepare(

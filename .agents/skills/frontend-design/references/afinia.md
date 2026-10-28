@@ -122,6 +122,11 @@ ni biometría, ni se muestran insignias de identidad o edad verificadas. El alia
 es público y el correo privado. Distingue pendiente, código enviado/inválido o
 caducado, correo confirmado y cuenta restringida. Conserva la página al abrir
 la cuenta. La maqueta estática solo explica el acceso y no simula envíos.
+El piloto ofrece Google cuando está configurado, con retorno al mismo espacio y
+alias/declaración 18+ para cuentas nuevas. La vinculación es explícita y conserva
+la cuenta existente; no se fusiona por correo. Reutiliza GoogleAccess y su marca
+sin añadir permisos sobre Gmail, foto o contactos. La configuración ausente y
+la cancelación deben permitir seguir explorando o usar el acceso anterior.
 
 ## Conversación y cuidados
 

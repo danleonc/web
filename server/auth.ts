@@ -26,8 +26,13 @@ export async function passwordHash(password: string) {
   return `${salt}:${(await derive(password, salt)).toString("hex")}`;
 }
 async function passwordMatches(password: string, hash: string) {
-  const [salt, key] = hash.split(":");
-  return timingSafeEqual(await derive(password, salt), Buffer.from(key, "hex"));
+  const valid = /^[a-f0-9]{32}:[a-f0-9]{128}$/.test(hash);
+  const [salt, key] = valid ? hash.split(":") : ["0".repeat(32), dummy];
+  const matched = timingSafeEqual(
+    await derive(password, salt),
+    Buffer.from(key, "hex"),
+  );
+  return valid && matched;
 }
 export function cookie(
   res: ServerResponse,
@@ -167,6 +172,7 @@ export class Auth {
         const hash = await passwordHash(value.password);
         if (
           !account ||
+          account.passwordHash === "google-only" ||
           !valid ||
           this.storage.account(username)?.recoveryHash !== supplied
         )

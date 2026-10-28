@@ -24,6 +24,8 @@ import {
 import type { RoomSafety } from "../src/safety/rules.ts";
 import { validImageRef } from "../src/media/types.ts";
 import { ModerationStore } from "./moderation.ts";
+import { GoogleAuth } from "./google.ts";
+import type { GoogleConfig } from "./google.ts";
 import { EmailConfirmation } from "./email.ts";
 import type { SendVerificationEmail } from "./email.ts";
 import { handleFeatures } from "./features.ts";
@@ -56,6 +58,7 @@ type Connection = {
   expires: number;
 };
 type Options = {
+  google?: GoogleConfig;
   sendVerificationEmail?: SendVerificationEmail;
   allowedOrigins?: string[];
   now?: () => number;
@@ -93,6 +96,16 @@ export function createRoomServer(options: Options = {}) {
     : null;
   const enforceSchedule = options.enforceSchedule ?? !!storage;
   const moderation = storage ? new ModerationStore(storage, now) : null;
+  const google =
+    storage && options.google
+      ? new GoogleAuth(
+          storage,
+          now,
+          options.google,
+          options.secureCookies ?? false,
+          (id) => !!moderation?.restriction(id),
+        )
+      : null;
   const allowed = new Set(
     options.allowedOrigins || [
       "http://localhost:4173",
@@ -157,6 +170,7 @@ export function createRoomServer(options: Options = {}) {
         };
         identities.set(identity.id, identity);
       }
+      identity.alias = account.alias;
       return identity;
     }
     const token = (req.headers.cookie || "")
@@ -220,6 +234,36 @@ export function createRoomServer(options: Options = {}) {
       } catch {
         json(res, 404, { error: "not_found" });
       }
+      return;
+    }
+    if (path === "/api/auth/options" && req.method === "GET") {
+      json(res, 200, { google: !!google });
+      return;
+    }
+    if (path === "/api/auth/google-callback") {
+      if (req.method !== "GET") {
+        json(res, 405, { error: "method_not_allowed" });
+        return;
+      }
+      if (!google) {
+        json(res, 503, { error: "google_unavailable" });
+        return;
+      }
+      const result = await google.callback(
+        new URL(req.url!, "http://callback.local"),
+        req,
+        res,
+      );
+      if (result.revoked)
+        for (const c of connections)
+          if (c.tokenHash === result.revoked)
+            c.socket.close(4001, "Sesion renovada");
+      res.writeHead(303, {
+        Location: result.location,
+        "Cache-Control": "no-store",
+        "Referrer-Policy": "no-referrer",
+      });
+      res.end();
       return;
     }
     const identity = authenticated(req);
@@ -396,6 +440,13 @@ export function createRoomServer(options: Options = {}) {
                       storage.canParticipate(identity.id) &&
                       !moderation?.restriction(identity.id),
                     emailDeliveryAvailable: !!options.sendVerificationEmail,
+                    googleLinked: !!storage.googleIdentity(identity.id),
+                    needsGoogleProfile:
+                      storage.googleIdentity(identity.id)?.profileComplete ===
+                      0,
+                    passwordEnabled:
+                      storage.accountById(identity.id)?.passwordHash !==
+                      "google-only",
                   }
                 : {}),
             }
@@ -439,6 +490,25 @@ export function createRoomServer(options: Options = {}) {
       if (authPath && auth) {
         if (!record(value)) {
           json(res, 422, { error: "invalid_fields" });
+          return;
+        }
+        if (["google-start", "google-complete"].includes(authPath[1])) {
+          if (!google) {
+            json(res, 503, { error: "google_unavailable" });
+            return;
+          }
+          if (authPath[1] === "google-start") {
+            const result = google.start(value, req, res);
+            json(res, result.status, result.body);
+            return;
+          }
+          const current = authenticated(req);
+          if (!current) {
+            json(res, 401, { error: "session_required" });
+            return;
+          }
+          const result = google.complete(value, current.id);
+          json(res, result.status, result.body);
           return;
         }
         if (

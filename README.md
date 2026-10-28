@@ -71,8 +71,9 @@ alias público y la dirección queda privada. La demo estática explica el flujo
 desde **Acceso** y conserva sus pruebas locales; no simula cuentas o envío real.
 
 Configuración SMTP, protección de códigos, migración v3 y límites:
-[Acceso y correo](docs/ACCESO_Y_CORREO.md). El acceso directo con Google sigue
-pendiente; esta primera vía admite direcciones Gmail mediante correo confirmado.
+[Acceso y correo](docs/ACCESO_Y_CORREO.md). El acceso directo con Google está implementado en el piloto y requiere configurar
+un cliente OAuth web. No verifica identidad civil ni edad.
+[Configuración y pruebas de Google](docs/GOOGLE_LOGIN.md).
 
 ## Conversación y cuidados en las salas
 

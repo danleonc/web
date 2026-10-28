@@ -18,6 +18,9 @@ export type AccountView = {
   adultDeclared?: boolean;
   canParticipate?: boolean;
   emailDeliveryAvailable?: boolean;
+  googleLinked?: boolean;
+  needsGoogleProfile?: boolean;
+  passwordEnabled?: boolean;
   moderator?: boolean;
   imagesEnabled?: boolean;
   restriction?: {
@@ -41,6 +44,16 @@ export type Offering = {
 };
 export type HistoryRoom = { id: string; activityId: string; phase: string };
 const errors: Record<string, string> = {
+  google_unavailable: "El acceso con Google aún no está configurado.",
+  google_link_requires_access:
+    "Inicia sesión y confirma tu correo antes de vincular Google.",
+  google_logout_first:
+    "Cierra la sesión actual para entrar con otra cuenta de Google.",
+  google_profile_unavailable:
+    "No se pudo completar este perfil. Actualiza tu sesión.",
+  google_email_mismatch:
+    "Usa el correo de la cuenta de Google con la que entraste.",
+  invalid_google_request: "No se pudo preparar el acceso con Google.",
   email_confirmation_required: "Confirma tu correo para participar.",
   account_restricted:
     "Tu cuenta tiene una restricción. Revisa el motivo y la apelación.",
@@ -77,6 +90,9 @@ const errors: Record<string, string> = {
 function useAccountState() {
   const [account, setAccount] = useState<AccountView | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
+  const [googleResult, setGoogleResult] = useState("");
+  const [activeRoom, setActiveRoom] = useState(false);
   const [activities, setActivities] = useState<Offering[]>([]);
   const [rooms, setRooms] = useState<HistoryRoom[]>([]);
   const [messages, setMessages] = useState<SharedMessage[]>([]);
@@ -137,6 +153,53 @@ function useAccountState() {
   }, []);
   useEffect(() => {
     if (!accountsEnabled) return;
+    let alive = true;
+    void fetch("/api/auth/options")
+      .then(async (r) => {
+        if (r.ok) {
+          const v = await r.json();
+          if (alive) setGoogleAvailable(v.google === true);
+        }
+      })
+      .catch(() => {});
+    const url = new URL(location.href),
+      result = url.searchParams.get("google");
+    if (result) {
+      const messages: Record<string, string> = {
+        cancelled:
+          "Cancelaste el acceso con Google. Puedes volver a intentarlo o usar tu usuario.",
+        expired:
+          "El acceso con Google caducó o ya se utilizó. Vuelve a intentarlo.",
+        failed:
+          "No se pudo completar el acceso con Google. Inténtalo de nuevo.",
+        invalid:
+          "La respuesta de Google no se pudo validar. Vuelve a intentarlo.",
+        account_exists:
+          "Este correo ya tiene una cuenta. Entra con tu usuario y vincula Google desde tu cuenta.",
+        link_expired:
+          "La sesión para vincular Google terminó. Inicia sesión e inténtalo de nuevo.",
+        link_conflict:
+          "No se pudo vincular. Usa una cuenta de Google con el mismo correo confirmado y que no esté asociada a otra cuenta.",
+        email_changed:
+          "El correo de Google cambió. Usa tu acceso anterior si lo tienes y solicita ayuda antes de vincular otra dirección.",
+      };
+      if (["success", "linked", ...Object.keys(messages)].includes(result)) {
+        setGoogleResult(result);
+        if (messages[result]) setError(messages[result]);
+      }
+      url.searchParams.delete("google");
+      window.history.replaceState(
+        null,
+        "",
+        url.pathname + url.search + url.hash,
+      );
+    }
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useEffect(() => {
+    if (!accountsEnabled) return;
     void refresh();
     const timer = setInterval(() => {
       if (!busyRef.current) void refresh();
@@ -187,6 +250,56 @@ function useAccountState() {
       setBusy(false);
     }
   }
+  async function startGoogle(intent: "login" | "link") {
+    if (busyRef.current) return;
+    if (activeRoom || location.hash === "#room") {
+      setError(
+        "Sal del encuentro antes de continuar con Google para conservar la conversación del grupo.",
+      );
+      return;
+    }
+    busyRef.current = true;
+    setBusy(true);
+    setError("");
+    try {
+      const returnTo = [
+        "#plaza",
+        "#discover",
+        "#connections",
+        "#agenda",
+        "#profile",
+        "#shared",
+      ].includes(location.hash)
+        ? location.hash
+        : "#plaza";
+      const r = await fetch("/api/auth/google-start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ intent, returnTo }),
+      });
+      const value = await r.json();
+      if (!r.ok)
+        throw Error(
+          errors[value.error] || "No se pudo abrir Google. Inténtalo de nuevo.",
+        );
+      const url = new URL(value.authorizationUrl);
+      if (
+        url.origin !== "https://accounts.google.com" ||
+        url.pathname !== "/o/oauth2/v2/auth"
+      )
+        throw Error("La dirección de acceso no es válida.");
+      window.dispatchEvent(
+        new CustomEvent("afinia:before-google", {
+          detail: { accountId: account?.id || "guest" },
+        }),
+      );
+      window.location.assign(url.href);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo abrir Google.");
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }
   async function history(id: string) {
     const current = generation.current;
     const version = ++historyVersion.current;
@@ -209,6 +322,12 @@ function useAccountState() {
   return {
     account,
     loaded,
+    googleAvailable,
+    googleResult,
+    clearGoogleResult: () => setGoogleResult(""),
+    activeRoom,
+    setActiveRoom,
+    startGoogle,
     activities,
     rooms,
     messages,

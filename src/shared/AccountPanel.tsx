@@ -1,3 +1,4 @@
+import { GoogleAccess, GoogleProfile } from "./GoogleAccess";
 import { EmailConfirmationForm } from "./EmailConfirmationForm";
 import { AccountRestriction, ModerationDesk } from "../safety/ModerationDesk";
 import { useState, useId } from "react";
@@ -70,6 +71,7 @@ export function AccountPanel({
             sesión, confirmar tu correo y declarar que eres mayor de 18 años.
             Usarás un alias público; no solicitamos cédula ni biometría.
           </p>
+          <GoogleAccess state={state} />
           <p>
             Tu usuario permite volver desde otro dispositivo. El nombre que
             elijas para la sala será visible para el grupo.
@@ -244,7 +246,23 @@ export function AccountPanel({
               </div>
             </div>
           )}
-          <EmailConfirmationForm key={state.account.id} state={state} />
+          {state.account.needsGoogleProfile ? (
+            <GoogleProfile key={state.account.id} state={state} />
+          ) : (
+            <EmailConfirmationForm key={state.account.id} state={state} />
+          )}
+          {state.account.googleLinked ? (
+            <p className="google-linked" role="status">
+              Cuenta de Google vinculada.
+              {state.account.passwordEnabled === false
+                ? " Puedes volver a entrar con Google; no se ha creado una contraseña local."
+                : " También conservas tu acceso con usuario y contraseña."}
+            </p>
+          ) : (
+            state.account.canParticipate && (
+              <GoogleAccess state={state} link disabled={active} />
+            )
+          )}
           {state.account.restriction && (
             <AccountRestriction
               key={state.account.id}

@@ -6,6 +6,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { Storage, digest } from "../server/storage.ts";
 import { passwordHash } from "../server/auth.ts";
 import { ModerationStore } from "../server/moderation.ts";
+import { mockGoogle } from "../tests/server/mock-google.mjs";
 import { createRoomServer } from "../server/app.ts";
 const directory = await mkdtemp(join(tmpdir(), "entre-browser-pilot-"));
 // This role and password exist ONLY in the private browser-test fixture.
@@ -33,6 +34,7 @@ new ModerationStore(setup, Date.now).role("moderator_fixture", true);
 setup.close();
 const app = createRoomServer({
   databasePath: join(directory, "test.sqlite"),
+  google: await mockGoogle("http://127.0.0.1:4190"),
   sendVerificationEmail: async (email, code) => {
     await writeFile(
       join(mailbox, createHash("sha256").update(email).digest("hex") + ".json"),

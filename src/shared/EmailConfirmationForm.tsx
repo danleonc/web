@@ -56,6 +56,7 @@ export function EmailConfirmationForm({
         <input
           id={`${id}-email`}
           type="email"
+          readOnly={state.account.googleLinked}
           autoComplete="email"
           maxLength={254}
           required

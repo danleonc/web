@@ -61,7 +61,7 @@ Se incorporan imágenes normalizadas de acceso privado, votaciones de expulsión
 
 ## Copias y restauración
 
-La base usa claves foráneas, migración automática v1/v2 → `user_version=3`, WAL y transacciones. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
+La base usa claves foráneas, migración automática v1/v2/v3 → `user_version=4`, WAL y transacciones. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
 
 ```sh
 node scripts/backup-db.mjs .data/entre.sqlite backups/entre-fecha-unica.sqlite
@@ -104,3 +104,12 @@ npm run test:pilot
 La prueba de navegador del piloto usa una base temporal aislada y omite el horario **solo en su fixture de tests**, para comprobar registro, recuperación, reserva y mensajería sin esperar a la fecha programada. No hay endpoint público que cambie el reloj o ignore el horario.
 
 La siguiente etapa es confirmar compatibilidad del hosting, desplegar una instancia privada y comprobar HTTPS/WebSocket, reinicio y copias desde dispositivos reales. Después: gestión de convocatorias, asignación y validación de moderación, sincronización de Plaza y controles de datos de cuenta antes de invitar participantes.
+
+
+## Acceso con Google
+
+El piloto admite inicio con Google y vinculación explícita a una cuenta existente.
+Configurar `ENTRE_GOOGLE_CLIENT_ID` y `ENTRE_GOOGLE_CLIENT_SECRET` en el servidor;
+registrar en Google el callback exacto derivado de `ENTRE_PUBLIC_ORIGIN`.
+Sin esas variables se conserva la vía de usuario/correo, sin botón Google activo.
+Procedimiento, permisos y límites: [Acceso con Google](GOOGLE_LOGIN.md).

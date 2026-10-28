@@ -5,9 +5,9 @@ declaración de mayoría de edad. No se recogen documentos, rostro, RUT, huellas
 ni fecha de nacimiento. No se afirma verificar identidad civil ni edad.
 
 La vía implementada conserva usuario/contraseña y recuperación por clave,
-añadiendo confirmación de correo (incluye direcciones Gmail). El acceso directo
-con Google queda pendiente: requiere su propia integración y configuración.
-No se muestra un botón que simule ese acceso.
+añadiendo confirmación de correo (incluye direcciones Gmail). El acceso directo con Google se incorpora como alternativa del piloto:
+[configuración de Google](GOOGLE_LOGIN.md). Requiere credenciales OAuth web; no
+se presenta como activo si falta configurar el proveedor.
 
 ## Experiencia
 
@@ -77,7 +77,7 @@ junto con la configuración del proxy y el volumen del piloto antes de abrirlo.
 
 ## Datos, actualización y pruebas
 
-SQLite migra de v1/v2 a v3, conservando cuentas, sesiones, reservas e historiales.
+SQLite migra de v1/v2/v3 a v4, conservando cuentas, sesiones, reservas e historiales.
 La nueva tabla guarda correo, fecha de confirmación/declaración y estado temporal
 del código. Las cuentas antiguas quedan pendientes hasta confirmar un correo;
 no se les atribuye verificación anterior. Respaldar antes de actualizar.

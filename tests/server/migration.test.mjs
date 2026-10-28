@@ -7,7 +7,7 @@ import { DatabaseSync } from "node:sqlite";
 import { Storage, digest } from "../../server/storage.ts";
 import { ModerationStore } from "../../server/moderation.ts";
 import { createSession } from "../../src/room/engine.ts";
-test("migración v1 a v3 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
+test("migración v1 a v4 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
   const dir = await mkdtemp(join(tmpdir(), "afinia-upgrade-")),
     path = join(dir, "old.sqlite");
   try {
@@ -70,7 +70,7 @@ test("migración v1 a v3 conserva cuenta, reserva, sesión e historial con segur
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        3,
+        4,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);

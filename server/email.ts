@@ -92,6 +92,8 @@ export class EmailConfirmation {
         return fail(422, "invalid_email_declaration");
       if (!this.send) return fail(503, "email_unavailable");
       const old = this.storage.emailStatus(id);
+      if (this.storage.googleIdentity(id) && old?.email !== email)
+        return fail(422, "google_email_mismatch");
       if (old?.verifiedAt != null) return fail(409, "email_already_confirmed");
       if (
         (old && now - old.lastSent < 60_000) ||

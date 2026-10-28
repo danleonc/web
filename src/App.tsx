@@ -29,6 +29,7 @@ import { Connections } from "./pages/Connections";
 import { Room } from "./pages/Room";
 import { SharedRoom } from "./pages/SharedRoom";
 import { useAccount } from "./shared/accounts";
+import { saveGoogleDraft, restoreGoogleDraft } from "./shared/googleDraft";
 import { AccountPanel } from "./shared/AccountPanel";
 import { accountsEnabled, sharedEnabled } from "./shared/mode";
 import { getSticker, stickerPacks } from "./chat/stickers";
@@ -93,6 +94,40 @@ function App() {
   const [toast, setToast] = useState("");
   const [profileReturn, setProfileReturn] = useState<Page>("plaza");
   const [plazaDraft, setPlazaDraft] = useState(blankDraft);
+  const draftOwner = useRef<string | null>(null);
+  useEffect(() => {
+    if (accountsEnabled && account.loaded) {
+      const owner = account.account?.id || "guest";
+      if (draftOwner.current !== null && draftOwner.current !== owner)
+        setPlazaDraft(blankDraft);
+      draftOwner.current = owner;
+    }
+  }, [account.loaded, account.account?.id]);
+  useEffect(() => {
+    const save = (event: Event) => {
+      const owner = (event as CustomEvent).detail?.accountId;
+      if (
+        typeof owner === "string" &&
+        owner.length <= 100 &&
+        draftOwner.current === owner
+      )
+        saveGoogleDraft(plazaDraft, owner);
+    };
+    window.addEventListener("afinia:before-google", save);
+    return () => window.removeEventListener("afinia:before-google", save);
+  }, [plazaDraft, account.account?.id]);
+  useEffect(() => {
+    if (accountsEnabled && account.loaded) {
+      const restored = restoreGoogleDraft(account.account?.id || "guest");
+      if (restored) setPlazaDraft(restored);
+    }
+  }, [account.loaded, account.account?.id]);
+  useEffect(() => {
+    if (account.loaded && account.googleResult) {
+      setAccessOpen(true);
+      account.clearGoogleResult();
+    }
+  }, [account.loaded, account.googleResult]);
   const [plazaThread, setPlazaThread] = useState<string | null>(null);
   const [plazaComment, setPlazaComment] = useState<string | null>(null);
   const [pendingInvitation, setPendingInvitation] = useState<Omit<
@@ -798,9 +833,7 @@ function App() {
             <div className="modal-content access-preview">
               <h3>Explora primero, participa con tu cuenta.</h3>
               <p>
-                En la versión con cuentas podrás iniciar sesión, confirmar tu
-                correo y declarar que eres mayor de 18 años para publicar,
-                comentar y conversar.
+                El piloto incluye acceso con Google o con usuario y correo confirmado. Antes de participar eliges un alias y declaras que eres mayor de 18 años. Google requiere configurar el proveedor en el servidor.
               </p>
               <p>
                 Tu alias será público. El correo confirmado no verifica
