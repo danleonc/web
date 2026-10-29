@@ -983,6 +983,18 @@ main:focus {
   height: 25px;
   margin-right: 4px;
 }
+.footer-about {
+  min-height: 44px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--green);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
 .footer-flower {
   font-size: 21px;
   color: #5a5f4c;

@@ -14,18 +14,6 @@
   object-fit: cover;
   object-position: center 35%;
 }
-.hero-photo figcaption {
-  position: absolute;
-  right: 12px;
-  bottom: 12px;
-  max-width: calc(100% - 24px);
-  padding: 6px 9px;
-  border-radius: 6px;
-  background: #fffefaef;
-  color: #354f3b;
-  font-size: 12px;
-  line-height: 1.5;
-}
 .plaza-welcome.plaza-photo-hero,
 .connections-hero.connections-photo-hero {
   display: grid;

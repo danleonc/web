@@ -17,7 +17,6 @@ export function HeroPhoto({ images, alt, className = "" }: {
         fetchPriority="high"
         decoding="async"
       />
-      <figcaption>Escena ilustrativa · creada con IA</figcaption>
     </figure>
   );
 }

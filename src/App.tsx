@@ -89,6 +89,7 @@ function App() {
   const [room, setRoom] = useState<Activity | null>(null);
   const [pendingBooking, setPendingBooking] = useState<Activity | null>(null);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [showAbout, setShowAbout] = useState(false);
   const [resetConfirm, setResetConfirm] = useState(false);
   const [storageWarning, setStorageWarning] = useState(false);
   const [toast, setToast] = useState("");
@@ -786,7 +787,10 @@ function App() {
             <Logo /> <span>Conectar empieza por compartir.</span>
           </span>
           <span>
-            Hecho para ir a tu ritmo <span className="footer-flower">✳</span>
+            <button className="footer-about" onClick={() => setShowAbout(true)}>
+              Acerca de Afinia
+            </button>
+            <span className="footer-flower" aria-hidden="true">✳</span>
           </span>
         </footer>
         <nav className="mobile-spaces" aria-label="Espacios de Afinia">
@@ -920,6 +924,28 @@ function App() {
                 <ArrowRight size={17} />
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+      {showAbout && (
+        <Modal title="Acerca de Afinia" onClose={() => setShowAbout(false)}>
+          <div className="modal-content">
+            <p>
+              Afinia es un espacio para conectar a través de conversaciones,
+              intereses y experiencias compartidas.
+            </p>
+            <h3>Sobre las imágenes</h3>
+            <p>
+              Las imágenes de los banners se crearon con inteligencia artificial.
+              Son escenas ilustrativas: no muestran miembros reales de Afinia
+              ni representan una función de videollamadas.
+            </p>
+            <h3>Sobre esta versión</h3>
+            <p>
+              La Plaza y Conexiones son espacios de demostración con personas
+              y conversaciones de ejemplo. La guía de los encuentros utiliza
+              preguntas preparadas; no es una persona ni una IA conversacional.
+            </p>
           </div>
         </Modal>
       )}

@@ -27,7 +27,8 @@ desde espacios separados, luz natural y colores cálidos. La Plaza representa
 intereses compartidos; Conexiones, atención y continuidad; Encuentros,
 participación online. Las escenas generadas se identifican como ilustrativas;
 no representan miembros reales ni capturas de funciones de vídeo. Se usa
-`HeroPhoto` con WebP locales adaptables, texto alternativo y leyenda visible.
+`HeroPhoto` con WebP locales adaptables y texto alternativo. La aclaración sobre
+su origen se reúne en «Acerca de Afinia», sin leyendas repetidas en los banners.
 Las decisiones están en `docs/diseno/Banner_fotografico_encuentros.md` y
 `docs/diseno/Banners_Plaza_Conexiones.md`. Los personajes expresivos siguen
 teniendo su lugar en los stickers.

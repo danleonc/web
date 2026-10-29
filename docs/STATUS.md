@@ -319,3 +319,13 @@ Verificación: ambas compilaciones y TypeScript correctos, incluidos los 60 stic
 Revisión renderizada a 320, 390, 768 y 1440 px de entrada, alias y cuenta lista, además de configuración ausente a 390 px: campos a 16 px, sin desbordamiento ni errores JavaScript, demo sin solicitudes API. Cuatro auditorías axe en entrada/alias a 320/1440 px sin infracciones detectadas. Capturas `afinia-google-*.png` y medidas `afinia-google-revision.json` en `/workspace/entregables/`. Los tests usan un proveedor simulado privado con tokens RSA y controles de producción activos; no se ha probado cuenta Google real, consentimiento real ni iPhone físico.
 
 Siguiente: crear el cliente OAuth web y registrar/configurar el callback del piloto para probar con cuentas autorizadas reales. No se han contratado servicios ni añadido costos de biometría.
+
+## Actualización · 29 de octubre de 2026 · Aclaraciones visuales reunidas
+
+Se retiran las leyendas repetidas «Escena ilustrativa · creada con IA» de los tres banners. El pie ofrece «Acerca de Afinia», con un diálogo que reúne la procedencia de las imágenes y aclara que no muestran miembros reales ni una función de videollamadas. Se conservan las advertencias de demostración, los textos alternativos y las explicaciones del guion preparado en salas. No cambia la autenticación ni se incorpora IA conversacional.
+
+Ajuste local de diseño: se mantienen verde #285d4c, texto #293e35, fondo #faf9f6, crema #f3f1e8 y líneas #e7e8df; tipografía Inter/Georgia y composición existentes. El enlace discreto del pie reutiliza Modal, con acción táctil de 44 px. El brief local refleja la aclaración centralizada.
+
+Verificación: compilaciones estática y piloto correctas y 60 stickers comprobados. Revisión Chromium a 320, 390 y 1440 px: imágenes cargadas en Plaza, Conexiones y Encuentros, ausencia de leyendas, sin desbordamiento horizontal, apertura/cierre con Escape y retorno del foco. Capturas `afinia-acerca-*.png` y `afinia-banner-sin-etiqueta-*.png` en `/workspace/entregables/`; revisión visual de móvil y banner de escritorio. No requiere cambios de backend ni pruebas con Google real.
+
+Siguiente: configurar el cliente OAuth de Google para probar acceso real cuando el usuario lo cree; la configuración permanece preparada e inactiva sin credenciales.
