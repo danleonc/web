@@ -42,4 +42,4 @@ Interfaces: pushFromEnv y PushDelivery; GET opciones y POST status/subscribe/uns
 
 - [x] Compilar demo/piloto, ejecutar regresiones necesarias, revisar320/390/1440 y límites. Resultado:221 escenarios aprobados.
 - [x] Actualizar estado, guías de configuración y pauta; distinguir implementación de configuración pendiente.
-- [ ] Commit, publicar demo estática autorizada y comprobar marcador/archivos públicos. Esta operación se verifica después del commit fuente; no publica el backend ni activa Web Push real.
+- [x] Commit, publicar demo estática autorizada y comprobar marcador/archivos públicos. Implementación361e5b1, Pages41003666742 completado; marcador e index/JS/CSS/manifest/worker/tres iconos públicos coinciden con la compilación. No publica el backend ni activa Web Push real.

@@ -40,3 +40,18 @@ El build estático incorpora La Plaza, Conexiones y Encuentros con la identidad 
 ## Imágenes y convivencia · 25 de octubre de 2026
 
 La maqueta incorpora imágenes locales en Plaza/salas y controles de convivencia de prueba. La compilación de piloto añade imágenes privadas, reportes, moderación por rol, sanciones y apelación; requiere migración SQLite v2 y asignación explícita de moderación. El Dockerfile incluye Sharp y sus binarios nativos de producción, y se comprobó ejecución sin root, raíz de solo lectura, volumen y límite de 512 MiB. La referencia Nginx limita los cuerpos a 2 MiB. Esta entrega conserva la separación entre GitHub Pages y el backend; no publica el piloto en HostGator. Operación y alcance: [IMAGENES_Y_CONVIVENCIA.md](IMAGENES_Y_CONVIVENCIA.md).
+
+## Nexafia · notificaciones · 30 de octubre de 2026
+
+Implementación `361e5b1` subida a `master`; compilación estática publicada en
+`https://danleonc.github.io/web/`. El despliegue Pages `41003666742` terminó
+correctamente y el marcador público identifica ese commit. Se compararon los
+bytes públicos de index, JavaScript, CSS, manifest, worker y tres iconos con
+`dist`, con coincidencia exacta. Las comprobaciones del cierre se guardan en
+un commit documental posterior, sin cambios ejecutables.
+
+La campana y el centro de avisos son probables mediante la acción explícita de
+ejemplo. Plaza continúa local; el worker no cachea HTML/JS ni pide permiso al entrar.
+Publicar estos archivos no activa Web Push: falta backend HTTPS, VAPID privado,
+eventos/preferencias compartidos de Plaza y prueba en teléfonos reales. No se
+publica el backend ni se cambia HostGator/DNS. Ver [NOTIFICACIONES.md](NOTIFICACIONES.md).
