@@ -1,4 +1,4 @@
-# Brief de diseño y UI de Afinia
+# Brief de diseño y UI de Nexafia
 
 Este documento aporta el contexto del producto a la skill `frontend-design`.
 Las decisiones más recientes del usuario y la implementación vigente tienen
@@ -6,7 +6,7 @@ prioridad sobre esta referencia. No es una orden de rediseñar todo el portal.
 
 ## Propósito y público
 
-Afinia facilita conexiones humanas a través de conversaciones, intereses y
+Nexafia facilita conexiones humanas a través de conversaciones, intereses y
 experiencias compartidas. Permite participar a ritmos distintos y sin exigir
 definir una intención de amistad o romance. Las personas pueden llegar con
 curiosidad, timidez o poca experiencia con aplicaciones sociales.
@@ -28,7 +28,7 @@ intereses compartidos; Conexiones, atención y continuidad; Encuentros,
 participación online. Las escenas generadas se identifican como ilustrativas;
 no representan miembros reales ni capturas de funciones de vídeo. Se usa
 `HeroPhoto` con WebP locales adaptables y texto alternativo. La aclaración sobre
-su origen se reúne en «Acerca de Afinia», sin leyendas repetidas en los banners.
+su origen se reúne en «Acerca de Nexafia», sin leyendas repetidas en los banners.
 Las decisiones están en `docs/diseno/Banner_fotografico_encuentros.md` y
 `docs/diseno/Banners_Plaza_Conexiones.md`. Los personajes expresivos siguen
 teniendo su lugar en los stickers.
@@ -173,3 +173,9 @@ del repositorio y no exige una cuenta de 21st.dev.
 Los detalles técnicos de la maqueta, el backend y los límites vigentes se
 consultan en `README.md`, `docs/STATUS.md`, `docs/ECOSISTEMA.md` y
 `docs/IMAGENES_Y_CONVIVENCIA.md`.
+
+## Marca vigente
+
+El nombre visible es Nexafia. Se conserva la flor, la composición y la tipografía.
+Las claves `afinia.*`, cookies, eventos, variables `ENTRE_*` y rutas técnicas
+heredadas no son la marca visible y se conservan por compatibilidad.

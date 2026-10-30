@@ -182,7 +182,7 @@ export async function handleFeatures(
       "Content-Type": "image/webp",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
-      "Content-Disposition": 'inline; filename="afinia-imagen.webp"',
+      "Content-Disposition": 'inline; filename="nexafia-imagen.webp"',
       "Cross-Origin-Resource-Policy": "same-origin",
     });
     res.end(Buffer.from(asset.body as Uint8Array));

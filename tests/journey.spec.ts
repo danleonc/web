@@ -184,7 +184,7 @@ test("cancellation, export and complete local reset work", async ({ page }) => {
     .getByRole("button", { name: "Descargar mis datos de prueba" })
     .click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe("entre-datos-de-prueba.json");
+  expect(download.suggestedFilename()).toBe("nexafia-datos-de-prueba.json");
   const stream = await download.createReadStream();
   let content = "";
   for await (const chunk of stream!) content += chunk.toString();

@@ -64,7 +64,7 @@ export function ImagePicker({
         }}
       >
         <p>
-          Elige una foto de tu galería o toma una con la cámara. Afinia la
+          Elige una foto de tu galería o toma una con la cámara. Nexafia la
           reduce automáticamente para compartirla; no necesitas comprimirla tú.
         </p>
         <label className="image-file-label">

@@ -59,7 +59,7 @@ async function setup(t, delivery = true) {
       username: name,
       alias: name,
       adult: true,
-      password: "Una frase de prueba para Afinia 123",
+      password: "Una frase de prueba para Nexafia 123",
     });
     assert.equal(r.status, 201);
     return r;

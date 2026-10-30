@@ -319,7 +319,7 @@ function App() {
     );
     const link = document.createElement("a");
     link.href = url;
-    link.download = "entre-datos-de-prueba.json";
+    link.download = "nexafia-datos-de-prueba.json";
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -434,7 +434,7 @@ function App() {
         )}
         <button
           className="logo-button"
-          aria-label="Afinia, ir a La Plaza"
+          aria-label="Nexafia, ir a La Plaza"
           onClick={() => navigate("plaza")}
         >
           <Logo />
@@ -518,7 +518,7 @@ function App() {
               <Menu size={22} />
             </button>
             <span className="breadcrumb">
-              <span>Afinia</span>
+              <span>Nexafia</span>
               <span className="breadcrumb-divider">/</span>
               <strong>
                 {page === "plaza"
@@ -788,12 +788,12 @@ function App() {
           </span>
           <span>
             <button className="footer-about" onClick={() => setShowAbout(true)}>
-              Acerca de Afinia
+              Acerca de Nexafia
             </button>
             <span className="footer-flower" aria-hidden="true">✳</span>
           </span>
         </footer>
-        <nav className="mobile-spaces" aria-label="Espacios de Afinia">
+        <nav className="mobile-spaces" aria-label="Espacios de Nexafia">
           {links.slice(0, 3).map(({ page: target, label, icon: Icon }) => (
             <button
               key={target}
@@ -810,7 +810,7 @@ function App() {
       {accessOpen && (
         <Modal
           title={
-            accountsEnabled ? "Tu cuenta en Afinia" : "Explorar y participar"
+            accountsEnabled ? "Tu cuenta en Nexafia" : "Explorar y participar"
           }
           onClose={() => setAccessOpen(false)}
         >
@@ -828,7 +828,7 @@ function App() {
                     className="button primary full"
                     onClick={() => setAccessOpen(false)}
                   >
-                    Continuar en Afinia
+                    Continuar en Nexafia
                   </button>
                 </div>
               )}
@@ -928,16 +928,16 @@ function App() {
         </Modal>
       )}
       {showAbout && (
-        <Modal title="Acerca de Afinia" onClose={() => setShowAbout(false)}>
+        <Modal title="Acerca de Nexafia" onClose={() => setShowAbout(false)}>
           <div className="modal-content">
             <p>
-              Afinia es un espacio para conectar a través de conversaciones,
+              Nexafia es un espacio para conectar a través de conversaciones,
               intereses y experiencias compartidas.
             </p>
             <h3>Sobre las imágenes</h3>
             <p>
               Las imágenes de los banners se crearon con inteligencia artificial.
-              Son escenas ilustrativas: no muestran miembros reales de Afinia
+              Son escenas ilustrativas: no muestran miembros reales de Nexafia
               ni representan una función de videollamadas.
             </p>
             <h3>Sobre esta versión</h3>
@@ -960,7 +960,7 @@ function App() {
             </div>
             <p>
               Este es un prototipo local llamado provisionalmente{" "}
-              <strong>Afinia</strong>. La maqueta pública no crea cuentas ni
+              <strong>Nexafia</strong>. La maqueta pública no crea cuentas ni
               conecta con personas reales. El nombre no ha sido validado como
               marca.
             </p>

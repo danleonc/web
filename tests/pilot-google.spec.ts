@@ -36,7 +36,7 @@ test("Google vuelve al espacio elegido y exige alias/18+ antes de participar, si
     .getByRole("button", { name: "Continuar con Google", exact: true })
     .click();
   const dialog = page.getByRole("dialog", {
-    name: "Tu cuenta en Afinia",
+    name: "Tu cuenta en Nexafia",
     exact: true,
   });
   await expect(
@@ -49,7 +49,7 @@ test("Google vuelve al espacio elegido y exige alias/18+ antes de participar, si
     (await page.request.post("/api/reservations/cafe", { data: {} })).status(),
   ).toBe(403);
   await expect(
-    dialog.getByRole("button", { name: "Continuar en Afinia", exact: true }),
+    dialog.getByRole("button", { name: "Continuar en Nexafia", exact: true }),
   ).toHaveCount(0);
   await dialog
     .getByLabel("Tu alias público", { exact: true })
@@ -80,7 +80,7 @@ test("Google vuelve al espacio elegido y exige alias/18+ antes de participar, si
     ).violations,
   ).toEqual([]);
   await dialog
-    .getByRole("button", { name: "Continuar en Afinia", exact: true })
+    .getByRole("button", { name: "Continuar en Nexafia", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Compartir algo", exact: true })
@@ -129,7 +129,7 @@ test("vincular Google conserva la cuenta y el borrador; permite entrar luego con
     .getByRole("button", { name: "Vincular cuenta de Google", exact: true })
     .click();
   const d = page.getByRole("dialog", {
-    name: "Tu cuenta en Afinia",
+    name: "Tu cuenta en Nexafia",
     exact: true,
   });
   await expect(d.getByText(/Cuenta de Google vinculada/)).toBeVisible();
@@ -137,7 +137,7 @@ test("vincular Google conserva la cuenta y el borrador; permite entrar luego con
     prior,
   );
   await d
-    .getByRole("button", { name: "Continuar en Afinia", exact: true })
+    .getByRole("button", { name: "Continuar en Nexafia", exact: true })
     .click();
   await page
     .getByRole("button", { name: "Compartir algo", exact: true })

@@ -1,6 +1,6 @@
-# Afinia · prototipo de conexiones humanas
+# Nexafia · prototipo de conexiones humanas
 
-Prototipo navegable con **La Plaza, Conexiones y Encuentros**. **Afinia es el nombre de trabajo de la interfaz, sin validación de marca**; los identificadores técnicos de Entre se conservan para proteger datos existentes. Construido con React, TypeScript y Vite. Interfaz adaptable en español; fechas de ejemplo en la zona `America/Santiago`.
+Prototipo navegable con **La Plaza, Conexiones y Encuentros**. **Nexafia es el nombre elegido por el usuario; no se ha realizado validación registral de marca**; los identificadores técnicos de Entre se conservan para proteger datos existentes. Construido con React, TypeScript y Vite. Interfaz adaptable en español; fechas de ejemplo en la zona `America/Santiago`.
 
 La entrada es La Plaza: publicaciones y respuestas locales, filtros, guardados, invitaciones de ejemplo y enlaces a encuentros relacionados. Conexiones distingue afinidades e invitaciones pendientes; «Seguir conversando» en una respuesta conserva el comentario de origen y permite volver a él o explorar un encuentro relacionado. Encuentros mantiene reservas, recepción y dinámica grupal. **Los espacios nuevos no conectan con personas reales**; están separados del backend de cuentas y salas persistentes. Alcance y próximos pasos: [docs/ECOSISTEMA.md](docs/ECOSISTEMA.md).
 
@@ -8,7 +8,7 @@ La entrada es La Plaza: publicaciones y respuestas locales, filtros, guardados, 
 
 El repositorio incluye la skill `frontend-design` de Anthropic en
 [`.agents/skills/frontend-design/SKILL.md`](.agents/skills/frontend-design/SKILL.md),
-con un [brief de Afinia](.agents/skills/frontend-design/references/afinia.md).
+con un [brief de Nexafia](.agents/skills/frontend-design/references/afinia.md).
 [`AGENTS.md`](AGENTS.md) indica utilizarla en las tareas de interfaz. La copia de
 origen, su revisión y licencia se describen en
 [UPSTREAM.md](.agents/skills/frontend-design/UPSTREAM.md). La instalación es local
@@ -170,3 +170,9 @@ Este comando compila y publica únicamente `dist/` en la rama `gh-pages`, sin mo
 En GitHub, abrir **Settings → Pages → Build and deployment**, elegir **Deploy from a branch**, rama **gh-pages**, carpeta **/ (root)** y guardar. Es una acción única; disponibilidad y precio dependen de la visibilidad del repositorio y el plan de GitHub. No cambiar la visibilidad del repositorio para publicar sin una decisión expresa.
 
 La dirección prevista es `https://danleonc.github.io/web/`. Solo puede anunciarse como disponible después de comprobar que GitHub Pages terminó el despliegue y sirve la aplicación. El sitio seguirá siendo una demo sin usuarios reales. No almacena secretos ni requiere backend.
+
+## Prueba guiada de usabilidad
+
+Pauta para cinco sesiones individuales, tareas y registro de observaciones:
+[Prueba de Nexafia con cinco personas](docs/PRUEBA_USABILIDAD.md). Evalúa comprensión
+y uso de la maqueta; no acredita demanda, retención ni conexiones reales.

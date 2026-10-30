@@ -338,3 +338,17 @@ El usuario confirma Nexafia como nuevo nombre y facilita el ID del cliente OAuth
 No se ha recibido ni almacenado un secreto, verificado el cliente con Google, configurado callback/origen público, desplegado el backend o cambiado DNS. La autenticación real continúa inactiva. Verificación documental, coincidencia del ID, variables comentadas, reglas de exclusión del archivo privado y `git diff --check`; no cambia código ejecutable.
 
 Siguiente: definir el alojamiento y origen del backend para registrar el callback exacto; después configurar las credenciales privadamente en ese servidor y probar con usuarios autorizados. La demo de GitHub Pages no sirve como backend OAuth.
+
+## Actualización · 29 de octubre de 2026 · Marca Nexafia y preparación de usabilidad
+
+Se aplica Nexafia como nombre visible en la marca floral, cabecera, navegación accesible, pie, diálogos, cuenta, título/descripción HTML y avisos del cargador de imágenes. Las descargas de imágenes, recuperación y datos locales utilizan el nuevo nombre; también el asunto/cuerpo de confirmación por correo del servidor. Se actualizan README, AGENTS, guía Google y brief, conservando los documentos históricos. Diseño acotado en `docs/diseno/Marca_Nexafia.md`.
+
+Las claves de almacenamiento, IndexedDB, cookies OAuth, eventos internos y variables ENTRE_* conservan sus identificadores por compatibilidad. No cambia el cliente OAuth recibido, el origen pendiente, las condiciones de acceso ni la arquitectura. No se contrata alojamiento, activa Google real, cambia DNS o publica el backend.
+
+Se prepara `docs/PRUEBA_USABILIDAD.md`: cinco sesiones individuales de 20–25 minutos, tareas de Plaza → respuesta → invitación → Conexiones → Encuentros, registro sin ayuda/con ayuda/no completado y criterios para priorizar problemas. Explica las limitaciones de la maqueta, consentimiento, datos ficticios y que la comprensión/interés declarado no demuestra demanda o retención. No se han reclutado personas ni realizado las sesiones.
+
+Revisión renderizada de la demo compilada a 320, 390 y 1440 px: cinco secciones sin marca anterior visible, título actualizado, sin desbordamiento ni errores JavaScript; logo dentro de pantalla con menú móvil abierto y diálogo Acerca operativo. Se revisaron capturas de Plaza de escritorio y menú móvil; archivos `nexafia-*.png` en `/workspace/entregables/`. Chromium móvil no sustituye a iPhone físico.
+
+Verificación final: compilaciones estática y piloto correctas (TypeScript y 60 stickers); **77 escenarios aprobados**: 56 navegador maqueta en escritorio/móvil, 15 navegador piloto y 6 servidor correo. Incluyen publicar/responder/editar, contexto de invitación, reservas, sala/guía, recuperación, correo pendiente/confirmado, imágenes y nuevas descargas, foco, teclado, bloqueos/moderación e identidad Google simulada. Las auditorías automáticas de accesibilidad incluidas en los recorridos no detectan infracciones; no equivalen a certificación. No se probaron Google o SMTP reales. Identificadores heredados comprobados sin cambios y `git diff --check` correcto.
+
+Siguiente: realizar las cinco sesiones de usabilidad con la pauta y corregir los problemas observados antes de decidir el alojamiento del piloto real.

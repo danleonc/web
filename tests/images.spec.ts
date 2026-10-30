@@ -186,7 +186,7 @@ for (const decoder of ["missing", "rejects"] as const) {
     await page
       .getByRole("link", { name: "Descargar imagen", exact: true })
       .click();
-    expect((await download).suggestedFilename()).toBe("afinia-imagen.jpg");
+    expect((await download).suggestedFilename()).toBe("nexafia-imagen.jpg");
   });
 }
 

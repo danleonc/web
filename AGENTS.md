@@ -2,8 +2,8 @@
 
 Este repositorio contiene Nexafia (antes Afinia). El usuario confirmó el nuevo
 nombre: utilizar Nexafia en nuevas comunicaciones y cambios de marca. La interfaz
-aún contiene referencias anteriores; conservar identificadores técnicos para no
-afectar datos existentes. Lee `README.md` y las últimas entradas de
+utiliza Nexafia; conservar identificadores técnicos heredados para no afectar
+datos existentes. Lee `README.md` y las últimas entradas de
 `docs/STATUS.md` para conocer el alcance actual antes de intervenir.
 
 ## Diseño y experiencia de usuario
@@ -18,7 +18,7 @@ interfaz, utiliza la skill local `frontend-design`:
    autorizada, con una profundidad proporcional al cambio.
 
 Las instrucciones y decisiones del usuario tienen prioridad. Las referencias
-generales de la skill se interpretan en el contexto de Afinia; las revisiones
+generales de la skill se interpretan en el contexto de Nexafia; las revisiones
 internas no añaden una aprobación extra a cambios ya autorizados. Consulta
 información faltante solo cuando sea necesaria para resolver una ambigüedad real.
 

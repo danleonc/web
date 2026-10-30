@@ -15,7 +15,7 @@ una cuenta real de Google. La audiencia, los usuarios de prueba y los permisos
 se deben comprobar en la consola antes de activar.
 
 La nueva marca es Nexafia. Los nombres técnicos `ENTRE_*` se conservan para
-mantener compatibilidad; la sustitución de marca en la interfaz queda pendiente.
+mantener compatibilidad; la interfaz y las descargas ya utilizan Nexafia.
 
 ## Preparar Google Cloud
 

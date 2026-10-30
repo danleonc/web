@@ -27,7 +27,7 @@ async function register(page: Page, username: string) {
     .getByRole("button", { name: "Descargar clave", exact: true })
     .click();
   expect((await download).suggestedFilename()).toBe(
-    "entre-clave-de-recuperacion.txt",
+    "nexafia-clave-de-recuperacion.txt",
   );
   await page
     .getByRole("button", { name: "Ya guardé mi clave", exact: true })

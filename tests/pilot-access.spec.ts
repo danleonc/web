@@ -17,7 +17,7 @@ test("exploración abierta, cuenta pendiente, correo confirmado y retorno a La P
     .getByRole("button", { name: "Compartir algo", exact: true })
     .click();
   const access = page.getByRole("dialog", {
-    name: "Tu cuenta en Afinia",
+    name: "Tu cuenta en Nexafia",
     exact: true,
   });
   await expect(access).toBeVisible();
@@ -45,7 +45,7 @@ test("exploración abierta, cuenta pendiente, correo confirmado y retorno a La P
     (await page.request.post("/api/reservations/cafe", { data: {} })).status(),
   ).toBe(403);
   await expect(
-    access.getByRole("button", { name: "Continuar en Afinia", exact: true }),
+    access.getByRole("button", { name: "Continuar en Nexafia", exact: true }),
   ).toHaveCount(0);
   expect(
     (
@@ -61,7 +61,7 @@ test("exploración abierta, cuenta pendiente, correo confirmado y retorno a La P
       ).toBeGreaterThanOrEqual(16);
   await confirmTestEmail(page, name);
   await access
-    .getByRole("button", { name: "Continuar en Afinia", exact: true })
+    .getByRole("button", { name: "Continuar en Nexafia", exact: true })
     .click();
   await expect(access).toHaveCount(0);
   await page

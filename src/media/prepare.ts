@@ -155,7 +155,7 @@ export async function prepareImage(
 ): Promise<{ image: ImageRef; blob: Blob }> {
   if (file.size > maxOriginalImageBytes)
     throw Error(
-      `Esta foto supera los ${maxOriginalImageMB} MB. Puedes elegir fotos de hasta ${maxOriginalImageMB} MB; Afinia las reduce automáticamente.`,
+      `Esta foto supera los ${maxOriginalImageMB} MB. Puedes elegir fotos de hasta ${maxOriginalImageMB} MB; Nexafia las reduce automáticamente.`,
     );
   const bytes = new Uint8Array(await file.arrayBuffer()),
     type = photoType(bytes);

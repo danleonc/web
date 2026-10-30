@@ -39,8 +39,8 @@ export function smtpMailer(
     await transporter.sendMail({
       from: env.ENTRE_MAIL_FROM,
       to: email,
-      subject: "Confirma tu correo en Afinia",
-      text: `Tu código de Afinia es ${code}. Caduca en 10 minutos y solo puede usarse una vez. No lo compartas. Si no solicitaste este mensaje, puedes ignorarlo.`,
+      subject: "Confirma tu correo en Nexafia",
+      text: `Tu código de Nexafia es ${code}. Caduca en 10 minutos y solo puede usarse una vez. No lo compartas. Si no solicitaste este mensaje, puedes ignorarlo.`,
       disableFileAccess: true,
       disableUrlAccess: true,
     });

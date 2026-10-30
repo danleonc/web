@@ -165,7 +165,7 @@ export function ImageView({
               <a
                 className="button secondary"
                 href={src}
-                download={`afinia-imagen.${extension}`}
+                download={`nexafia-imagen.${extension}`}
               >
                 Descargar imagen
               </a>

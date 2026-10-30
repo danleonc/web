@@ -28,7 +28,7 @@ async function seed(page: Page) {
 async function space(page: Page, name: string) {
   if ((page.viewportSize()?.width || 0) <= 700)
     await page
-      .getByRole("navigation", { name: "Espacios de Afinia", exact: true })
+      .getByRole("navigation", { name: "Espacios de Nexafia", exact: true })
       .getByRole("button", { name, exact: true })
       .click();
   else

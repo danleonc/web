@@ -33,14 +33,14 @@ export function AccountPanel({
   function saveRecovery() {
     const blob = new Blob(
       [
-        `Afinia · clave de recuperación\n\n${state.recovery}\n\nGuárdala fuera de este navegador. Permite cambiar tu contraseña. No la compartas.\n`,
+        `Nexafia · clave de recuperación\n\n${state.recovery}\n\nGuárdala fuera de este navegador. Permite cambiar tu contraseña. No la compartas.\n`,
       ],
       { type: "text/plain" },
     );
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "entre-clave-de-recuperacion.txt";
+    link.download = "nexafia-clave-de-recuperacion.txt";
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }

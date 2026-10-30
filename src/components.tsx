@@ -11,7 +11,7 @@ export function Logo() {
         />
         <circle cx="20" cy="20" r="4" fill="#F7E8D0" />
       </svg>
-      afinia<span className="brand-dot">.</span>
+      nexafia<span className="brand-dot">.</span>
     </span>
   );
 }
