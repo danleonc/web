@@ -27,7 +27,7 @@ async function createProfile(page: Page) {
 async function book(page: Page) {
   await page
     .getByRole("button", {
-      name: "Ver encuentro: Historias y cultura",
+      name: "Ver encuentro: ¿Y si pudieras vivir otra vida?",
       exact: true,
     })
     .click();
@@ -108,10 +108,10 @@ test("filters and normalized search have meaningful empty and recovery states", 
   await page.getByRole("button", { name: "Bienestar", exact: true }).click();
   await expect(page.locator(".activity-card")).toHaveCount(1);
   await page.getByRole("button", { name: "Todos", exact: true }).click();
-  await page.getByLabel("Buscar encuentros").fill("cafe");
+  await page.getByLabel("Buscar encuentros").fill("pelicula");
   await expect(page.locator(".activity-card")).toHaveCount(1);
   await expect(
-    page.getByRole("heading", { name: "Historias y cultura", exact: true }),
+    page.getByRole("heading", { name: "¿Y si pudieras vivir otra vida?", exact: true }),
   ).toBeVisible();
   await page.getByLabel("Buscar encuentros").fill("inexistente");
   await expect(
@@ -249,7 +249,7 @@ test("modal keeps focus and Escape closes it", async ({ page }) => {
   await page.goto("/#discover");
   await page
     .getByRole("button", {
-      name: "Ver encuentro: Historias y cultura",
+      name: "Ver encuentro: ¿Y si pudieras vivir otra vida?",
       exact: true,
     })
     .click();
@@ -281,7 +281,7 @@ test("core screens have no automatically detected WCAG A/AA violations", async (
   await audit();
   await page
     .getByRole("button", {
-      name: "Ver encuentro: Historias y cultura",
+      name: "Ver encuentro: ¿Y si pudieras vivir otra vida?",
       exact: true,
     })
     .click();

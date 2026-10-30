@@ -73,7 +73,7 @@ test("piloto: imagen compartida, reporte, revisión, baneo apelable y expulsión
 }, info) => {
   test.setTimeout(90_000);
   const mobile = info.project.name.includes("mobile"),
-    topic = mobile ? "Vida cotidiana y pequeños planes" : "Crear y descubrir",
+    topic = mobile ? "Ser adulto no venía con manual" : "Ideas tan locas que podrían funcionar",
     suffix = mobile ? "movil" : "pc";
   const contexts = await Promise.all(
     [1, 2, 3].map(() =>

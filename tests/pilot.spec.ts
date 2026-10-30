@@ -38,7 +38,7 @@ async function register(page: Page, username: string) {
 }
 async function reserve(page: Page) {
   await page
-    .getByRole("button", { name: "Reservar Historias y cultura", exact: true })
+    .getByRole("button", { name: "Reservar ¿Y si pudieras vivir otra vida?", exact: true })
     .click();
   await expect(
     page.getByText("Tu reserva está guardada.", { exact: true }),
@@ -101,13 +101,13 @@ test("registro, reserva, cierre, recuperación y acceso desde otro contexto", as
     ).toBeVisible();
     await other
       .getByRole("button", {
-        name: "Cancelar reserva de Historias y cultura",
+        name: "Cancelar reserva de ¿Y si pudieras vivir otra vida?",
         exact: true,
       })
       .click();
     await expect(
       other.getByRole("button", {
-        name: "Reservar Historias y cultura",
+        name: "Reservar ¿Y si pudieras vivir otra vida?",
         exact: true,
       }),
     ).toBeEnabled();
@@ -116,7 +116,7 @@ test("registro, reserva, cierre, recuperación y acceso desde otro contexto", as
   }
   await expect(
     page.getByRole("button", {
-      name: "Reservar Historias y cultura",
+      name: "Reservar ¿Y si pudieras vivir otra vida?",
       exact: true,
     }),
   ).toBeEnabled({ timeout: 8000 });

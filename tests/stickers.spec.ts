@@ -314,12 +314,12 @@ test("character collections and frequent favorites persist across Plaza and chat
   await seedProfile(page);
   await page
     .getByRole("button", {
-      name: "¿Qué canción te lleva de vuelta a un lugar?",
+      name: "¿Qué canción sería el tráiler de tu vida?",
       exact: true,
     })
     .click();
   const thread = page.getByRole("dialog", {
-    name: "¿Qué canción te lleva de vuelta a un lugar?",
+    name: "¿Qué canción sería el tráiler de tu vida?",
     exact: true,
   });
   await thread
@@ -372,7 +372,7 @@ test("character collections and frequent favorites persist across Plaza and chat
   await page.reload();
   await page
     .getByRole("button", {
-      name: "¿Qué canción te lleva de vuelta a un lugar?",
+      name: "¿Qué canción sería el tráiler de tu vida?",
       exact: true,
     })
     .click();

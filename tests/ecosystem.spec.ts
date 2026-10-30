@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-const song = "¿Qué canción te lleva de vuelta a un lugar?";
+const song = "¿Qué canción sería el tráiler de tu vida?";
 async function seed(page: Page) {
   await page.goto("/");
   await page.evaluate(() =>
@@ -345,10 +345,10 @@ test("los perfiles anteriores conservan sus datos y los bloqueos se respetan ent
   await expect(
     page.getByRole("heading", { name: song, exact: true }),
   ).toHaveCount(0);
-  await thread(page, "Crear algo, aunque no salga perfecto.");
+  await thread(page, "Tienes un local vacío. ¿Qué inventamos ahí?");
   await expect(
     page.getByText(
-      "Me pasa con escribir. A veces una página sin corregir nada ya es un buen comienzo.",
+      "Una librería donde cada libro viene con una nota de quien lo leyó antes. Y una mesa para quedarse conversando.",
       { exact: true },
     ),
   ).toHaveCount(0);

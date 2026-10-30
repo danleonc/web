@@ -187,3 +187,11 @@ La dirección prevista es `https://danleonc.github.io/web/`. Solo puede anunciar
 Pauta para cinco sesiones individuales, tareas y registro de observaciones:
 [Prueba de Nexafia con cinco personas](docs/PRUEBA_USABILIDAD.md). Evalúa comprensión
 y uso de la maqueta; no acredita demanda, retención ni conexiones reales.
+
+## Temas de ejemplo
+
+Los encuentros vigentes proponen imaginar otra vida, inventar ideas improbables
+y compartir con humor la vida adulta. Las seis publicaciones iniciales conectan
+esos temas con música, ficción, creatividad y planes cotidianos. Criterios y
+alcance: [Temas de ejemplo](docs/diseno/Temas_de_ejemplo.md). La atracción real
+de estas propuestas sigue pendiente de comprobar con participantes.

@@ -58,6 +58,7 @@ corta para borrarlas; no subir grabaciones ni notas identificables al repositori
 - ¿Qué te resultó más útil y qué te frenó o generó desconfianza?
 - ¿Qué esperarías que ocurriera al enviar una invitación?
 - ¿En qué situación concreta volverías? ¿Qué faltaría para eso?
+- ¿Cuál de los tres encuentros elegirías y por qué? ¿Qué tema te falta?
 
 ## Cómo decidir el siguiente cambio
 

@@ -1,9 +1,9 @@
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-const song = "¿Qué canción te lleva de vuelta a un lugar?";
+const song = "¿Qué canción sería el tráiler de tu vida?";
 const quote =
-  "Las canciones de los viajes en familia. Siempre termino recordando el paisaje antes que la letra.";
+  "Una de los viajes en familia: mi primer capítulo empezaría mirando por la ventana, antes de que llegue el estribillo.";
 async function seed(page: Page) {
   await page.goto("/");
   await page.evaluate(() =>
@@ -130,7 +130,7 @@ test("una invitación por persona conserva su comentario original al venir de ot
   await seed(page);
   const dialog = await inviteFromReply(
     page,
-    "Crear algo, aunque no salga perfecto.",
+    "Tienes un local vacío. ¿Qué inventamos ahí?",
     "Antonia",
   );
   await dialog
@@ -166,7 +166,7 @@ test("una invitación por persona conserva su comentario original al venir de ot
   await expect(
     page
       .getByRole("dialog", {
-        name: "Crear algo, aunque no salga perfecto.",
+        name: "Tienes un local vacío. ¿Qué inventamos ahí?",
         exact: true,
       })
       .getByRole("group", { name: "Respuesta de Antonia", exact: true }),
@@ -181,7 +181,7 @@ test("sin perfil se retoma el comentario después de crearlo sin guardar ni acep
   await page.goto("/#discover");
   await page
     .getByRole("button", {
-      name: "Ver encuentro: Historias y cultura",
+      name: "Ver encuentro: ¿Y si pudieras vivir otra vida?",
       exact: true,
     })
     .click();

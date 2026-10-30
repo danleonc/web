@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import type { Page, Locator } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import sharp from "sharp";
-const title = "¿Qué canción te lleva de vuelta a un lugar?";
+const title = "¿Qué canción sería el tráiler de tu vida?";
 async function seed(page: Page) {
   await page.goto("/");
   await page.evaluate(() =>

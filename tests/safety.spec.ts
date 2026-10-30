@@ -165,7 +165,7 @@ test("Plaza: reportar no sanciona ni oculta automáticamente; bloquear retira pu
   page.on("dialog", (d) => void d.accept());
   await page
     .getByRole("heading", {
-      name: "¿Qué canción te lleva de vuelta a un lugar?",
+      name: "¿Qué canción sería el tráiler de tu vida?",
       exact: true,
     })
     .getByRole("button")
@@ -185,14 +185,14 @@ test("Plaza: reportar no sanciona ni oculta automáticamente; bloquear retira pu
     .click();
   await expect(
     page.getByRole("heading", {
-      name: "¿Qué canción te lleva de vuelta a un lugar?",
+      name: "¿Qué canción sería el tráiler de tu vida?",
       exact: true,
     }),
   ).toHaveCount(0);
   await page.reload();
   await expect(
     page.getByRole("heading", {
-      name: "¿Qué canción te lleva de vuelta a un lugar?",
+      name: "¿Qué canción sería el tráiler de tu vida?",
       exact: true,
     }),
   ).toHaveCount(0);

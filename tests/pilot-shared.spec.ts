@@ -37,7 +37,7 @@ async function register(page: Page, username: string) {
 }
 async function reserve(page: Page) {
   await page
-    .getByRole("button", { name: "Reservar Historias y cultura", exact: true })
+    .getByRole("button", { name: "Reservar ¿Y si pudieras vivir otra vida?", exact: true })
     .click();
   await expect(
     page.getByText("Tu reserva está guardada.", { exact: true }),
@@ -107,7 +107,7 @@ test("cuentas distintas comparten sala y recuperan el historial al volver a entr
     await pages[2].getByText("Historial de mis salas", { exact: true }).click();
     await pages[2]
       .getByRole("button", {
-        name: "Ver mensajes de Historias y cultura",
+        name: "Ver mensajes de ¿Y si pudieras vivir otra vida?",
         exact: true,
       })
       .click();

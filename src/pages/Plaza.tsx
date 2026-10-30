@@ -547,13 +547,8 @@ export function Plaza({
             <p className="eyebrow">De conversar a compartir</p>
             <PlazaArt scene="books" />
             <span className="small-label">Encuentro de ejemplo</span>
-            <h2>
-              Una historia.
-              <br />
-              Un café.
-              <br />
-              <em>Un buen comienzo.</em>
-            </h2>
+            <h2>{culture.title}</h2>
+            <p>{culture.subtitle}</p>
             <p>
               {dateLabel(culture.startsAt)} · {timeLabel(culture.startsAt)} h
               <br />
