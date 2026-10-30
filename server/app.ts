@@ -29,6 +29,8 @@ import type { GoogleConfig } from "./google.ts";
 import { EmailConfirmation } from "./email.ts";
 import type { SendVerificationEmail } from "./email.ts";
 import { handleFeatures } from "./features.ts";
+import { PushDelivery, handlePush } from "./push.ts";
+import type { PushConfig } from "./push.ts";
 
 type Identity = {
   id: string;
@@ -58,6 +60,7 @@ type Connection = {
   expires: number;
 };
 type Options = {
+  push?: PushConfig;
   google?: GoogleConfig;
   sendVerificationEmail?: SendVerificationEmail;
   allowedOrigins?: string[];
@@ -94,6 +97,7 @@ export function createRoomServer(options: Options = {}) {
   const confirmation = storage
     ? new EmailConfirmation(storage, now, options.sendVerificationEmail)
     : null;
+  const pushDelivery = storage && options.push ? new PushDelivery(storage, options.push, now) : null;
   const enforceSchedule = options.enforceSchedule ?? !!storage;
   const moderation = storage ? new ModerationStore(storage, now) : null;
   const google =
@@ -219,6 +223,8 @@ export function createRoomServer(options: Options = {}) {
           ".css": "text/css",
           ".svg": "image/svg+xml",
           ".json": "application/json",
+          ".webmanifest": "application/manifest+json",
+          ".png": "image/png",
         };
         res.writeHead(200, {
           "Content-Type": type[extname(file)] || "application/octet-stream",
@@ -292,6 +298,7 @@ export function createRoomServer(options: Options = {}) {
       json(res, 403, { error: "account_restricted" });
       return;
     }
+    if (await handlePush({ storage, delivery: pushDelivery, identity, sessionHash: tokenHash(req), originValid: validOrigin(req) }, req, res, path)) return;
     if (
       await handleFeatures(
         {

@@ -191,3 +191,18 @@ texto con aria-describedby y mantiene Tab entre objetivo y controles. Escape
 restaura origen/foco y borrador; el detalle final no reserva. No se inicia durante
 una sala o edición de perfil. La invitación es opcional; `nexafia.tour.v1` mantiene
 la preferencia local, sin métricas, y funciona aunque falle el almacenamiento.
+
+
+## Notificaciones
+
+La campana abre avisos y conversaciones seguidas, con contador y silencio por
+hilo. Participar activa seguimiento; responder no quita el silencio y reactivar
+no reenvía lo omitido. Los estados locales se aíslan por cuenta y la exportación
+solo incluye el ámbito actual. No generar actividad fingida: la maqueta solo
+produce avisos al pulsar la prueba explícita, con rótulo «Aviso de ejemplo».
+Plaza compartida y preferencias en servidor siguen pendientes. Teléfono requiere
+piloto HTTPS/VAPID y permiso voluntario por dispositivo; en demo estática no hay
+botón de activación falso. Mostrar instrucciones iPhone/pantalla de inicio y
+estados denegado/caducado/baja. Worker sin caché de app; payload genérico y navegación
+solo al mismo ámbito, sin abandonar salas al abrir un aviso. El mensaje del worker
+cierra primero la guía para no bloquear el centro. Ver `docs/NOTIFICACIONES.md`.

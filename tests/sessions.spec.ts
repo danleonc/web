@@ -141,7 +141,7 @@ test("rounds have a shared time cap; typing is ephemeral and another question ne
     .getByRole("button", { name: "Votar otra pregunta: Nicolás", exact: true })
     .click();
   await expect(
-    page.getByText("¿Qué descubriste al escuchar a alguien de este grupo?", {
+    page.getByText("¿Qué canción, película o libro tendría un lugar en esa vida?", {
       exact: true,
     }),
   ).toBeVisible();

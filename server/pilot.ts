@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { pushFromEnv } from "./push.ts";
 import { googleFromEnv } from "./google.ts";
 import { smtpMailer } from "./email.ts";
 import { createRoomServer } from "./app.ts";
@@ -29,6 +30,7 @@ if (
 const app = createRoomServer({
   sendVerificationEmail: smtpMailer(),
   google: googleFromEnv(process.env,origin.origin),
+  push: pushFromEnv(process.env),
   databasePath:
     process.env.ENTRE_DATABASE_PATH || resolve(".data/entre.sqlite"),
   staticRoot: root,

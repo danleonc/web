@@ -41,7 +41,8 @@ export class Storage {
       version !== 1 &&
       version !== 2 &&
       version !== 3 &&
-      version !== 4
+      version !== 4 &&
+      version !== 5
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -91,6 +92,11 @@ export class Storage {
       CREATE TABLE account_google(user_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE, subject TEXT NOT NULL UNIQUE, profile_complete INTEGER NOT NULL DEFAULT 0, created_at INTEGER NOT NULL);
       CREATE TABLE google_flows(state_hash TEXT PRIMARY KEY, browser_hash TEXT NOT NULL, verifier TEXT NOT NULL, nonce_hash TEXT NOT NULL, expires_at INTEGER NOT NULL, intent TEXT NOT NULL, session_hash TEXT, account_id TEXT, return_to TEXT NOT NULL);
       PRAGMA user_version=4; COMMIT;`);
+    if (version < 5)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE push_subscriptions(endpoint_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,session_hash TEXT NOT NULL,subscription_json TEXT NOT NULL,created_at INTEGER NOT NULL);
+      CREATE INDEX push_user ON push_subscriptions(user_id);
+      PRAGMA user_version=5; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");
@@ -141,6 +147,7 @@ export class Storage {
       | undefined;
   }
   revoke(tokenHash: string) {
+    this.db.prepare("DELETE FROM push_subscriptions WHERE session_hash=?").run(tokenHash);
     this.db.prepare("DELETE FROM sessions WHERE token_hash=?").run(tokenHash);
   }
   recover(id: string, passwordHash: string, recoveryHash: string) {
@@ -150,6 +157,7 @@ export class Storage {
           "UPDATE accounts SET password_hash=?,recovery_hash=? WHERE id=?",
         )
         .run(passwordHash, recoveryHash, id);
+      this.db.prepare("DELETE FROM push_subscriptions WHERE user_id=?").run(id);
       this.db.prepare("DELETE FROM sessions WHERE user_id=?").run(id);
     });
   }

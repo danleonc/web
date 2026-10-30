@@ -1,3 +1,5 @@
+import { ThreadWatch } from "../notifications/NoticeCenter";
+import type { NotificationScope } from "../notifications/model";
 import { ConductGuide } from "../safety/ConductGuide";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -73,6 +75,8 @@ type Props = StickerActions & {
   onMeet: (id: string) => void;
   activePost: string | null;
   focusComment?: string | null;
+  notificationScope: NotificationScope;
+  onNotificationToggle: (postId: string) => void;
   onOpenPost: (id: string | null) => void;
   onInvite: (i: PlazaInvitation) => void;
   onPrepareInvitation: (source: Omit<PlazaInvitation, "note">) => void;
@@ -93,6 +97,8 @@ export function Plaza({
   onMeet,
   activePost,
   focusComment,
+  notificationScope,
+  onNotificationToggle,
   onOpenPost,
   onInvite,
   onPrepareInvitation,
@@ -765,6 +771,7 @@ export function Plaza({
       {active && (
         <Modal title={active.title} wide onClose={() => onOpenPost(null)}>
           <div className="modal-content plaza-thread">
+            <ThreadWatch following={notificationScope.following.includes(active.id)} muted={notificationScope.muted.includes(active.id)} onToggle={() => onNotificationToggle(active.id)} />
             <div className="thread-person">
               <Avatar name={active.author} />
               <div>

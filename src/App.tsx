@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowDownToLine,
   ArrowRight,
+  Bell,
   CalendarDays,
   CheckCheck,
   Clock3,
@@ -44,6 +45,10 @@ import type { PlazaInvitation } from "./plaza/data";
 import { normalizeInvitation } from "./plaza/invitations";
 import { InviteDialog } from "./plaza/InviteDialog";
 import { ProductTour, useProductTour } from "./tour/ProductTour";
+import { useNotices } from "./notifications/useNotices";
+import { DevicePush } from "./notifications/DevicePush";
+import { prepareServiceWorker } from "./notifications/pushClient";
+import { NoticeCenter } from "./notifications/NoticeCenter";
 type Page =
   | "plaza"
   | "discover"
@@ -75,6 +80,22 @@ function App() {
     return false;
   }
   const [state, setState] = useState<LocalState>(loadState);
+  const [noticesOpen, setNoticesOpen] = useState(false);
+  const noticeOwner = accountsEnabled ? (account.account ? `account:${account.account.id}` : null) : "prototype";
+  const notices = useNotices(state, setState, noticeOwner);
+  useEffect(() => {
+    void prepareServiceWorker().catch(() => {});
+    const location = new URL(window.location.href);
+    if (location.searchParams.get("openNotifications") === "1") {
+      setNoticesOpen(true); location.searchParams.delete("openNotifications");
+      window.history.replaceState(null, "", location.pathname + location.search + location.hash);
+    }
+    const openNotices = (event: MessageEvent) => {
+      if (event.data?.type === "nexafia-open-notifications" && event.source && "scriptURL" in event.source && event.source.scriptURL === new URL("sw.js", document.baseURI).href) { tour.close(); setNoticesOpen(true); }
+    };
+    navigator.serviceWorker?.addEventListener("message", openNotices);
+    return () => navigator.serviceWorker?.removeEventListener("message", openNotices);
+  }, []);
   const participationProfile: Profile | null = accountsEnabled
     ? account.account?.canParticipate
       ? {
@@ -321,6 +342,7 @@ function App() {
               prototype: true,
               exportedAt: new Date().toISOString(),
               ...state,
+              notifications: noticeOwner ? { [noticeOwner]: notices.scope } : {},
               reports: localReports(),
               imagesNote:
                 "Este JSON incluye referencias de imágenes, no sus archivos. Descarga cada imagen desde su vista ampliada.",
@@ -572,6 +594,9 @@ function App() {
                   : "Entrar"
                 : "Acceso"}
             </button>
+            <button className="icon-button notice-trigger" aria-label={`Notificaciones, ${notices.unread === 0 ? "sin avisos sin leer" : notices.unread === 1 ? "1 aviso sin leer" : `${notices.unread} avisos sin leer`}`} onClick={() => setNoticesOpen(true)}>
+              <Bell size={21} aria-hidden="true" />{notices.unread > 0 && <span className="notice-badge" aria-hidden="true">{notices.unread}</span>}
+            </button>
             <button
               className="top-avatar"
               aria-label="Editar mi perfil"
@@ -619,7 +644,7 @@ function App() {
               draft={plazaDraft}
               onDraft={setPlazaDraft}
               onChange={(plaza) => {
-                if (requireParticipation()) setState((s) => ({ ...s, plaza }));
+                if (requireParticipation()) notices.updatePlaza(plaza);
               }}
               onProfile={() => prepareProfile("plaza")}
               onAccess={accountsEnabled ? () => setAccessOpen(true) : undefined}
@@ -630,7 +655,10 @@ function App() {
               }
               activePost={plazaThread}
               focusComment={plazaComment}
+              notificationScope={notices.scope}
+              onNotificationToggle={(id) => { if (!noticeOwner) setAccessOpen(true); else notices.toggle(id); }}
               onOpenPost={(id) => {
+                if (id) notices.readThread(id);
                 setPlazaThread(id);
                 setPlazaComment(null);
               }}
@@ -843,6 +871,13 @@ function App() {
           tour.close();
           requestAnimationFrame(() => mainRef.current?.focus({ preventScroll: true }));
         }} />
+      )}
+      {noticesOpen && (
+        <NoticeCenter key={noticeOwner || "guest"} notices={notices} signedIn={!!noticeOwner} activeRoom={page === "room" || account.activeRoom}
+          onClose={() => setNoticesOpen(false)} onAccess={() => { setNoticesOpen(false); setAccessOpen(true); }}
+          onOpen={(postId, commentId) => { notices.readThread(postId); setNoticesOpen(false); openPlaza(postId, commentId); }}>
+          <DevicePush key={noticeOwner || "guest"} owner={noticeOwner} canParticipate={!!account.account?.canParticipate} />
+        </NoticeCenter>
       )}
       {accessOpen && (
         <Modal
@@ -1064,7 +1099,7 @@ function App() {
             <p>
               Se borrarán el perfil, las reservas, las evaluaciones, los
               stickers favoritos y recientes, publicaciones, respuestas e
-              invitaciones de La Plaza y los bloqueos de este prototipo en este
+              invitaciones de La Plaza, avisos y preferencias de notificación, y los bloqueos de este prototipo en este
               navegador, junto con las imágenes y los reportes locales. No
               podrás deshacerlo.
             </p>

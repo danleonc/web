@@ -1,3 +1,4 @@
+import { syncPushIdentity, unsubscribeBrowserPush } from "../notifications/pushClient";
 import {
   createContext,
   createElement,
@@ -209,6 +210,11 @@ function useAccountState() {
       clearInterval(timer);
     };
   }, [refresh]);
+  useEffect(() => {
+    // Restore only a previously chosen device subscription, including Google returns.
+    if (accountsEnabled && loaded && account?.id && account.canParticipate !== undefined)
+      void syncPushIdentity(`account:${account.id}`).catch(() => {});
+  }, [loaded, account?.id, account?.canParticipate]);
   async function request(path: string, method: string, body?: unknown) {
     if (busyRef.current) return false;
     busyRef.current = true;
@@ -230,6 +236,7 @@ function useAccountState() {
             "No se pudo completar la acción. Inténtalo de nuevo.",
         );
       if (path.endsWith("/logout")) {
+        void unsubscribeBrowserPush().catch(() => {});
         setAccount(null);
         setActivities([]);
         setRooms([]);

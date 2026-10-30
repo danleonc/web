@@ -61,7 +61,7 @@ Se incorporan imágenes normalizadas de acceso privado, votaciones de expulsión
 
 ## Copias y restauración
 
-La base usa claves foráneas, migración automática v1/v2/v3 → `user_version=4`, WAL y transacciones. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
+La base usa claves foráneas, migración automática v1/v2/v3/v4 → `user_version=5`, WAL y transacciones. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
 
 ```sh
 node scripts/backup-db.mjs .data/entre.sqlite backups/entre-fecha-unica.sqlite
@@ -113,3 +113,11 @@ Configurar `ENTRE_GOOGLE_CLIENT_ID` y `ENTRE_GOOGLE_CLIENT_SECRET` en el servido
 registrar en Google el callback exacto derivado de `ENTRE_PUBLIC_ORIGIN`.
 Sin esas variables se conserva la vía de usuario/correo, sin botón Google activo.
 Procedimiento, permisos y límites: [Acceso con Google](GOOGLE_LOGIN.md).
+
+
+## Avisos en el teléfono
+
+El esquema vigente v5 añade suscripciones push por cuenta/dispositivo. La activación
+es voluntaria y requiere configurar VAPID; sin sus variables el piloto conserva
+el acceso anterior y no ofrece activación. PWA, requisitos de iPhone, privacidad,
+baja/prueba y alcance pendiente de Plaza en [Notificaciones](NOTIFICACIONES.md).

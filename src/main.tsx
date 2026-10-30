@@ -12,6 +12,7 @@ import "./photo-banners.css";
 import "./encounter-banner.css";
 import "./shared/access.css";
 import "./tour/tour.css";
+import "./notifications/notifications.css";
 import "./mobile-inputs.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

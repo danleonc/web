@@ -141,3 +141,8 @@ Para activar: crear el cliente web, registrar el callback, configurar las dos
 credenciales en un backend HTTPS y probar allí con las cuentas autorizadas.
 Verificar entrada, cancelación, retorno, vinculación, sesión y restricciones antes
 de ampliar el piloto. Las pruebas locales no equivalen a esa comprobación real.
+
+
+El esquema vigente v5 incorpora además suscripciones push, independientes de la
+vinculación de Google. La configuración de notificaciones está en
+[Notificaciones](NOTIFICACIONES.md); Google no otorga permiso para avisos al teléfono.

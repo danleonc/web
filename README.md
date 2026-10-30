@@ -130,7 +130,7 @@ Los favoritos y recientes se comparten entre ambas vistas; los mensajes siguen s
 
 Perfil, reservas, evaluaciones, bloqueos, solicitudes, publicaciones/respuestas/guardados/invitaciones de Plaza y las preferencias de stickers (favoritos, colecciones, frecuencia de uso y recientes) se guardan en `localStorage` bajo `entre.prototype.v1`. Los mensajes de salas y chats individuales de prueba solo viven en memoria y se pierden al abandonarlos o recargar. No ingresar datos sensibles ni utilizar el prototipo con usuarios reales. Las imágenes locales viven en IndexedDB y los reportes locales tienen su propio registro. La descarga JSON incluye referencias de imágenes y reportes; los archivos se descargan individualmente desde su vista ampliada. La función de borrar también limpia las imágenes y reportes locales, sin borrar cuentas del piloto.
 
-La maqueta pública no utiliza backend. El laboratorio añade una API local con presencia y mensajería compartidas en memoria, sin cuentas de producción ni persistencia. No hay IA generativa, notificaciones, pagos ni protección de fotografías. Los límites de perfil son controles de la experiencia de prueba. Antes de un piloto se necesitan servicios desplegados, revisión jurídica y controles de seguridad verificables.
+La maqueta pública no utiliza backend. El laboratorio añade una API local con presencia y mensajería compartidas en memoria, sin cuentas de producción ni persistencia. No hay IA generativa, entrega real de notificaciones, pagos ni protección de fotografías. El centro de avisos local y la preparación de Web Push se describen en [docs/NOTIFICACIONES.md](docs/NOTIFICACIONES.md). Los límites de perfil son controles de la experiencia de prueba. Antes de un piloto se necesitan servicios desplegados, revisión jurídica y controles de seguridad verificables.
 
 ## Verificar
 
@@ -142,6 +142,8 @@ npm run test:pilot
 ```
 
 Playwright usa el Chromium disponible en `/usr/bin/chromium` en este entorno. En otra máquina puede definirse `CHROMIUM_PATH` apuntando a su ejecutable. Si no hay navegador de sistema, ejecutar `npx playwright install chromium` y `PLAYWRIGHT_BUNDLED_BROWSER=1 npm test`.
+
+`test:pilot` ejecuta escritorio y móvil por separado, recreando el servidor privado entre ambos. Así cada proyecto conserva su propia base y presupuesto de códigos por correo; los límites de producción no se desactivan para las pruebas.
 
 El runner ejecuta primero las pruebas del motor y las pruebas de integración de servidor con Node, y después los tests de navegador. Playwright arranca Vite en 4173 y la API local en 8787 si no hay instancias existentes. La prueba compartida usa tres contextos independientes; los recorridos de maqueta se ejecutan en escritorio y móvil: reserva, perfil, chat, guion, evaluación, reencuentro, bloqueo, búsquedas, cancelación, exportación, borrado, almacenamiento inválido, acceso directo a sala y foco de diálogos. También realizan comprobaciones automáticas WCAG A/AA con axe en las pantallas principales. No sustituyen la evaluación manual con tecnologías de asistencia ni acreditan cumplimiento completo de accesibilidad.
 
@@ -195,3 +197,12 @@ y compartir con humor la vida adulta. Las seis publicaciones iniciales conectan
 esos temas con música, ficción, creatividad y planes cotidianos. Criterios y
 alcance: [Temas de ejemplo](docs/diseno/Temas_de_ejemplo.md). La atracción real
 de estas propuestas sigue pendiente de comprobar con participantes.
+
+## Notificaciones y teléfono
+
+Campana con avisos sin leer, seguimiento automático al publicar/responder y
+silencio persistente por conversación. Las pruebas locales se marcan como ejemplo:
+La Plaza aún no tiene eventos compartidos. Los avisos reales requieren conectar
+su backend y preferencias por cuenta. Se prepara Web Push con activación voluntaria,
+VAPID privado, PWA/worker e instrucciones iPhone. La demo estática no envía avisos
+al teléfono. Configuración, pruebas y límites: [Notificaciones](docs/NOTIFICACIONES.md).

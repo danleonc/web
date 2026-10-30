@@ -1,0 +1,53 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import webpush from 'web-push';
+import {fixture} from './feature-fixture.mjs';
+import {pushFromEnv, validSubscription} from '../../server/push.ts';
+const keys=webpush.generateVAPIDKeys();
+const config={...keys,subject:'mailto:pilot@example.test'};
+const subscription=(suffix='one')=>({endpoint:`https://fcm.googleapis.com/fcm/send/test-${suffix}`,expirationTime:null,keys:{p256dh:keys.publicKey,auth:Buffer.alloc(16,2).toString('base64url')}});
+test('push: configuración ausente/partial, claves emparejadas y destinos permitidos',()=>{
+ assert.equal(pushFromEnv({}),undefined);assert.throws(()=>pushFromEnv({ENTRE_VAPID_PUBLIC_KEY:keys.publicKey}));
+ assert.equal(pushFromEnv({ENTRE_VAPID_PUBLIC_KEY:keys.publicKey,ENTRE_VAPID_PRIVATE_KEY:keys.privateKey,ENTRE_VAPID_SUBJECT:config.subject}).publicKey,keys.publicKey);
+ assert.throws(()=>pushFromEnv({ENTRE_VAPID_PUBLIC_KEY:keys.publicKey,ENTRE_VAPID_PRIVATE_KEY:webpush.generateVAPIDKeys().privateKey,ENTRE_VAPID_SUBJECT:config.subject}));
+ assert.ok(validSubscription(subscription()));
+ for(const endpoint of ['http://fcm.googleapis.com/x','https://127.0.0.1/x','https://fcm.googleapis.com.evil.test/x','https://user:pass@fcm.googleapis.com/x','https://web.push.apple.com:444/x','https://example.test/x'])assert.equal(validSubscription({...subscription(),endpoint}),null);
+ assert.equal(validSubscription({...subscription(),keys:{p256dh:'x',auth:'x'}}),null);
+});
+test('push: sin configurar no ofrece activación ni acepta suscripciones',async t=>{
+ const f=await fixture(t);assert.deepEqual((await f.request('/api/push/options')).body,{available:false});
+ const u=await f.signup();assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription()},u.cookie)).status,503);
+});
+test('push: origen, sesión/correo, límites de campos, aislamiento y prueba al dispositivo propio',async t=>{
+ const sent=[];const f=await fixture(t,{push:{...config,send:async(sub,payload)=>{sent.push({sub,payload});}}});
+ const pub=await f.request('/api/push/options');assert.equal(pub.body.publicKey,keys.publicKey);assert.equal('privateKey' in pub.body,false);
+ assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription()})).status,401);
+ const pending=await f.request('/api/auth/register','POST',{username:'push_pending',alias:'Pendiente',adult:true,password:'Una frase larga para pruebas 123'});
+ assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription()},pending.cookie)).status,403);
+ const a=await f.signup('push_a'),b=await f.signup('push_b');
+ assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription()},a.cookie,'https://evil.test')).status,403);
+ assert.equal((await f.request('/api/push/subscribe','POST',{subscription:{...subscription(),endpoint:'https://127.0.0.1/x'}},a.cookie)).status,422);
+ assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription(),userId:b.id},a.cookie)).status,422);
+ assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription()},a.cookie)).status,200);
+ assert.equal((await f.request('/api/push/status','POST',{endpoint:subscription().endpoint},b.cookie)).body.enabled,false);
+ assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription()},b.cookie)).status,409);
+ assert.equal((await f.request('/api/push/test','POST',{endpoint:subscription().endpoint},b.cookie)).status,404);assert.equal(sent.length,0);
+ assert.equal((await f.request('/api/push/test','POST',{endpoint:subscription().endpoint,title:'Arbitrario'},a.cookie)).status,422);
+ assert.equal((await f.request('/api/push/test','POST',{endpoint:subscription().endpoint},a.cookie)).status,200);
+ assert.equal(sent.length,1);assert.equal(sent[0].payload.includes('push_a'),false);assert.match(sent[0].payload,/prueba/i);
+ await f.request('/api/push/unsubscribe','POST',{endpoint:subscription().endpoint},b.cookie);
+ assert.equal((await f.request('/api/push/status','POST',{endpoint:subscription().endpoint},a.cookie)).body.enabled,true);
+ await f.restart();assert.equal((await f.request('/api/push/status','POST',{endpoint:subscription().endpoint},a.cookie)).body.enabled,true);
+ await f.request('/api/auth/logout','POST',{},a.cookie);
+ assert.equal((await f.request('/api/push/test','POST',{endpoint:subscription().endpoint},a.cookie)).status,401);
+ const relog=await f.request('/api/auth/login','POST',{username:a.username,password:'Una frase larga para pruebas 123'});
+ assert.equal((await f.request('/api/push/status','POST',{endpoint:subscription().endpoint},relog.cookie)).body.enabled,false);
+});
+test('push: baja propia, suscripción caducada, error de entrega y límite de pruebas',async t=>{
+ let mode='ok';const f=await fixture(t,{push:{...config,send:async()=>{if(mode!=='ok')throw Object.assign(new Error('private provider detail'),{statusCode:mode==='gone'?410:500});}}});const u=await f.signup();
+ const req=(path,body)=>f.request('/api/push/'+path,'POST',body,u.cookie);
+ await req('subscribe',{subscription:subscription()});await req('unsubscribe',{endpoint:subscription().endpoint});assert.equal((await req('status',{endpoint:subscription().endpoint})).body.enabled,false);
+ await req('subscribe',{subscription:subscription()});mode='gone';assert.equal((await req('test',{endpoint:subscription().endpoint})).status,410);assert.equal((await req('status',{endpoint:subscription().endpoint})).body.enabled,false);
+ await req('subscribe',{subscription:subscription('two')});mode='fail';const failed=await req('test',{endpoint:subscription('two').endpoint});assert.equal(failed.status,503);assert.equal(JSON.stringify(failed.body).includes('private provider'),false);
+ mode='ok';for(let i=0;i<3;i++)await req('test',{endpoint:subscription('two').endpoint});assert.equal((await req('test',{endpoint:subscription('two').endpoint})).status,429);
+});

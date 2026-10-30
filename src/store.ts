@@ -1,8 +1,10 @@
 import { validStickerIds, stickerPacks, getSticker } from "./chat/stickers";
-import { emptyPlaza, plazaTopics, seedComments } from "./plaza/data";
+import { emptyPlaza, plazaTopics, seedComments, seedPosts } from "./plaza/data";
 import { validImageRef } from "./media/types";
 import type { PlazaState } from "./plaza/data";
 import { normalizeInvitation } from "./plaza/invitations";
+import { emptyNotifications, loadNotificationScopes, trackParticipation } from "./notifications/model";
+import type { NotificationScope } from "./notifications/model";
 export type Profile = {
   alias: string;
   interests: string[];
@@ -27,6 +29,7 @@ export type LocalState = {
   stickerUsage: Record<string, number>;
   stickerFavoritePacks: string[];
   plaza: PlazaState;
+  notifications: Record<string, NotificationScope>;
 };
 export const storageKey = "entre.prototype.v1";
 export const emptyState: LocalState = {
@@ -39,6 +42,7 @@ export const emptyState: LocalState = {
   stickerUsage: {},
   stickerFavoritePacks: [],
   plaza: emptyPlaza,
+  notifications: {},
 };
 const strings = (v: unknown): v is string[] =>
   Array.isArray(v) && v.every((x) => typeof x === "string");
@@ -157,8 +161,14 @@ export function loadState(): LocalState {
       )
     )
       return emptyState;
+    const plaza = loadPlaza(v.plaza, v.blocked);
+    const notifications = loadNotificationScopes(v.notifications);
+    if (!notifications.prototype && (plaza.posts.length || plaza.comments.length)) {
+      notifications.prototype = trackParticipation(emptyNotifications, emptyPlaza, plaza, { posts: [...plaza.posts, ...seedPosts], comments: [...seedComments, ...plaza.comments], hidden: plaza.hidden, blocked: v.blocked });
+    }
     return {
       profile,
+      notifications,
       reservations: v.reservations,
       feedback: v.feedback,
       blocked: v.blocked,
@@ -188,7 +198,7 @@ export function loadState(): LocalState {
           strings(v.stickerFavoritePacks) ? v.stickerFavoritePacks : [],
         ),
       ].filter((id) => stickerPacks.some((p) => p.id === id)),
-      plaza: loadPlaza(v.plaza, v.blocked),
+      plaza,
     };
   } catch {
     return emptyState;

@@ -1,3 +1,4 @@
+import webpush from "web-push";
 // Isolated browser-test service: dates are bypassed only in this fixture.
 import { mkdir, writeFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -33,6 +34,7 @@ await mkdir(mailbox, { mode: 0o700 });
 new ModerationStore(setup, Date.now).role("moderator_fixture", true);
 setup.close();
 const app = createRoomServer({
+  push: { ...webpush.generateVAPIDKeys(), subject: "mailto:fixture@example.test", send: async () => {} },
   databasePath: join(directory, "test.sqlite"),
   google: await mockGoogle("http://127.0.0.1:4190"),
   sendVerificationEmail: async (email, code) => {

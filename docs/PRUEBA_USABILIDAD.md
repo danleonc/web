@@ -39,6 +39,13 @@ tres espacios. Registrar si pulsa los componentes iluminados o prefiere Siguient
 y si reconoce luego esos accesos sin la guía. Distinguir en las notas las tareas realizadas antes y después
 de verlo; esto no es una prueba estadística de conversión.
 
+Como tarea adicional opcional, pedir que siga una conversación y luego silencie
+sus avisos desde el detalle o la campana. Para ver un aviso en la maqueta, utilizar
+solo «Probar un aviso de ejemplo», explicando que no es actividad de otra persona.
+Observar si encuentra el comentario y distingue leer, silenciar y reactivar.
+En teléfono, comprobar que entiende la activación voluntaria y las instrucciones
+de instalación en iPhone; no presentar la demo pública como entrega push real.
+
 ## Registro por persona
 
 Identificar como P1–P5. Anotar dispositivo/navegador, tarea, resultado
