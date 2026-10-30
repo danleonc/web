@@ -1,14 +1,26 @@
 # Acceso con Google · configuración del piloto
 
-Implementado como alternativa al usuario/contraseña. La integración está preparada;
-no se ha creado un proyecto de Google Cloud, configurado credenciales reales,
-desplegado el backend ni probado una cuenta real de Google. El usuario pidió
-expresamente dejar preparada la configuración.
+Implementado como alternativa al usuario/contraseña para **Nexafia** (antes Afinia).
+El usuario creó el proyecto de Google Cloud y facilitó el ID de cliente OAuth web:
+
+```text
+1019315855168-a53iuhfo311dgkvpols7moog6q7i3plb.apps.googleusercontent.com
+```
+
+El ID no es un secreto. Está preparado, comentado, en
+[`deploy/.env.example`](../deploy/.env.example); no activa Google por sí solo.
+Todavía faltan confirmar el origen del backend, registrar su callback y configurar
+el secreto directamente en el servidor. No se ha desplegado el backend ni probado
+una cuenta real de Google. La audiencia, los usuarios de prueba y los permisos
+se deben comprobar en la consola antes de activar.
+
+La nueva marca es Nexafia. Los nombres técnicos `ENTRE_*` se conservan para
+mantener compatibilidad; la sustitución de marca en la interfaz queda pendiente.
 
 ## Preparar Google Cloud
 
 1. En [Google Cloud Console](https://console.cloud.google.com/auth/overview), crear
-   o elegir un proyecto para Afinia y configurar la marca/pantalla de consentimiento:
+   o elegir un proyecto para Nexafia y configurar la marca/pantalla de consentimiento:
    nombre, contacto de soporte, audiencia y URLs reales que correspondan.
 2. Para un piloto externo en modo de prueba, añadir las cuentas Google de quienes
    vayan a probarlo como usuarios de prueba. Revisar los requisitos de publicación
@@ -65,7 +77,7 @@ un error claro. No se contrataron servicios ni se activó facturación.
 - El correo permanece privado. Las cuentas nuevas de Google no reciben contraseña
   local ni clave local de recuperación: vuelven a entrar con Google. Recuperar la
   cuenta de Google corresponde al proveedor.
-- Cancelar, expirar o fallar vuelve a Afinia con explicación y permite reintentar.
+- Cancelar, expirar o fallar vuelve a Nexafia con explicación y permite reintentar.
   Un token inválido nunca inicia sesión. Una sanción conserva sus efectos y su
   posibilidad de apelación al entrar con Google.
 
@@ -103,7 +115,7 @@ La biblioteca JOSE valida firma RS256 contra las claves públicas de Google,
 emisor, audiencia, destinatario autorizado, tiempos y nonce. El servidor intercambia
 el código en un endpoint HTTPS fijo, con secreto y verificador PKCE. No se guarda
 ni devuelve a la interfaz el ID token o los tokens de acceso/renovación de Google.
-El cliente solo recibe su cookie de sesión de Afinia. El retorno usa rutas internas
+El cliente solo recibe su cookie de sesión de Nexafia. El retorno usa rutas internas
 permitidas; los secretos nunca se incorporan al bundle estático.
 
 El intento de acceso se limita por IP y se guarda temporalmente en SQLite. La

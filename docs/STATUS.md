@@ -329,3 +329,12 @@ Ajuste local de diseño: se mantienen verde #285d4c, texto #293e35, fondo #faf9f
 Verificación: compilaciones estática y piloto correctas y 60 stickers comprobados. Revisión Chromium a 320, 390 y 1440 px: imágenes cargadas en Plaza, Conexiones y Encuentros, ausencia de leyendas, sin desbordamiento horizontal, apertura/cierre con Escape y retorno del foco. Capturas `afinia-acerca-*.png` y `afinia-banner-sin-etiqueta-*.png` en `/workspace/entregables/`; revisión visual de móvil y banner de escritorio. No requiere cambios de backend ni pruebas con Google real.
 
 Siguiente: configurar el cliente OAuth de Google para probar acceso real cuando el usuario lo cree; la configuración permanece preparada e inactiva sin credenciales.
+
+
+## Actualización · 29 de octubre de 2026 · Nexafia y cliente OAuth recibido
+
+El usuario confirma Nexafia como nuevo nombre y facilita el ID del cliente OAuth web. Se registra en `docs/GOOGLE_LOGIN.md` y, comentado, en `deploy/.env.example`. No se copia a variables activas ni al bundle: activar solo el ID provocaría un error de configuración parcial. AGENTS.md conserva la decisión de marca; la sustitución visual sigue pendiente.
+
+No se ha recibido ni almacenado un secreto, verificado el cliente con Google, configurado callback/origen público, desplegado el backend o cambiado DNS. La autenticación real continúa inactiva. Verificación documental, coincidencia del ID, variables comentadas, reglas de exclusión del archivo privado y `git diff --check`; no cambia código ejecutable.
+
+Siguiente: definir el alojamiento y origen del backend para registrar el callback exacto; después configurar las credenciales privadamente en ese servidor y probar con usuarios autorizados. La demo de GitHub Pages no sirve como backend OAuth.

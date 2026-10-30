@@ -1,6 +1,9 @@
-# Trabajo en Afinia
+# Trabajo en Nexafia
 
-Este repositorio contiene Afinia. Lee `README.md` y las últimas entradas de
+Este repositorio contiene Nexafia (antes Afinia). El usuario confirmó el nuevo
+nombre: utilizar Nexafia en nuevas comunicaciones y cambios de marca. La interfaz
+aún contiene referencias anteriores; conservar identificadores técnicos para no
+afectar datos existentes. Lee `README.md` y las últimas entradas de
 `docs/STATUS.md` para conocer el alcance actual antes de intervenir.
 
 ## Diseño y experiencia de usuario
