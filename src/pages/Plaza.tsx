@@ -321,7 +321,7 @@ export function Plaza({
           <strong>Comparte a tu ritmo</strong>
           <small>La Plaza</small>
         </span>
-        <button onClick={onConnections}>
+        <button onClick={onConnections} data-tour="plaza-connections">
           <Users size={18} />
           <strong>Descubre afinidades</strong>
           <small>

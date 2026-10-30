@@ -180,11 +180,14 @@ El nombre visible es Nexafia. Se conserva la flor, la composición y la tipograf
 Las claves `afinia.*`, cookies, eventos, variables `ENTRE_*` y rutas técnicas
 heredadas no son la marca visible y se conservan por compatibilidad.
 
-## Recorrido opcional
+## Recorrido opcional sobre la interfaz
 
-«Conoce Nexafia» vive en el menú y explica los tres espacios con vistas de ejemplo
-reutilizando su lenguaje visual. La invitación inicial es discreta y descartable;
-no abrir automáticamente ni avanzar con temporizadores. Mantener contexto y
-borradores al cerrar, y navegar solo al elegir el destino final. No se inicia
-durante una sala activa. La preferencia local `nexafia.tour.v1` no almacena datos
-personales ni métricas; el recorrido funciona aunque el almacenamiento falle.
+«Conoce Nexafia» ilumina componentes reales y avanza al pulsarlos: Plaza,
+Conexiones desde Plaza, Tus invitaciones, Encuentros y una convocatoria. Usar
+navegación inferior en móvil. La explicación se coloca junto al objetivo sin
+cubrirlo ni duplicarlo; máscara sin desenfoque y contorno, con adaptación al
+scroll/resize. Siguiente activa el mismo control. La guía no modal asocia el
+texto con aria-describedby y mantiene Tab entre objetivo y controles. Escape
+restaura origen/foco y borrador; el detalle final no reserva. No se inicia durante
+una sala o edición de perfil. La invitación es opcional; `nexafia.tour.v1` mantiene
+la preferencia local, sin métricas, y funciona aunque falle el almacenamiento.

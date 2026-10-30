@@ -303,6 +303,7 @@ function ActivityCard({
       <button
         className={`card-art ${a.color}`}
         onClick={onOpen}
+        data-tour="encounter-detail"
         aria-label={`Ver encuentro: ${a.title}`}
       >
         <span className="card-category">

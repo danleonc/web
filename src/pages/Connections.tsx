@@ -100,6 +100,7 @@ export function Connections({
           Afinidades
         </button>
         <button
+          data-tour="connections-invitations"
           aria-pressed={tab === "pending"}
           className={tab === "pending" ? "selected" : ""}
           onClick={() => setTab("pending")}

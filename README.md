@@ -20,11 +20,14 @@ con estados, acciones y composición móvil más claros.
 
 ## Conoce Nexafia
 
-Recorrido opcional de tres pasos con vistas de ejemplo de Plaza, Conexiones y
-Encuentros. La invitación inicial se puede descartar y el menú permite volver a
-abrirlo. No cambia de página hasta elegir un destino, ni publica, reserva o envía
-invitaciones. Conserva borradores y permite salir en cualquier momento. No exige
-cuenta ni utiliza métricas o servicios externos. Diseño: [Recorrido Nexafia](docs/diseno/Recorrido_Nexafia.md).
+Recorrido opcional sobre los componentes reales de Plaza, Conexiones y Encuentros.
+Ilumina cinco accesos y avanza al pulsarlos: navegación de Plaza, acceso a
+Conexiones desde Plaza, Tus invitaciones, navegación de Encuentros y convocatoria.
+En móvil usa la barra inferior. Siguiente activa el mismo componente; Anterior
+regresa. Salir restaura el espacio de origen y el borrador de publicación; abrir
+el detalle final no reserva. La invitación se puede omitir y el menú permite
+repetirlo. No se inicia durante una sala o edición de perfil. No exige cuenta ni
+utiliza métricas o servicios externos. Diseño: [Recorrido Nexafia](docs/diseno/Recorrido_Nexafia.md).
 
 ## Ejecutar
 

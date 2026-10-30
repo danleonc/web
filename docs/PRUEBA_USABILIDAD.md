@@ -35,7 +35,8 @@ Observar primero qué entiende la persona sin explicaciones del facilitador.
 No indicarle si debe abrir «Ver recorrido»: registrar si lo descubre y decide
 usarlo. Si no lo abrió durante las tareas, ofrecer al final «Conoce Nexafia»
 desde el menú. Preguntar qué aclaró, qué sobró y si cambió su comprensión de los
-tres espacios. Distinguir en las notas las tareas realizadas antes y después
+tres espacios. Registrar si pulsa los componentes iluminados o prefiere Siguiente,
+y si reconoce luego esos accesos sin la guía. Distinguir en las notas las tareas realizadas antes y después
 de verlo; esto no es una prueba estadística de conversión.
 
 ## Registro por persona

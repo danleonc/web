@@ -87,6 +87,7 @@ function App() {
       : null
     : state.profile;
   const [page, setPage] = useState<Page>(getPage);
+  const tourOrigin = useRef({ page, scroll: 0 });
   const [detail, setDetail] = useState<Activity | null>(null);
   const [room, setRoom] = useState<Activity | null>(null);
   const [pendingBooking, setPendingBooking] = useState<Activity | null>(null);
@@ -185,6 +186,7 @@ function App() {
     return () => clearTimeout(timer);
   }, [toast]);
   useEffect(() => {
+    if (tour.open) return;
     mainRef.current?.focus();
     window.scrollTo({ top: 0, behavior: "instant" });
   }, [page]);
@@ -192,8 +194,19 @@ function App() {
     setPlazaThread(null);
     setPlazaComment(null);
     setPage(next);
-    location.hash = next;
+    if (tour.open) window.history.replaceState(null, "", `#${next}`);
+    else location.hash = next;
     setMobileMenu(false);
+  }
+  function startTour() {
+    tourOrigin.current = { page, scroll: window.scrollY };
+    tour.start();
+    setMobileMenu(false);
+  }
+  function cancelTour() {
+    navigate(tourOrigin.current.page);
+    tour.close();
+    requestAnimationFrame(() => window.scrollTo({ top: tourOrigin.current.scroll, behavior: "instant" }));
   }
   function prepareProfile(returnTo: Page) {
     if (!requireParticipation()) return;
@@ -447,6 +460,7 @@ function App() {
           {links.map(({ page: target, label, icon: Icon }) => (
             <button
               key={target}
+              data-tour={`nav-${target}`}
               className={`nav-item ${page === target ? "active" : ""} ${target === "agenda" ? "secondary-start" : ""}`}
               aria-current={page === target ? "page" : undefined}
               onClick={() =>
@@ -479,9 +493,9 @@ function App() {
           <span className="tiny-spark">✳</span>
         </div>
         <div className="sidebar-bottom">
-          <button className="privacy-link" onClick={tour.start}
-            disabled={page === "room" || account.activeRoom}
-            title={page === "room" || account.activeRoom ? "Disponible al salir del encuentro" : undefined}>
+          <button className="privacy-link" onClick={startTour}
+            disabled={page === "room" || page === "profile" || account.activeRoom}
+            title={page === "room" || account.activeRoom ? "Disponible al salir del encuentro" : page === "profile" ? "Guarda tu perfil antes de iniciar el recorrido" : undefined}>
             <Compass size={17} /> Conoce Nexafia
           </button>
           <button className="privacy-link" onClick={() => setShowPrivacy(true)}>
@@ -584,7 +598,7 @@ function App() {
           <section className="tour-invitation" aria-label="Descubre Nexafia">
             <p><strong>¿Primera vez por aquí?</strong> Descubre cómo se conectan los tres espacios.</p>
             <div>
-              <button className="button secondary" onClick={tour.start}>Ver recorrido</button>
+              <button className="button secondary" onClick={startTour}>Ver recorrido</button>
               <button className="button text" aria-label="Ahora no, omitir recorrido" onClick={tour.dismiss}>Ahora no</button>
             </div>
           </section>
@@ -813,6 +827,7 @@ function App() {
           {links.slice(0, 3).map(({ page: target, label, icon: Icon }) => (
             <button
               key={target}
+              data-tour={`nav-${target}`}
               aria-current={page === target ? "page" : undefined}
               className={page === target ? "selected" : ""}
               onClick={() => navigate(target)}
@@ -824,10 +839,9 @@ function App() {
         </nav>
       </div>
       {tour.open && (
-        <ProductTour onClose={tour.close} onExplore={(next) => {
+        <ProductTour onClose={cancelTour} onNavigate={navigate} onComplete={() => {
           tour.close();
-          navigate(next);
-          requestAnimationFrame(() => mainRef.current?.focus());
+          requestAnimationFrame(() => mainRef.current?.focus({ preventScroll: true }));
         }} />
       )}
       {accessOpen && (

@@ -1,24 +1,34 @@
-# Conoce Nexafia · recorrido opcional
+# Conoce Nexafia · recorrido sobre componentes reales
 
-Solicitud aprobada: explicar Plaza, Conexiones y Encuentros en tres pasos, con
-avanzar/volver/salir, invitación discreta inicial y acceso permanente. Sin avance
-automático ni cuenta obligatoria. Lectura orientativa de 30–45 segundos, sin límite.
+Corrección solicitada: el usuario esperaba foco real en los componentes que llevan
+a cada sección, con interacción directa. Se reemplazan las tarjetas de ejemplo
+por un foco sobre la aplicación: el elemento real permanece iluminado y se puede
+pulsar. La explicación breve se coloca junto a él sin taparlo.
 
-Se usa un diálogo con vistas de ejemplo de los patrones existentes, para mantener
-la página y los borradores al abrir/cerrar. Cambiar las rutas mientras se explica
-podría desmontar formularios o interferir con una sala: se descarta. Los ejemplos
-son de solo lectura y nunca envían invitaciones, publican, reservan ni simulan
-aceptación. La invitación se recuerda como vista/descartada solo en este navegador;
-el almacenamiento bloqueado no debe impedir el recorrido. No recopila métricas.
+Cinco paradas que recorren los tres espacios: acceso La Plaza; «Descubre afinidades»
+en Plaza; pestaña «Tus invitaciones» en Conexiones; acceso Encuentros; convocatoria
+real de Encuentros. Cada clic ejecuta la acción normal y avanza. Siguiente activa
+el mismo control; Anterior regresa. La última convocatoria abre su detalle, sin
+reservar. Terminar permite quedarse en Encuentros. Salir/Escape restaura el espacio
+de origen y el borrador de publicación que permanece en App.
 
-Estilo: verde #285d4c, tinta #293e35, fondo #faf9f6, crema #f3f1e8, albaricoque
-#f7e8d0 y lavanda #e7e1ef. Inter para explicación/controles, Georgia para títulos.
-Columna de lectura alineada a izquierda, secuencia numerada con sentido real,
-vista compacta por paso, acciones inferiores que se adaptan a móvil. Reutilizar
-Modal, Avatar y el lenguaje visual de las publicaciones, invitaciones y encuentros.
+El menú móvil se cierra al iniciar y se utiliza la navegación inferior. Se mantiene
+la preferencia local anterior; el recorrido no se abre por sí mismo. Las rutas del
+recorrido reemplazan el hash sin añadir entradas al historial. No se inicia durante
+una sala o edición de perfil, para evitar interrumpir esos procesos.
 
-El paso final ofrece Explorar La Plaza o Ver encuentros; solo esas acciones
-navegan. El acceso permanente queda en el menú. No se ofrece iniciar el recorrido
-durante una sala activa. Escape/cerrar devuelve el foco y conserva el contexto.
-Pruebas: pasos, vuelta/salida/elección, persistencia del aviso, almacenamiento
-bloqueado, borrador/datos intactos, foco, accesibilidad y adaptación 320/390/1440.
+Paleta y tipografía vigentes: verde #285d4c, tinta #293e35, fondo #faf9f6, crema
+#f3f1e8 y foco #a46743; Inter/Georgia. Máscara suave sin desenfoque, contorno sobre
+el control y explicación alineada a izquierda, lateral en escritorio o arriba/
+abajo en móvil. La posición responde a scroll, orientación y tamaño. No hay copias
+de controles ni una capa que bloquee el objetivo. El resto no activa acciones.
+
+La explicación no es modal: el componente real sigue enfocable. Tab recorre
+objetivo y controles; Escape siempre sale. Se asocia la explicación al objetivo
+con aria-describedby, limpiándolo al terminar. Si un objetivo no está disponible,
+Anterior/Salir permanecen operativos. La guía no publica ni manda invitaciones,
+no cambia reservas y no solicita cuenta o datos. Sin dependencias o seguimiento.
+
+Verificar clic y teclado sobre controles reales, pantalla 320, redimensionado,
+objetivo no tapado, regreso de ruta/foco/borrador, preferencia y almacenamiento
+bloqueado, conservación de datos y apertura del detalle sin reserva.
