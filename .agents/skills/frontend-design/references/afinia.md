@@ -179,3 +179,12 @@ consultan en `README.md`, `docs/STATUS.md`, `docs/ECOSISTEMA.md` y
 El nombre visible es Nexafia. Se conserva la flor, la composición y la tipografía.
 Las claves `afinia.*`, cookies, eventos, variables `ENTRE_*` y rutas técnicas
 heredadas no son la marca visible y se conservan por compatibilidad.
+
+## Recorrido opcional
+
+«Conoce Nexafia» vive en el menú y explica los tres espacios con vistas de ejemplo
+reutilizando su lenguaje visual. La invitación inicial es discreta y descartable;
+no abrir automáticamente ni avanzar con temporizadores. Mantener contexto y
+borradores al cerrar, y navegar solo al elegir el destino final. No se inicia
+durante una sala activa. La preferencia local `nexafia.tour.v1` no almacena datos
+personales ni métricas; el recorrido funciona aunque el almacenamiento falle.

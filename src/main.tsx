@@ -11,6 +11,7 @@ import "./room/conversation.css";
 import "./photo-banners.css";
 import "./encounter-banner.css";
 import "./shared/access.css";
+import "./tour/tour.css";
 import "./mobile-inputs.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(

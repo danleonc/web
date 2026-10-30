@@ -18,6 +18,14 @@ La primera aplicación y su comparación visual se documentan en la
 La continuación cubre [Conexiones y Encuentros](docs/diseno/Conexiones_y_Encuentros.md),
 con estados, acciones y composición móvil más claros.
 
+## Conoce Nexafia
+
+Recorrido opcional de tres pasos con vistas de ejemplo de Plaza, Conexiones y
+Encuentros. La invitación inicial se puede descartar y el menú permite volver a
+abrirlo. No cambia de página hasta elegir un destino, ni publica, reserva o envía
+invitaciones. Conserva borradores y permite salir en cualquier momento. No exige
+cuenta ni utiliza métricas o servicios externos. Diseño: [Recorrido Nexafia](docs/diseno/Recorrido_Nexafia.md).
+
 ## Ejecutar
 
 **Nuevo: cuentas y persistencia.** `npm run build:pilot` prepara una compilación separada; `ENTRE_PUBLIC_ORIGIN=http://127.0.0.1:8788 npm start` sirve la web y API con SQLite persistente. La sección **Mi cuenta y encuentros** permite registrar/iniciar/recuperar cuenta y confirmar correo antes de reservar o conversar. El envío real requiere configurar SMTP; no se solicita documento ni biometría. El modo público estático y el laboratorio anterior siguen separados. Instrucciones, límites y preparación para HostGator: [docs/CUENTAS_Y_DESPLIEGUE.md](docs/CUENTAS_Y_DESPLIEGUE.md).

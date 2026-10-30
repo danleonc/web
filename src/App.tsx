@@ -43,6 +43,7 @@ import { plazaPeople } from "./plaza/data";
 import type { PlazaInvitation } from "./plaza/data";
 import { normalizeInvitation } from "./plaza/invitations";
 import { InviteDialog } from "./plaza/InviteDialog";
+import { ProductTour, useProductTour } from "./tour/ProductTour";
 type Page =
   | "plaza"
   | "discover"
@@ -66,6 +67,7 @@ const getPage = (): Page =>
     : "plaza";
 function App() {
   const account = useAccount();
+  const tour = useProductTour();
   const [accessOpen, setAccessOpen] = useState(false);
   function requireParticipation() {
     if (!accountsEnabled || account.account?.canParticipate) return true;
@@ -477,6 +479,11 @@ function App() {
           <span className="tiny-spark">✳</span>
         </div>
         <div className="sidebar-bottom">
+          <button className="privacy-link" onClick={tour.start}
+            disabled={page === "room" || account.activeRoom}
+            title={page === "room" || account.activeRoom ? "Disponible al salir del encuentro" : undefined}>
+            <Compass size={17} /> Conoce Nexafia
+          </button>
           <button className="privacy-link" onClick={() => setShowPrivacy(true)}>
             <ShieldCheck size={17} /> Tu privacidad importa{" "}
             <ArrowRight size={15} />
@@ -573,6 +580,15 @@ function App() {
             Cómo funciona <ArrowRight size={13} />
           </button>
         </div>
+        {tour.invitation && !account.activeRoom && ["plaza", "connections", "discover"].includes(page) && (
+          <section className="tour-invitation" aria-label="Descubre Nexafia">
+            <p><strong>¿Primera vez por aquí?</strong> Descubre cómo se conectan los tres espacios.</p>
+            <div>
+              <button className="button secondary" onClick={tour.start}>Ver recorrido</button>
+              <button className="button text" aria-label="Ahora no, omitir recorrido" onClick={tour.dismiss}>Ahora no</button>
+            </div>
+          </section>
+        )}
         {storageWarning && (
           <p className="storage-warning" role="alert">
             El navegador no permite guardar datos. El recorrido funciona, pero
@@ -807,6 +823,13 @@ function App() {
           ))}
         </nav>
       </div>
+      {tour.open && (
+        <ProductTour onClose={tour.close} onExplore={(next) => {
+          tour.close();
+          navigate(next);
+          requestAnimationFrame(() => mainRef.current?.focus());
+        }} />
+      )}
       {accessOpen && (
         <Modal
           title={
