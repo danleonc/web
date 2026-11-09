@@ -3,7 +3,7 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomBytes, randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { resolve, extname } from "node:path";
+import { resolve, extname, relative as relativePath, isAbsolute, sep } from "node:path";
 import { Storage, digest } from "./storage.ts";
 import { Auth, accountCookie, readToken } from "./auth.ts";
 import { WebSocket, WebSocketServer } from "ws";
@@ -29,6 +29,7 @@ import type { GoogleConfig } from "./google.ts";
 import { EmailConfirmation } from "./email.ts";
 import type { SendVerificationEmail } from "./email.ts";
 import { handleFeatures } from "./features.ts";
+import { handlePlaza } from "./plaza-http.ts";
 import { PushDelivery, handlePush } from "./push.ts";
 import type { PushConfig } from "./push.ts";
 
@@ -60,6 +61,7 @@ type Connection = {
   expires: number;
 };
 type Options = {
+  plazaEnabled?: boolean;
   push?: PushConfig;
   google?: GoogleConfig;
   sendVerificationEmail?: SendVerificationEmail;
@@ -215,7 +217,9 @@ export function createRoomServer(options: Options = {}) {
         const relative =
           decodeURIComponent(path).replace(/^\/+/, "") || "index.html";
         const file = resolve(root, relative);
-        if (!file.startsWith(root + "/")) throw new Error("invalid_path");
+        const fromRoot = relativePath(root, file);
+        if (!fromRoot || fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot))
+          throw new Error("invalid_path");
         const body = await readFile(file);
         const type: Record<string, string> = {
           ".html": "text/html; charset=utf-8",
@@ -225,6 +229,7 @@ export function createRoomServer(options: Options = {}) {
           ".json": "application/json",
           ".webmanifest": "application/manifest+json",
           ".png": "image/png",
+          ".webp": "image/webp",
         };
         res.writeHead(200, {
           "Content-Type": type[extname(file)] || "application/octet-stream",
@@ -322,6 +327,7 @@ export function createRoomServer(options: Options = {}) {
       )
     )
       return;
+    if (options.plazaEnabled && storage && await handlePlaza(storage, now, validOrigin, req, res, path, identity)) return;
     if (storage && req.method === "GET" && path === "/api/activities") {
       if (!identity) {
         json(res, 401, { error: "session_required" });

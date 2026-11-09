@@ -56,7 +56,12 @@ test('un original fuera de los últimos 50 no admite nuevas respuestas; reintent
   await b.wait(x=>x.snapshot.messages.length===1);
   const id=b.snapshot.messages[0].id, sent=command({type:'text',text:'Respuesta confirmada',replyTo:id});
   b.send(sent); await c.wait(x=>x.snapshot.messages.length===2);
-  for(let n=0;n<51;n++) a.send(command({type:'text',text:`Mensaje ${n}`}));
+  for(let n=0;n<51;n++) {
+    const next=command({type:'text',text:`Mensaje ${n}`});
+    a.send(next);
+    await a.wait(x=>x.events.some(e=>e.type==='ack'&&e.clientId===next.clientId));
+    await c.wait(x=>x.snapshot.messages.at(-1)?.text===`Mensaje ${n}`);
+  }
   await c.wait(x=>x.snapshot.messages.at(-1)?.text==='Mensaje 50');
   assert.equal(c.snapshot.messages.length,50);
   assert.ok(!c.snapshot.messages.some(m=>m.id===id));

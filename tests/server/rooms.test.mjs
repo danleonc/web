@@ -311,12 +311,16 @@ test("bloquear desconecta todas las pestañas propias y evita volver a coincidir
 test("el historial se limita a 50 y una sesión vencida pierde acceso", async (t) => {
   const f = await setup(t);
   const [a, b] = await f.trio();
-  for (let i = 0; i < 55; i++)
+  for (let i = 0; i < 55; i++) {
+    const clientId = randomUUID();
     a.send({
       type: "message",
-      clientId: randomUUID(),
+      clientId,
       content: { type: "text", text: `Mensaje ${i}` },
     });
+    await a.wait((c) => c.events.some((e) => e.type === "ack" && e.clientId === clientId));
+    await b.wait((c) => c.snapshot.messages.at(-1)?.text === `Mensaje ${i}`);
+  }
   await b.wait((c) => c.snapshot.messages.at(-1)?.text === "Mensaje 54");
   assert.equal(b.snapshot.messages.length, 50);
   assert.equal(b.snapshot.messages[0].text, "Mensaje 5");

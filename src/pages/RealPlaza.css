@@ -1,0 +1,11 @@
+.real-plaza { display: grid; gap: 1.5rem; }
+.real-plaza-panel { background: #fff; border: 1px solid var(--line); border-radius: 1.25rem; padding: clamp(1rem, 3vw, 2rem); }
+.real-plaza-panel h2 { margin-top: 0; }
+.real-plaza-form { display: grid; gap: 1rem; }
+.real-plaza-form label { display: grid; gap: .4rem; font-weight: 600; }
+.real-plaza-form input, .real-plaza-form textarea, .real-plaza-form select { width: 100%; min-height: 44px; border: 1px solid #a9b6ae; border-radius: .6rem; padding: .7rem; background: #fff; color: var(--ink); font: inherit; }
+.real-plaza-form textarea { min-height: 110px; resize: vertical; }
+.real-plaza-post, .real-plaza-reply { padding: 1rem 0; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+.real-plaza-post h3 { margin: .4rem 0; }
+.real-plaza-post p, .real-plaza-reply p { white-space: pre-wrap; }
+.real-plaza button { min-height: 44px; }

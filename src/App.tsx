@@ -32,13 +32,14 @@ import { SharedRoom } from "./pages/SharedRoom";
 import { useAccount } from "./shared/accounts";
 import { saveGoogleDraft, restoreGoogleDraft } from "./shared/googleDraft";
 import { AccountPanel } from "./shared/AccountPanel";
-import { accountsEnabled, sharedEnabled } from "./shared/mode";
+import { accountsEnabled, sharedEnabled, realPlazaEnabled } from "./shared/mode";
 import { getSticker, stickerPacks } from "./chat/stickers";
 import type { StickerActions } from "./chat/stickers";
 import { clearImages } from "./media/local";
 import { clearHiddenImages } from "./media/ImageView";
 import { localReports, clearLocalReports } from "./safety/local";
 import { Plaza, blankDraft } from "./pages/Plaza";
+import { RealPlaza } from "./pages/RealPlaza";
 import { activities } from "./data";
 import { plazaPeople } from "./plaza/data";
 import type { PlazaInvitation } from "./plaza/data";
@@ -609,7 +610,9 @@ function App() {
         <div className="demo-strip" role="region" aria-label="Aviso de maqueta">
           <Sparkles size={14} />
           <span>
-            {page === "shared"
+            {realPlazaEnabled && page === "plaza"
+              ? "La Plaza: conversaciones compartidas entre cuentas en el entorno de pruebas."
+              : page === "shared"
               ? accountsEnabled
                 ? "Piloto: tus reservas y mensajes se guardan en el servidor."
                 : "Laboratorio local: los mensajes se comparten con los navegadores que entren a la sala."
@@ -619,7 +622,7 @@ function App() {
             Cómo funciona <ArrowRight size={13} />
           </button>
         </div>
-        {tour.invitation && !account.activeRoom && ["plaza", "connections", "discover"].includes(page) && (
+        {!realPlazaEnabled && tour.invitation && !account.activeRoom && ["plaza", "connections", "discover"].includes(page) && (
           <section className="tour-invitation" aria-label="Descubre Nexafia">
             <p><strong>¿Primera vez por aquí?</strong> Descubre cómo se conectan los tres espacios.</p>
             <div>
@@ -635,7 +638,10 @@ function App() {
           </p>
         )}
         <main id="main-content" ref={mainRef} tabIndex={-1}>
-          {page === "plaza" && (
+          {page === "plaza" && realPlazaEnabled && (
+            <RealPlaza key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} />
+          )}
+          {page === "plaza" && !realPlazaEnabled && (
             <Plaza
               {...stickerActions}
               profile={participationProfile}

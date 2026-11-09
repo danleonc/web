@@ -42,7 +42,9 @@ export class Storage {
       version !== 2 &&
       version !== 3 &&
       version !== 4 &&
-      version !== 5
+      version !== 5 &&
+      version !== 6 &&
+      version !== 7
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -97,6 +99,19 @@ export class Storage {
       CREATE TABLE push_subscriptions(endpoint_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,session_hash TEXT NOT NULL,subscription_json TEXT NOT NULL,created_at INTEGER NOT NULL);
       CREATE INDEX push_user ON push_subscriptions(user_id);
       PRAGMA user_version=5; COMMIT;`);
+    if (version < 6)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE plaza_posts(id TEXT PRIMARY KEY, author_id TEXT NOT NULL REFERENCES accounts(id), topic TEXT NOT NULL, title TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL);
+      CREATE TABLE plaza_replies(id TEXT PRIMARY KEY, post_id TEXT NOT NULL REFERENCES plaza_posts(id) ON DELETE CASCADE, author_id TEXT NOT NULL REFERENCES accounts(id), body TEXT NOT NULL, created_at INTEGER NOT NULL);
+      CREATE INDEX plaza_replies_post ON plaza_replies(post_id, created_at, id);
+      PRAGMA user_version=6; COMMIT;`);
+    if (version < 7)
+      this.db.exec(`BEGIN IMMEDIATE;
+      ALTER TABLE plaza_posts ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE plaza_replies ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+      CREATE TABLE plaza_reports(id TEXT PRIMARY KEY, reporter_id TEXT NOT NULL REFERENCES accounts(id), target_id TEXT NOT NULL REFERENCES accounts(id), kind TEXT NOT NULL, content_id TEXT NOT NULL, reason TEXT NOT NULL, note TEXT NOT NULL, evidence_json TEXT NOT NULL, created_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'open', UNIQUE(reporter_id,kind,content_id,reason));
+      CREATE TABLE plaza_moderation_actions(id TEXT PRIMARY KEY, report_id TEXT NOT NULL REFERENCES plaza_reports(id), moderator_id TEXT NOT NULL REFERENCES accounts(id), action TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL);
+      PRAGMA user_version=7; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

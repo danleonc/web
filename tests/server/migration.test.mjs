@@ -7,7 +7,44 @@ import { DatabaseSync } from "node:sqlite";
 import { Storage, digest } from "../../server/storage.ts";
 import { ModerationStore } from "../../server/moderation.ts";
 import { createSession } from "../../src/room/engine.ts";
-test("migración v1 a v4 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
+import { PlazaStore } from "../../server/plaza.ts";
+test("actualizar v5 conserva cuentas y permite guardar contenido de Plaza", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "nexafia-v5-"));
+  const path = join(dir, "old.sqlite");
+  try {
+    const previous = new Storage(path);
+    previous.createAccount({ id: "legacy", username: "legacy", alias: "Persona", passwordHash: "test", recoveryHash: "test" }, 1);
+    previous.db.exec("DROP TABLE plaza_moderation_actions; DROP TABLE plaza_reports; DROP TABLE plaza_replies; DROP TABLE plaza_posts; PRAGMA user_version=5;");
+    previous.close();
+    const upgraded = new Storage(path);
+    try {
+      assert.equal(upgraded.account("legacy").alias, "Persona");
+      const plaza = new PlazaStore(upgraded);
+      plaza.createPost("legacy", { topic: "crear", title: "Ideas", body: "Primera conversación" }, 2);
+      assert.equal(plaza.listPosts("legacy")[0].body, "Primera conversación");
+    } finally { upgraded.close(); }
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+test("actualizar v6 preserva publicaciones y respuestas y habilita reportes", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "nexafia-v6-"));
+  const path = join(dir, "old.sqlite");
+  try {
+    const original = new Storage(path);
+    original.createAccount({ id: "legacy", username: "legacy", alias: "Persona", passwordHash: "test", recoveryHash: "test" }, 1);
+    const plaza = new PlazaStore(original);
+    const post = plaza.createPost("legacy", { topic: "crear", title: "Idea", body: "Anterior" }, 2);
+    plaza.createReply("legacy", post.id, "Respuesta anterior", 3);
+    original.db.exec("DROP TABLE plaza_moderation_actions; DROP TABLE plaza_reports; ALTER TABLE plaza_posts DROP COLUMN hidden; ALTER TABLE plaza_replies DROP COLUMN hidden; PRAGMA user_version=6;");
+    original.close();
+    const upgraded = new Storage(path);
+    try {
+      assert.equal(new PlazaStore(upgraded).listPosts("legacy")[0].body, "Anterior");
+      assert.equal(new PlazaStore(upgraded).listReplies("legacy", post.id)[0].body, "Respuesta anterior");
+      assert.equal(upgraded.db.prepare("SELECT COUNT(*) AS n FROM plaza_reports").get().n, 0);
+    } finally { upgraded.close(); }
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+test("migración v1 a v7 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
   const dir = await mkdtemp(join(tmpdir(), "afinia-upgrade-")),
     path = join(dir, "old.sqlite");
   try {
@@ -70,7 +107,7 @@ test("migración v1 a v4 conserva cuenta, reserva, sesión e historial con segur
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        5,
+        7,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);

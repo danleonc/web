@@ -1,0 +1,49 @@
+# Nexafia: infraestructura de pruebas y camino a publicación
+
+Evaluación del 5 de noviembre de 2026. Propuesta operativa, no una contratación ni una certificación. La beta completa no está terminada: La Plaza, solicitudes y chat privado todavía necesitan backend compartido; los encuentros existentes necesitan completar su operación. No es una aplicación de citas y no exige declarar intenciones románticas.
+
+## Selección provisional
+
+Para comenzar, evaluar Render con Node 24.19.0 en runtime nativo, una sola instancia pagada `0.5c-512mb`, un disco persistente de 1 GB para SQLite y correo transaccional SMTP. El borrador [render.staging.example.yaml](../deploy/render.staging.example.yaml) no se ha validado ni ejecutado en Render. Es exclusivamente un punto de partida para pruebas con datos sintéticos: el servicio web tendrá URL pública y no queda protegido por el mero hecho de llamarse pruebas. Implantar control de acceso real antes de información privada y antes de invitar a terceros.
+
+La elección de runtime nativo evita asumir que el montaje de un disco de Render será escribible por el usuario sin privilegios de nuestro Dockerfile: permisos y escritura deberán comprobarse en el entorno real. Confirmar el tamaño de memoria con pruebas de carga antes de pensar en apertura. Una instancia con disco no escala horizontalmente y tendrá interrupción durante despliegues; SQLite no es una solución de alta disponibilidad. No añadir instancias ni despliegues simultáneos que escriban en esa base. Diseñar una migración a PostgreSQL cuando la capacidad lo requiera.
+
+El proxy del proveedor puede hacer que el límite actual por IP se comparta entre visitantes; no confiar en cabeceras de proxy arbitrarias. Hay que configurar una solución de IPs y límites en el borde que se pueda verificar antes de recibir público.
+
+Fuentes: [servicios web y WebSocket](https://render.com/docs/websocket), [discos persistentes y snapshots](https://render.com/docs/disks), [Blueprint](https://render.com/docs/blueprint-spec), [planes de cómputo](https://render.com/docs/compute-plans), [runtime nativo](https://render.com/docs/native-runtimes).
+
+## Estimación inicial, no cotización
+
+| Concepto | Referencia | Estado |
+| --- | --- | --- |
+| Un servicio siempre activo | Render publica desde USD 7/mes para 0,5 CPU y 512 MB | Precio de referencia; comprobar factura y condiciones |
+| Disco de 1 GB | USD 0,25/GB/mes según documentación de costos de Render | Capacidad mínima propuesta, puede crecer |
+| Correo transaccional | Resend gratuito: 3.000/mes y 100/día | Requiere cuenta, dominio verificado y prueba de entrega; no contratado |
+| Subtotal ilustrativo | USD 7,25/mes por **un** servicio y disco, si se cumplen esas tarifas y se usa correo gratuito | No incluye impuestos, transferencias excedentes, backups externos, dominio ni otros cargos |
+| Dos ambientes activos | USD 14,50/mes usando dos servicios y dos discos iguales | Solo infraestructura indicada; probar separación y costos reales |
+
+Fuentes: [referencia de precio del servicio](https://render.com/articles/best-railway-alternatives), [precio del disco](https://render.com/articles/how-much-does-cloud-application-hosting-cost-for-small-businesses), [precios de Resend](https://resend.com/pricing?product=transactional). Mantener una reserva orientativa de CLP 30.000–50.000 al mes para infraestructura y revisar conversión, impuestos, cuotas, soporte y condiciones antes de contratar. No incluye desarrollo, moderación, difusión ni asesoría jurídica.
+
+## Antes de provisionar el entorno de pruebas
+
+- [ ] Disponer de una cuenta Render del propietario y medio de pago, revisar importe final y región. No compartir credenciales por chat.
+- [ ] Revisar qué commit se desplegará: el repositorio local contiene cambios no publicados. La integración de un repositorio remoto no incluye automáticamente archivos locales sin subir.
+- [ ] Confirmar que un acceso restringido protege tanto la web como API y WebSocket. Si aún no existe, utilizar exclusivamente datos sintéticos; no asumir privacidad por tener una URL poco conocida.
+- [ ] Crear el servicio de pruebas separado del futuro entorno de producción, con una base distinta. Conservar el sitio actual y no modificar DNS o correo existentes.
+- [ ] Configurar `ENTRE_PUBLIC_ORIGIN` con el origen HTTPS exacto; no guardar secretos en el repositorio. Configurar SMTP solo mediante el almacén de secretos del proveedor; comprobar que el proceso puede escribir SQLite y WAL en el disco montado.
+- [ ] Verificar `/api/health`, TLS, cuenta, confirmación de correo, dos sesiones, reserva, WebSocket, reconexión, reinicio y persistencia con datos sintéticos. La plantilla habilita solamente la funcionalidad actualmente existente.
+- [ ] Antes de datos reales: programar copia consistente de SQLite mediante `scripts/backup-db.mjs`, almacenarla cifrada fuera del servicio y probar una restauración aislada. Los snapshots de disco del proveedor no sustituyen una copia consistente de base de datos.
+- [ ] Preparar alertas, límites de gasto, retención, acceso a secretos, responsable operativo, moderación y recuperación ante incidentes.
+
+La verificación de correo mediante SMTP es independiente de la verificación de edad o identidad. El correo real y los permisos de entrega todavía no se han probado. Render indica que su plan gratuito bloquea los puertos SMTP 25, 465 y 587; evaluar con el servicio pagado y un proveedor adecuado. [Restricción de SMTP](https://render.com/changelog/free-web-services-will-no-longer-allow-outbound-traffic-to-smtp-ports).
+
+## Apertura solo después de completar producto
+
+1. La Plaza compartida: publicaciones y respuestas persistentes, permisos de dueño, bloqueos y reportes efectivos, sin contenido ficticio presentado como real.
+2. Conexiones: solicitudes aceptadas explícitamente, rechazo y revocación; chat privado real solo entre personas autorizadas.
+3. Encuentros: programación de convocatorias, reservas y salas reales, cancelación, capacidad, quórum y manejo de desconexiones.
+4. Cuenta y datos: perfil, controles de privacidad, exportación y eliminación en servidor, retención y procedimientos operativos.
+5. Seguridad y confianza: moderación humana con cobertura real, procedimientos de abuso y revisión legal de términos, privacidad y tratamiento de datos en Chile.
+6. Pruebas integrales con múltiples cuentas, teléfonos y escritorio, recuperación de copias, límites de capacidad y costo; preparar una URL de producción y verificarla después del despliegue.
+
+No hay usuario, demanda, ingreso, cumplimiento jurídico ni prueba de proveedor reales acreditados por este documento.

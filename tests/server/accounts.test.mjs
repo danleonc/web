@@ -139,6 +139,113 @@ async function fixture(t, extra = {}) {
   };
 }
 
+test("Plaza compartida exige cuenta confirmada y protege autoría y origen", async (t) => {
+  const f = await fixture(t, { plazaEnabled: true });
+  const ana = await f.signup("plaza_ana");
+  const bea = await f.signup("plaza_bea");
+  const pending = await f.request("/api/auth/register", "POST", { username: "plaza_pendiente", alias: "Pendiente", adult: true, password });
+  const data = { topic: "cultura", title: "Una pregunta", body: "¿Qué opinas?" };
+  assert.equal((await f.request("/api/plaza/posts", "POST", data)).status, 401);
+  assert.equal((await f.request("/api/plaza/posts", "POST", data, pending.cookie)).status, 403);
+  assert.equal((await f.request("/api/plaza/posts", "POST", data, ana.cookie, "https://ajeno.example")).status, 403);
+  assert.equal((await f.request("/api/plaza/posts", "POST", { ...data, authorId: bea.id }, ana.cookie)).status, 422);
+  const created = await f.request("/api/plaza/posts", "POST", data, ana.cookie);
+  assert.equal(created.status, 201);
+  const id = created.body.post.id;
+  assert.equal((await f.request(`/api/plaza/posts/${id}`, "PATCH", data, bea.cookie)).status, 404);
+  const reply = await f.request(`/api/plaza/posts/${id}/replies`, "POST", { body: "Hola" }, bea.cookie);
+  assert.equal(reply.status, 201);
+  assert.equal((await f.request(`/api/plaza/replies/${reply.body.reply.id}`, "PATCH", { body: "Suplantación" }, ana.cookie)).status, 404);
+  assert.equal((await f.request(`/api/plaza/replies/${reply.body.reply.id}`, "PATCH", { body: "Hola de nuevo" }, bea.cookie)).status, 200);
+  await f.restart();
+  const list = await f.request("/api/plaza/posts", "GET", undefined, bea.cookie);
+  assert.equal(list.body.posts[0].title, "Una pregunta");
+  const replies = await f.request(`/api/plaza/posts/${id}/replies`, "GET", undefined, ana.cookie);
+  assert.equal(replies.body.replies[0].body, "Hola de nuevo");
+  assert.equal((await f.request(`/api/plaza/replies/${reply.body.reply.id}`, "DELETE", undefined, ana.cookie)).status, 404);
+  assert.equal((await f.request(`/api/plaza/posts/${id}`, "DELETE", undefined, ana.cookie)).status, 200);
+});
+
+test("Plaza: reportes guardan evidencia del servidor y solo moderación puede revisarlos", async (t) => {
+  const f = await fixture(t, { plazaEnabled: true });
+  const author = await f.signup("reporte_autor");
+  const reporter = await f.signup("reporte_lector");
+  const moderator = await f.signup("reporte_mod");
+  const db = new DatabaseSync(f.path);
+  db.prepare("INSERT INTO moderators(user_id) VALUES(?)").run(moderator.id);
+  db.close();
+  const data = { topic: "cultura", title: "Título original", body: "Contenido original" };
+  const post = (await f.request("/api/plaza/posts", "POST", data, author.cookie)).body.post;
+  const reportData = { kind: "post", contentId: post.id, reason: "acoso", note: "Explicación" };
+  assert.equal((await f.request("/api/plaza/reports", "POST", reportData, author.cookie)).status, 422);
+  assert.equal((await f.request("/api/plaza/reports", "POST", { ...reportData, evidence: "inventado" }, reporter.cookie)).status, 422);
+  assert.equal((await f.request("/api/plaza/reports", "POST", reportData, reporter.cookie, "https://ajeno.example")).status, 403);
+  const sent = await f.request("/api/plaza/reports", "POST", reportData, reporter.cookie);
+  assert.equal(sent.status, 201);
+  const duplicate = await f.request("/api/plaza/reports", "POST", reportData, reporter.cookie);
+  assert.equal(duplicate.body.id, sent.body.id);
+  assert.equal((await f.request("/api/plaza/posts", "GET", undefined, reporter.cookie)).body.posts.length, 1);
+  assert.equal((await f.request("/api/plaza/moderation/reports", "GET", undefined, reporter.cookie)).status, 403);
+  await f.request(`/api/plaza/posts/${post.id}`, "PATCH", { ...data, body: "Contenido cambiado" }, author.cookie);
+  await f.restart();
+  const queue = await f.request("/api/plaza/moderation/reports", "GET", undefined, moderator.cookie);
+  assert.equal(queue.status, 200);
+  assert.equal(queue.body.reports[0].evidence.body, "Contenido original");
+  const decision = { reportId: sent.body.id, action: "hide", reason: "Contenido revisado" };
+  assert.equal((await f.request("/api/plaza/moderation/actions", "POST", decision, reporter.cookie)).status, 403);
+  assert.equal((await f.request("/api/plaza/moderation/actions", "POST", decision, moderator.cookie)).status, 200);
+  assert.equal((await f.request("/api/plaza/posts", "GET", undefined, reporter.cookie)).body.posts.length, 0);
+  assert.equal((await f.request("/api/plaza/moderation/actions", "POST", decision, moderator.cookie)).status, 422);
+  await f.restart();
+  assert.equal((await f.request("/api/plaza/posts", "GET", undefined, author.cookie)).body.posts.length, 0);
+  const reviewed = (await f.request("/api/plaza/moderation/reports", "GET", undefined, moderator.cookie)).body.reports[0];
+  assert.equal(reviewed.status, "resolved");
+  assert.equal(reviewed.evidence.body, "Contenido original");
+});
+
+test("La API de Plaza permanece desactivada por defecto", async (t) => {
+  const f = await fixture(t);
+  const person = await f.signup("plaza_default");
+  assert.equal((await f.request("/api/plaza/posts", "GET", undefined, person.cookie)).status, 404);
+});
+
+test("Plaza: reportar una respuesta conserva evidencia incluso si la autora la elimina", async (t) => {
+  const f = await fixture(t, { plazaEnabled: true });
+  const owner = await f.signup("plaza_duena");
+  const author = await f.signup("plaza_autora");
+  const moderator = await f.signup("plaza_moderadora");
+  const db = new DatabaseSync(f.path);
+  db.prepare("INSERT INTO moderators(user_id) VALUES(?)").run(moderator.id); db.close();
+  const post = (await f.request("/api/plaza/posts", "POST", { topic: "crear", title: "Conversación", body: "Contenido" }, owner.cookie)).body.post;
+  const reply = (await f.request(`/api/plaza/posts/${post.id}/replies`, "POST", { body: "Respuesta reportada" }, author.cookie)).body.reply;
+  const data = { kind: "reply", contentId: reply.id, reason: "spam", note: "" };
+  const sent = await f.request("/api/plaza/reports", "POST", data, owner.cookie);
+  assert.equal(sent.status, 201);
+  assert.equal((await f.request(`/api/plaza/replies/${reply.id}`, "DELETE", undefined, author.cookie)).status, 200);
+  const queue = await f.request("/api/plaza/moderation/reports", "GET", undefined, moderator.cookie);
+  assert.equal(queue.body.reports[0].evidence.body, "Respuesta reportada");
+  assert.equal((await f.request("/api/plaza/moderation/actions", "POST", { reportId: sent.body.id, action: "dismiss", reason: "Caso revisado" }, moderator.cookie)).status, 200);
+  const audit = new DatabaseSync(f.path);
+  try {
+    const action = audit.prepare("SELECT action,reason,moderator_id FROM plaza_moderation_actions WHERE report_id=?").get(sent.body.id);
+    assert.equal(action.action, "dismiss"); assert.equal(action.reason, "Caso revisado"); assert.equal(action.moderator_id, moderator.id);
+  } finally { audit.close(); }
+});
+
+test("Plaza limita reportes nuevos y no consume cuota en duplicados", async (t) => {
+  const f = await fixture(t, { plazaEnabled: true });
+  const author = await f.signup("limite_autor"); const reporter = await f.signup("limite_lector");
+  let first;
+  for (let i = 0; i < 6; i++) {
+    const post = (await f.request("/api/plaza/posts", "POST", { topic: "crear", title: `Caso ${i}`, body: "Contenido" }, author.cookie)).body.post;
+    const report = { kind: "post", contentId: post.id, reason: "spam", note: "" };
+    const result = await f.request("/api/plaza/reports", "POST", report, reporter.cookie);
+    assert.equal(result.status, i < 5 ? 201 : 422);
+    if (i === 0) { first = result.body.id; assert.equal((await f.request("/api/plaza/reports", "POST", report, reporter.cookie)).body.id, first); }
+  }
+  assert.ok(first);
+});
+
 test("salir de recepción retira acceso al historial del grupo que empieza después", async (t) => {
   const f = await fixture(t);
   const visitor = await f.signup("visitante");
@@ -634,12 +741,16 @@ test("historial: conserva solo los últimos 50 mensajes y elimina salas archivad
   for (const u of users) clients.push(await f.socket(u));
   clients[0].send({ type: "start" });
   await clients[2].wait((c) => c.snapshot.session.phase === "question");
-  for (let i = 0; i < 55; i++)
+  for (let i = 0; i < 55; i++) {
+    const clientId = randomUUID();
     clients[0].send({
       type: "message",
-      clientId: randomUUID(),
+      clientId,
       content: { type: "text", text: `Guardado ${i}` },
     });
+    await clients[0].wait((c) => c.events.some((e) => e.type === "ack" && e.clientId === clientId));
+    await clients[2].wait((c) => c.snapshot.messages.at(-1)?.text === `Guardado ${i}`);
+  }
   await clients[2].wait(
     (c) => c.snapshot.messages.at(-1)?.text === "Guardado 54",
   );

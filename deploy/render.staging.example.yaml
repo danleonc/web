@@ -1,0 +1,25 @@
+# BORRADOR: no crea recursos ni protege la URL pública.
+# Revisar docs/INFRAESTRUCTURA_BETA.md antes de utilizarlo.
+services:
+  - type: web
+    name: nexafia-pruebas
+    runtime: node
+    plan: 0.5c-512mb
+    numInstances: 1
+    autoDeployTrigger: "off"
+    buildCommand: npm ci --no-audit --no-fund && npm run build:pilot
+    startCommand: npm start
+    healthCheckPath: /api/health
+    disk:
+      name: nexafia-pruebas-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: 24.19.0
+      - key: ENTRE_BIND
+        value: 0.0.0.0
+      - key: ENTRE_DATABASE_PATH
+        value: /var/data/entre.sqlite
+      - key: ENTRE_PUBLIC_ORIGIN
+        sync: false

@@ -2,6 +2,7 @@ import { defineConfig, devices } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/pilot*.spec.ts",
+  testIgnore: "**/pilot-real-plaza.spec.ts",
   workers: 1,
   reporter: "list",
   use: {
@@ -18,7 +19,7 @@ export default defineConfig({
     { name: "pilot-desktop", use: { ...devices["Desktop Chrome"] } },
     {
       name: "pilot-mobile",
-      testIgnore: "**/pilot-shared.spec.ts",
+      testIgnore: ["**/pilot-shared.spec.ts", "**/pilot-real-plaza.spec.ts"],
       use: { ...devices["Pixel 7"], defaultBrowserType: "chromium" },
     },
   ],

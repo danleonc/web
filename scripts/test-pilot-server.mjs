@@ -34,6 +34,7 @@ await mkdir(mailbox, { mode: 0o700 });
 new ModerationStore(setup, Date.now).role("moderator_fixture", true);
 setup.close();
 const app = createRoomServer({
+  plazaEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
   push: { ...webpush.generateVAPIDKeys(), subject: "mailto:fixture@example.test", send: async () => {} },
   databasePath: join(directory, "test.sqlite"),
   google: await mockGoogle("http://127.0.0.1:4190"),
