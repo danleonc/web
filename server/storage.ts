@@ -49,7 +49,8 @@ export class Storage {
       version !== 9 &&
       version !== 10 &&
       version !== 11 &&
-      version !== 12
+      version !== 12 &&
+      version !== 13
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -142,6 +143,11 @@ export class Storage {
       ALTER TABLE scheduled_meetings ADD COLUMN cancelled_at INTEGER;
       ALTER TABLE scheduled_meetings ADD COLUMN cancellation_reason TEXT;
       PRAGMA user_version=12; COMMIT;`);
+    if (version < 13)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS push_queue(meeting_id TEXT NOT NULL, endpoint_hash TEXT NOT NULL, user_id TEXT NOT NULL, created_at INTEGER NOT NULL, next_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(meeting_id,endpoint_hash));
+      CREATE INDEX IF NOT EXISTS push_queue_due ON push_queue(next_at);
+      PRAGMA user_version=13; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

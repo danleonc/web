@@ -83,7 +83,19 @@ test("actualizar v11 conserva convocatorias y agrega estado de cancelación", as
     finally { updated.close(); }
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
-test("migración v1 a v12 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
+test("actualizar v12 preserva convocatorias y crea cola de avisos", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "nexafia-v12-")); const path = join(dir, "old.sqlite");
+  try {
+    const old = new Storage(path); old.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1);
+    old.db.prepare("INSERT INTO offerings VALUES(?,?)").run("meeting", 100000);
+    old.db.prepare("INSERT INTO scheduled_meetings(id,theme_id,capacity,duration,created_at,created_by) VALUES(?,?,?,?,?,?)").run("meeting", "cafe", 4, 40, 1, "a");
+    old.db.exec("DROP TABLE push_queue; PRAGMA user_version=12;"); old.close();
+    const updated = new Storage(path);
+    try { assert.equal(updated.db.prepare("SELECT theme_id FROM scheduled_meetings WHERE id='meeting'").get().theme_id, "cafe"); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_queue").get().n, 0); }
+    finally { updated.close(); }
+  } finally { await rm(dir, { recursive: true, force: true }); }
+});
+test("migración v1 a v13 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
   const dir = await mkdtemp(join(tmpdir(), "afinia-upgrade-")),
     path = join(dir, "old.sqlite");
   try {
@@ -146,7 +158,7 @@ test("migración v1 a v12 conserva cuenta, reserva, sesión e historial con segu
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        12,
+        13,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);

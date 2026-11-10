@@ -51,6 +51,27 @@ export class PushDelivery {
   private now: () => number;
   constructor(storage: Storage, config: PushConfig, now: () => number) { validateConfig(config); this.storage = storage; this.config = config; this.now = now; }
   get publicKey() { return this.config.publicKey; }
+  async processQueue() {
+    const db = this.storage.db, now = this.now();
+    db.prepare("DELETE FROM push_queue WHERE created_at<? OR attempts>=5 OR NOT EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.endpoint_hash=push_queue.endpoint_hash AND s.user_id=push_queue.user_id) OR NOT EXISTS (SELECT 1 FROM reservations r WHERE r.activity_id=push_queue.meeting_id AND r.user_id=push_queue.user_id)").run(now - 86400_000);
+    const rows = db.prepare("SELECT q.meeting_id,q.endpoint_hash,q.user_id,q.attempts,s.subscription_json FROM push_queue q JOIN push_subscriptions s ON s.endpoint_hash=q.endpoint_hash AND s.user_id=q.user_id WHERE q.next_at<=? ORDER BY q.next_at LIMIT 20").all(now);
+    for (const row of rows) {
+      const meeting = String(row.meeting_id), endpoint = String(row.endpoint_hash), user = String(row.user_id);
+      if (!db.prepare("SELECT 1 FROM push_queue q JOIN push_subscriptions s ON s.endpoint_hash=q.endpoint_hash AND s.user_id=q.user_id JOIN reservations r ON r.activity_id=q.meeting_id AND r.user_id=q.user_id WHERE q.meeting_id=? AND q.endpoint_hash=?").get(meeting, endpoint)) continue;
+      let sub: webpush.PushSubscription | null = null;
+      try { sub = validSubscription(JSON.parse(String(row.subscription_json))); } catch { /* Invalid stored subscription. */ }
+      if (!sub) { db.prepare("DELETE FROM push_subscriptions WHERE endpoint_hash=? AND user_id=?").run(endpoint, user); db.prepare("DELETE FROM push_queue WHERE meeting_id=? AND endpoint_hash=?").run(meeting, endpoint); continue; }
+      try {
+        const payload = JSON.stringify({ title: "Nexafia", body: "Un encuentro que reservaste fue cancelado. Entra a Encuentros para revisar el aviso.", tag: "nexafia-meeting-cancelled" });
+        await (this.config.send || ((s, p, o) => webpush.sendNotification(s, p, o)))(sub, payload, { vapidDetails: { subject: this.config.subject, publicKey: this.config.publicKey, privateKey: this.config.privateKey }, TTL: 60, timeout: 5000 });
+        db.prepare("DELETE FROM push_queue WHERE meeting_id=? AND endpoint_hash=?").run(meeting, endpoint);
+      } catch (error) {
+        const status = (error as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410) { db.prepare("DELETE FROM push_subscriptions WHERE endpoint_hash=? AND user_id=?").run(endpoint, user); db.prepare("DELETE FROM push_queue WHERE meeting_id=? AND endpoint_hash=?").run(meeting, endpoint); }
+        else db.prepare("UPDATE push_queue SET attempts=attempts+1,next_at=? WHERE meeting_id=? AND endpoint_hash=?").run(this.now() + Math.min(3600_000, 60_000 * 2 ** Number(row.attempts)), meeting, endpoint);
+      }
+    }
+  }
   async handle(req: IncomingMessage, res: ServerResponse, path: string, identity: { id: string } | null, sessionHash: string | null, originValid: boolean) {
     if (path === "/api/push/options" && req.method === "GET") { json(res, 200, { available: true, publicKey: this.publicKey }); return; }
     if (!identity || !sessionHash) { req.resume(); json(res, 401, { error: "session_required" }); return; }

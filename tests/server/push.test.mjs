@@ -2,10 +2,55 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import webpush from 'web-push';
 import {fixture} from './feature-fixture.mjs';
-import {pushFromEnv, validSubscription} from '../../server/push.ts';
+import {pushFromEnv, validSubscription, PushDelivery} from '../../server/push.ts';
+import {Storage} from '../../server/storage.ts';
+import {DatabaseSync} from 'node:sqlite';
 const keys=webpush.generateVAPIDKeys();
 const config={...keys,subject:'mailto:pilot@example.test'};
 const subscription=(suffix='one')=>({endpoint:`https://fcm.googleapis.com/fcm/send/test-${suffix}`,expirationTime:null,keys:{p256dh:keys.publicKey,auth:Buffer.alloc(16,2).toString('base64url')}});
+test('push de cancelación persiste, reintenta y solo alcanza dispositivos de inscritos',async t=>{
+ const sent=[]; let fail=true; let clock=Date.now();
+ const f=await fixture(t,{meetingsEnabled:true,push:{...config,send:async()=>{}}});
+ const mod=await f.signup('push_mod'), person=await f.signup('push_person'), other=await f.signup('push_other');
+ let db=new DatabaseSync(f.path); db.prepare('INSERT INTO moderators(user_id) VALUES(?)').run(mod.id); db.close();
+ await f.request('/api/push/subscribe','POST',{subscription:subscription('person')},person.cookie);
+ await f.request('/api/push/subscribe','POST',{subscription:subscription('other')},other.cookie);
+ const meeting=await f.request('/api/meetings','POST',{themeId:'cafe',startsAt:f.startsAt+3600_000,capacity:4},mod.cookie); const id=meeting.body.meeting.id;
+ await f.request(`/api/reservations/${id}`,'POST',undefined,person.cookie);
+ assert.equal((await f.request(`/api/meetings/${id}/cancel`,'POST',{reason:'Motivo privado del encuentro'},mod.cookie)).status,200);
+ await f.restart(); clock=Date.now();
+ const storage=new Storage(f.path);
+ try {
+  const delivery=new PushDelivery(storage,{...config,send:async(sub,payload)=>{sent.push({sub,payload});if(fail)throw Object.assign(new Error('unavailable'),{statusCode:503});}},()=>clock);
+  await delivery.processQueue(); assert.equal(sent.length,1); assert.equal(sent[0].sub.endpoint,subscription('person').endpoint);
+  assert.equal(sent[0].payload.includes('Motivo privado'),false); assert.equal(sent[0].payload.includes('push_person'),false);
+  await delivery.processQueue(); assert.equal(sent.length,1);
+  fail=false; clock+=120_000; await delivery.processQueue(); assert.equal(sent.length,2);
+  await delivery.processQueue(); assert.equal(sent.length,2);
+ } finally {storage.close();}
+});
+test('push de cancelación respeta la baja previa del dispositivo',async t=>{
+ const sent=[]; const f=await fixture(t,{meetingsEnabled:true,push:{...config,send:async()=>{}}});
+ const mod=await f.signup('unsub_mod'), person=await f.signup('unsub_person');
+ const db=new DatabaseSync(f.path); db.prepare('INSERT INTO moderators(user_id) VALUES(?)').run(mod.id); db.close();
+ await f.request('/api/push/subscribe','POST',{subscription:subscription('unsub')},person.cookie);
+ const meeting=await f.request('/api/meetings','POST',{themeId:'cafe',startsAt:f.startsAt+3600_000,capacity:4},mod.cookie); const id=meeting.body.meeting.id;
+ await f.request(`/api/reservations/${id}`,'POST',undefined,person.cookie);
+ await f.request(`/api/meetings/${id}/cancel`,'POST',{reason:'Cambio de programa'},mod.cookie);
+ await f.request('/api/push/unsubscribe','POST',{endpoint:subscription('unsub').endpoint},person.cookie);
+ const storage=new Storage(f.path); try { await new PushDelivery(storage,{...config,send:async()=>sent.push(1)},Date.now).processQueue(); assert.deepEqual(sent,[]); assert.equal(storage.db.prepare('SELECT count(*) AS n FROM push_queue').get().n,0); } finally {storage.close();}
+});
+test('el servidor procesa automáticamente el aviso de una cancelación',async t=>{
+ const sent=[]; const f=await fixture(t,{meetingsEnabled:true,push:{...config,send:async(sub,payload)=>sent.push({sub,payload})}});
+ const mod=await f.signup('auto_mod'), person=await f.signup('auto_person');
+ const db=new DatabaseSync(f.path); db.prepare('INSERT INTO moderators(user_id) VALUES(?)').run(mod.id); db.close();
+ await f.request('/api/push/subscribe','POST',{subscription:subscription('auto')},person.cookie);
+ const meeting=await f.request('/api/meetings','POST',{themeId:'cafe',startsAt:f.startsAt+3600_000,capacity:4},mod.cookie); const id=meeting.body.meeting.id;
+ await f.request(`/api/reservations/${id}`,'POST',undefined,person.cookie);
+ await f.request(`/api/meetings/${id}/cancel`,'POST',{reason:'Cambio de programa'},mod.cookie);
+ const deadline=Date.now()+19000; while(!sent.length && Date.now()<deadline) await new Promise(resolve=>setTimeout(resolve,100));
+ assert.equal(sent.length,1); assert.equal(sent[0].sub.endpoint,subscription('auto').endpoint);
+});
 test('push: configuración ausente/partial, claves emparejadas y destinos permitidos',()=>{
  assert.equal(pushFromEnv({}),undefined);assert.throws(()=>pushFromEnv({ENTRE_VAPID_PUBLIC_KEY:keys.publicKey}));
  assert.equal(pushFromEnv({ENTRE_VAPID_PUBLIC_KEY:keys.publicKey,ENTRE_VAPID_PRIVATE_KEY:keys.privateKey,ENTRE_VAPID_SUBJECT:config.subject}).publicKey,keys.publicKey);

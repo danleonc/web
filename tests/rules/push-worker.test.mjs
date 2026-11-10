@@ -17,3 +17,9 @@ test('worker: enfoca la ventana actual y pide abrir el centro sin abandonar una 
  const w=worker([client]);let promise;w.handlers.notificationclick({notification:{close:()=>{}},waitUntil:p=>promise=p});await promise;
  assert.equal(focused,1);assert.equal(w.opened.length,0);assert.equal(messages[0].type,'nexafia-open-notifications');assert.equal(client.url,'https://example.test/web/#room');
 });
+test('worker: aviso de cancelación abre Encuentros sin interrumpir la ventana existente',async()=>{
+ const client={url:'https://example.test/web/#room',focus:async()=>{},postMessage:()=>{throw Error('no debe cambiar la sala');}};
+ const w=worker([client]);let promise;
+ w.handlers.notificationclick({notification:{tag:'nexafia-meeting-cancelled',close:()=>{}},waitUntil:p=>promise=p});await promise;
+ assert.equal(w.opened.length,1); const target=new URL(w.opened[0]); assert.equal(target.origin,'https://example.test'); assert.equal(target.pathname,'/web/'); assert.equal(target.hash,'#discover');
+});

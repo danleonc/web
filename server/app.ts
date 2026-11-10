@@ -1275,10 +1275,19 @@ export function createRoomServer(options: Options = {}) {
   heartbeat.unref();
   const maintenance = setInterval(() => storage?.prune(now()), 60_000);
   maintenance.unref();
+  let pushPending: Promise<void> | null = null;
+  const pushTimer = setInterval(() => {
+    if (options.meetingsEnabled && pushDelivery && !pushPending) {
+      pushPending = pushDelivery.processQueue().catch(() => {}).finally(() => { pushPending = null; });
+    }
+  }, 15_000);
+  pushTimer.unref();
   async function close() {
     clearInterval(timer);
     clearInterval(heartbeat);
     clearInterval(maintenance);
+    clearInterval(pushTimer);
+    if (pushPending) await pushPending;
     for (const c of connections) c.socket.terminate();
     await new Promise<void>((resolve) => wss.close(() => resolve()));
     server.closeAllConnections();

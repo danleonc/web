@@ -13,6 +13,7 @@ self.addEventListener("notificationclick", event => {
   event.notification.close();
   event.waitUntil((async () => {
     const scope = self.registration.scope;
+    if (event.notification.tag === "nexafia-meeting-cancelled") { const url = new URL(scope); url.hash = "discover"; await self.clients.openWindow(url.href); return; }
     const windows = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
     const current = windows.find(client => client.url.startsWith(scope));
     if (current) { await current.focus(); current.postMessage({ type: "nexafia-open-notifications" }); }

@@ -26,6 +26,10 @@ export function scheduleMeeting(storage: Storage, userId: string, value: Record<
 }
 export function cancelMeeting(storage: Storage, id: string, value: Record<string, unknown>, now: number) {
   if (Object.keys(value).length !== 1 || typeof value.reason !== "string" || value.reason.trim().length < 5 || value.reason.trim().length > 500) throw Error("invalid_reason");
-  const result = storage.db.prepare("UPDATE scheduled_meetings SET cancelled_at=?, cancellation_reason=? WHERE id=? AND cancelled_at IS NULL AND (SELECT starts_at FROM offerings WHERE activity_id=?) > ?").run(now, value.reason.trim(), id, id, now + 300_000);
-  if (!result.changes) throw Error("cannot_cancel");
+  const reason = value.reason.trim();
+  storage.transaction(() => {
+    const result = storage.db.prepare("UPDATE scheduled_meetings SET cancelled_at=?, cancellation_reason=? WHERE id=? AND cancelled_at IS NULL AND (SELECT starts_at FROM offerings WHERE activity_id=?) > ?").run(now, reason, id, id, now + 300_000);
+    if (!result.changes) throw Error("cannot_cancel");
+    storage.db.prepare("INSERT INTO push_queue(meeting_id,endpoint_hash,user_id,created_at,next_at) SELECT ?,s.endpoint_hash,s.user_id,?,? FROM push_subscriptions s JOIN reservations r ON r.user_id=s.user_id WHERE r.activity_id=?").run(id, now, now, id);
+  });
 }

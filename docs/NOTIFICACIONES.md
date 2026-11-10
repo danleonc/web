@@ -12,13 +12,15 @@ eliminados no se muestran. En sala activa no se abandona el encuentro al abrir u
 aviso. Los estados locales se aíslan por cuenta y la exportación solo incluye el
 ámbito actual de notificaciones; borrar datos locales incluye esos estados.
 
-**Plaza sigue siendo local, incluso en la compilación piloto.** No hay eventos de
+**La Plaza pública continúa siendo local.** Existe una versión compartida en pruebas internas, todavía desactivada en el servidor de despliegue; el centro de avisos de Plaza no está conectado a ella. No hay eventos de
 otras personas entregados por un backend de comunidad. «Probar un aviso de ejemplo»
 es una acción explícita: sigue una conversación ficticia y referencia un comentario
 preescrito, sin publicar una respuesta nueva. Se etiqueta como ejemplo. No se
 programan avisos falsos, métricas de actividad o recordatorios automáticos.
 
 ## Teléfono: preparación y alcance
+
+En el entorno interno de encuentros, cancelar una convocatoria encola un aviso genérico para los dispositivos activados de quienes reservaron. La cola se guarda junto con la cancelación, se procesa en una sola instancia cada 15 segundos en lotes de hasta 20 y reintenta hasta cinco veces durante un máximo de 24 horas; un dispositivo dado de baja o una reserva retirada deja de ser destinatario. El proveedor puede aceptar el mensaje sin que esto confirme su visualización. Un reinicio durante el envío puede producir un duplicado. Al tocar el aviso se abre Encuentros en otra ventana. No se han configurado claves reales ni probado teléfonos reales, y faltan observabilidad, recuperación de fallos y avisos para otros eventos.
 
 Se añaden manifest, iconos de la marca y worker push. El worker no cachea HTML/JS,
 por lo que no congela versiones de la app. No pide permisos al entrar. Una cuenta
