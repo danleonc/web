@@ -5,4 +5,5 @@ Primera descarga de datos propios en JSON para el servidor interno. La sesión a
 - [x] Probar aislamiento entre cuentas, sesión, cabeceras, omisiones explícitas y truncamiento.
 - [x] Exponer descarga y agregar acceso desde la cuenta con alcance claro, incluso con correo pendiente.
 - [x] Permitir descargar páginas adicionales de contenido propio y señalar si hay más registros.
+- [x] Incluir bloqueos iniciados, solicitudes enviadas y reportes redactados por la cuenta sin incluir la evidencia ni los reportes de terceros.
 - [ ] Completar exportación con instantánea coherente y los demás tipos de datos, y definir autenticación reforzada, eliminación, retención y tratamiento de datos de terceros con revisión profesional antes del lanzamiento.

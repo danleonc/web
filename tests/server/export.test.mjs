@@ -29,3 +29,16 @@ test('descarga identifica cada sección truncada al superar mil registros',async
  assert.equal((await f.request('/api/account/export?page=0','GET',undefined,user.cookie)).status,422);
  assert.equal((await f.request('/api/account/export?page=2x','GET',undefined,user.cookie)).status,422);
 });
+test('descarga incluye solicitudes, bloqueos y reportes propios sin incluir reportes ajenos',async t=>{
+ const f=await fixture(t,{plazaEnabled:true}); const ana=await f.signup('action_ana'), bea=await f.signup('action_bea');
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Tema',body:'Texto'},bea.cookie)).body.post;
+ const invitation=(await f.request('/api/plaza/invitations','POST',{kind:'post',contentId:post.id,note:'Mi invitación'},ana.cookie)).body.invitation;
+ await f.request('/api/plaza/reports','POST',{kind:'post',contentId:post.id,reason:'spam',note:'Mi observación'},ana.cookie);
+ const own=(await f.request('/api/account/export','GET',undefined,ana.cookie)).body;
+ const other=(await f.request('/api/account/export','GET',undefined,bea.cookie)).body;
+ assert.equal(own.invitations.items[0].id,invitation.id); assert.equal(own.invitations.items[0].note,'Mi invitación');
+ assert.equal(own.reports.items[0].note,'Mi observación'); assert.equal(other.reports.items.length,0);
+ assert.equal(JSON.stringify(other).includes('Mi observación'),false);
+ await f.request('/api/plaza/blocks','POST',{kind:'post',contentId:post.id},ana.cookie);
+ assert.equal((await f.request('/api/account/export','GET',undefined,ana.cookie)).body.blocks.items[0].blockedId,bea.id);
+});
