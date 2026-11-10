@@ -22,9 +22,31 @@ export function RealConnections({ account, loaded, onAccess, onPlaza }: { accoun
   const ready = !!account?.canParticipate;
   const refresh = useCallback(async () => { setConnections((await api<{ connections: Connection[] }>("/api/plaza/connections")).connections); }, []);
   useEffect(() => { let cancelled = false; if (!ready) return; setLoading(true); api<{ connections: Connection[] }>("/api/plaza/connections").then((result) => { if (!cancelled) setConnections(result.connections); }).catch(() => { if (!cancelled) setError("No pudimos cargar tus conexiones."); }).finally(() => { if (!cancelled) setLoading(false); }); return () => { cancelled = true; }; }, [ready]);
+  useEffect(() => {
+    if (!ready || busy) return;
+    let cancelled = false; let timer: ReturnType<typeof setTimeout>;
+    const update = async () => {
+      if (document.visibilityState !== "visible") { timer = setTimeout(update, 4000); return; }
+      const version = requestVersion.current;
+      try {
+        const result = await api<{ connections: Connection[] }>("/api/plaza/connections");
+        if (cancelled || version !== requestVersion.current) return;
+        setConnections(result.connections);
+        if (selected && !result.connections.some((item) => item.id === selected && item.status === "accepted")) {
+          requestVersion.current++; setSelected(null); setMessages([]); setReport(null); setNotice("Esta conexión ya no está disponible.");
+        } else if (selected) {
+          const current = await api<{ messages: Message[] }>(`/api/plaza/connections/${selected}/messages`);
+          if (!cancelled && version === requestVersion.current) setMessages(current.messages);
+        }
+      } catch { /* La próxima actualización volverá a intentarlo. */ }
+      finally { if (!cancelled) timer = setTimeout(update, 4000); }
+    };
+    timer = setTimeout(update, 4000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [ready, busy, selected, account?.id]);
   async function decision(id: string, action: string) { if (busy) return; setBusy(true); setError(""); try { await api(`/api/plaza/invitations/${id}/decision`, { action }); if (selected === id) { requestVersion.current++; setSelected(null); setMessages([]); } await refresh(); } catch (e) { setError(e instanceof Error ? e.message : "No se pudo actualizar."); } finally { setBusy(false); } }
   async function open(id: string) { const version = ++requestVersion.current; setSelected(id); setMessages([]); setDraft(""); setError(""); try { const result = await api<{ messages: Message[] }>(`/api/plaza/connections/${id}/messages`); if (version === requestVersion.current) setMessages(result.messages); } catch { if (version === requestVersion.current) setError("No pudimos cargar la conversación."); } }
-  async function send(e: FormEvent) { e.preventDefault(); if (!selected || busy || !draft.trim()) return; setBusy(true); setError(""); setNotice(""); const text = draft.trim();
+  async function send(e: FormEvent) { e.preventDefault(); if (!selected || busy || !draft.trim()) return; requestVersion.current++; setBusy(true); setError(""); setNotice(""); const text = draft.trim();
     if (!pending.current || pending.current.body !== text || pending.current.connection !== selected) pending.current = { id: crypto.randomUUID(), body: text, connection: selected };
     try { await api(`/api/plaza/connections/${selected}/messages`, { clientId: pending.current.id, body: text }); pending.current = null; setDraft(""); try { setMessages((await api<{ messages: Message[] }>(`/api/plaza/connections/${selected}/messages`)).messages); } catch { setNotice("El mensaje se envió, pero no pudimos actualizar la conversación. Vuelve a abrirla."); } }
     catch (e) { setError(e instanceof Error ? e.message : "No pudimos enviar el mensaje."); } finally { setBusy(false); }
