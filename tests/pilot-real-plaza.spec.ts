@@ -143,3 +143,166 @@ test("una persona puede reportar una respuesta compartida", async ({ browser }, 
     await expect(page.getByText(/quedó en la cola de revisión/)).toBeVisible();
   } finally { await author.close(); await reader.close(); }
 });
+
+test("bloquear y desbloquear una persona actualiza La Plaza", async ({ browser }, info) => {
+  const author = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const viewer = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    await register(author, `bloq_autor_${info.project.name}`); await register(viewer, `bloq_lector_${info.project.name}`);
+    const title = `Tema para bloquear ${info.project.name}`;
+    await author.request.post("/api/plaza/posts", { headers: { Origin: "http://127.0.0.1:4190" }, data: { topic: "crear", title, body: "Contenido compartido" } });
+    const page = await viewer.newPage(); page.on("dialog", (d) => void d.accept()); await page.goto("/#plaza");
+    await page.getByRole("article").filter({ hasText: title }).getByRole("button", { name: "Bloquear persona" }).click();
+    await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+    await page.reload();
+    await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+    await page.getByText("Personas bloqueadas", { exact: true }).click();
+    await expect(page.getByText(`bloq_autor_${info.project.name}`, { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: `Desbloquear bloq_autor_${info.project.name}` }).click();
+    await expect(page.getByText(title, { exact: true })).toBeVisible();
+  } finally { await author.close(); await viewer.close(); }
+});
+
+test("la autora apela una retirada y otra moderadora puede revisarla", async ({ browser }, info) => {
+  const contexts = await Promise.all(Array.from({ length: 4 }, () => browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use })));
+  const [author, reporter, modA, modB] = contexts;
+  try {
+    await register(author, `apel_autora_${info.project.name}`); await register(reporter, `apel_lector_${info.project.name}`);
+    const headers = { Origin: "http://127.0.0.1:4190" };
+    for (const [ctx, username] of [[modA, "moderator_fixture"], [modB, "moderator_fixture_second"]] as const)
+      expect((await ctx.request.post("/api/auth/login", { headers, data: { username, password: "Una clave exclusiva del fixture 123" } })).status()).toBe(200);
+    const title = `Contenido apelado ${info.project.name}`;
+    const post = await (await author.request.post("/api/plaza/posts", { headers, data: { topic: "crear", title, body: "Texto original" } })).json();
+    const report = await (await reporter.request.post("/api/plaza/reports", { headers, data: { kind: "post", contentId: post.post.id, reason: "spam", note: "Observación privada" } })).json();
+    expect((await modA.request.post("/api/plaza/moderation/actions", { headers, data: { reportId: report.id, action: "hide", reason: "Revisión inicial" } })).status()).toBe(200);
+    const page = await author.newPage(); await page.goto("/#plaza");
+    await page.getByText("Mis contenidos retirados", { exact: true }).click();
+    const action = page.getByRole("article").filter({ hasText: title });
+    await action.getByLabel("Por qué solicitas una revisión").fill("Solicito otra revisión del contenido");
+    await action.getByRole("button", { name: "Enviar apelación" }).click();
+    await expect(action.getByText("Apelación pendiente", { exact: true })).toBeVisible();
+    const review = await modB.newPage(); await review.goto("/#plaza");
+    await review.getByText("Apelaciones de Plaza · moderación", { exact: true }).click();
+    const item = review.getByRole("article").filter({ hasText: title });
+    await item.getByLabel("Resultado de la revisión").selectOption("restore");
+    await item.getByLabel("Justificación de la revisión").fill("Revisado por otra moderadora");
+    await item.getByRole("button", { name: "Guardar revisión" }).click();
+    await expect(item.getByText("Apelación aceptada", { exact: true })).toBeVisible();
+    await page.reload();
+    await expect(page.getByText(title, { exact: true })).toBeVisible();
+  } finally { for (const context of contexts) await context.close(); }
+});
+
+test("dos personas aceptan una solicitud antes de conversar en privado", async ({ browser }, info) => {
+  const ana = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const bea = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    await register(ana, `conexion_ana_${info.project.name}`); await register(bea, `conexion_bea_${info.project.name}`);
+    const title = `Una conversación para conectar ${info.project.name}`;
+    await bea.request.post("/api/plaza/posts", { headers: { Origin: "http://127.0.0.1:4190" }, data: { topic: "crear", title, body: "Una idea compartida" } });
+    const first = await ana.newPage(); await first.goto("/#plaza");
+    await first.getByRole("article").filter({ hasText: title }).getByRole("button", { name: "Seguir conversando" }).click();
+    await first.getByLabel("Mensaje de invitación").fill("Me gustaría conversar sobre tu idea");
+    await first.getByRole("button", { name: "Enviar solicitud" }).click();
+    await expect(first.getByText(/Solicitud enviada/)).toBeVisible();
+    await first.goto("/#connections");
+    await expect(first.getByText("Esperando respuesta", { exact: true })).toBeVisible();
+    await expect(first.getByRole("button", { name: "Abrir conversación" })).toHaveCount(0);
+    const second = await bea.newPage(); await second.goto("/#connections");
+    await second.getByRole("button", { name: "Aceptar solicitud" }).click();
+    await second.getByRole("button", { name: "Abrir conversación" }).click();
+    await second.getByLabel("Mensaje privado").fill("Hola, conversemos");
+    await second.getByRole("button", { name: "Enviar mensaje" }).click();
+    await first.reload();
+    await first.getByRole("button", { name: "Abrir conversación" }).click();
+    await expect(first.getByText("Hola, conversemos", { exact: true })).toBeVisible();
+    expect((await new AxeBuilder({ page: first }).include(".real-plaza").withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+    await first.screenshot({ path: info.outputPath("conexiones.png"), fullPage: true });
+    await first.getByRole("article").filter({ hasText: "Hola, conversemos" }).getByRole("button", { name: "Reportar mensaje" }).click();
+    await first.getByRole("button", { name: "Registrar reporte" }).click();
+    await expect(first.getByText(/quedó en la cola de revisión/)).toBeVisible();
+    await first.getByRole("button", { name: "Entendido" }).click();
+    first.on("dialog", (dialog) => void dialog.accept());
+    await first.getByRole("button", { name: "Bloquear persona" }).click();
+    await expect(first.getByText("Hola, conversemos", { exact: true })).toHaveCount(0);
+    await second.reload();
+    await expect(second.getByRole("button", { name: "Abrir conversación" })).toHaveCount(0);
+    expect(await first.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  } finally { await ana.close(); await bea.close(); }
+});
+
+test("una convocatoria programada se puede reservar y abrir como encuentro compartido", async ({ browser }, info) => {
+  const mod = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const user = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    const headers = { Origin: "http://127.0.0.1:4190" };
+    expect((await mod.request.post("/api/auth/login", { headers, data: { username: "moderator_fixture", password: "Una clave exclusiva del fixture 123" } })).status()).toBe(200);
+    await register(user, `encuentro_${info.project.name}`);
+    const moderator = await mod.newPage(); await moderator.goto("/#discover");
+    await moderator.getByText("Programar un encuentro", { exact: true }).click();
+    const time = await moderator.evaluate(() => { const d = new Date(Date.now() + 2 * 60 * 60_000); const pad = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; });
+    await moderator.getByLabel("Fecha y hora del encuentro").fill(time);
+    await moderator.getByRole("button", { name: "Crear convocatoria" }).click();
+    await expect(moderator.getByText("Convocatoria creada.", { exact: true })).toBeVisible();
+    const participant = await user.newPage(); await participant.goto("/#discover");
+    await expect(participant.getByText(/Lo que compartes se guarda solo en este navegador/)).toHaveCount(0);
+    expect((await new AxeBuilder({ page: participant }).include(".real-plaza").withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+    await participant.screenshot({ path: info.outputPath("encuentros.png"), fullPage: true });
+    await participant.getByRole("button", { name: "Reservar encuentro" }).click();
+    await expect(participant.getByText("Reserva confirmada", { exact: true })).toBeVisible();
+    await participant.getByRole("button", { name: "Entrar al encuentro" }).click();
+    await participant.getByLabel(/Entiendo que esta prueba comparte/).check();
+    await participant.getByRole("button", { name: "Conectar con esta sala" }).click();
+    await expect(participant.getByText("Conectado al servidor", { exact: true })).toBeVisible();
+    expect(await participant.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  } finally { await mod.close(); await user.close(); }
+});
+
+test("tres cuentas comparten una convocatoria programada", async ({ browser }, info) => {
+  const mod = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const people = await Promise.all(Array.from({ length: 3 }, () => browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use })));
+  try {
+    const headers = { Origin: "http://127.0.0.1:4190" };
+    expect((await mod.request.post("/api/auth/login", { headers, data: { username: "moderator_fixture", password: "Una clave exclusiva del fixture 123" } })).status()).toBe(200);
+    const meeting = await mod.request.post("/api/meetings", { headers, data: { themeId: "crear", startsAt: Date.now() + 7200_000, capacity: 3 } });
+    expect(meeting.status()).toBe(201);
+    for (let i = 0; i < people.length; i++) await register(people[i], `reunion_web_${info.project.name}_${i}`);
+    const pages = await Promise.all(people.map((context) => context.newPage()));
+    for (const page of pages) {
+      await page.goto("/#discover");
+      const card = page.getByRole("article").filter({ hasText: "Ideas tan locas que podrían funcionar" });
+      await card.getByRole("button", { name: "Reservar encuentro" }).click();
+      await card.getByRole("button", { name: "Entrar al encuentro" }).click();
+      await page.getByLabel(/Entiendo que esta prueba comparte/).check(); await page.getByRole("button", { name: "Conectar con esta sala" }).click();
+      await expect(page.getByText("Conectado al servidor", { exact: true })).toBeVisible();
+    }
+    await expect(pages[0].getByRole("button", { name: "Iniciar encuentro compartido" })).toBeEnabled();
+    await pages[0].getByRole("button", { name: "Iniciar encuentro compartido" }).click();
+    await pages[0].getByLabel("Tu mensaje de prueba").fill("Una conversación entre tres personas");
+    await pages[0].getByRole("button", { name: "Enviar mensaje de prueba" }).click();
+    await expect(pages[2].getByText("Una conversación entre tres personas", { exact: true })).toBeVisible();
+  } finally { await mod.close(); for (const context of people) await context.close(); }
+});
+
+test("una cancelación muestra el motivo a la persona con reserva", async ({ browser }, info) => {
+  const mod = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const user = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    const headers = { Origin: "http://127.0.0.1:4190" };
+    expect((await mod.request.post("/api/auth/login", { headers, data: { username: "moderator_fixture", password: "Una clave exclusiva del fixture 123" } })).status()).toBe(200);
+    await register(user, `cancelacion_${info.project.name}`);
+    const created = await mod.request.post("/api/meetings", { headers, data: { themeId: "cafe", startsAt: Date.now() + 7200_000, capacity: 4 } });
+    const id = (await created.json()).meeting.id;
+    expect((await user.request.post(`/api/reservations/${id}`, { headers })).status()).toBe(200);
+    const moderator = await mod.newPage(); await moderator.goto("/#discover");
+    const card = moderator.getByRole("article").filter({ hasText: "¿Y si pudieras vivir otra vida?" }).last();
+    await card.getByText("Cancelar convocatoria", { exact: true }).click();
+    await card.getByLabel("Motivo de cancelación").fill("La persona anfitriona no podrá asistir");
+    await card.getByRole("button", { name: "Confirmar cancelación" }).click();
+    const participant = await user.newPage(); await participant.goto("/#discover");
+    await expect(participant.getByText(/Encuentro cancelado. La persona anfitriona no podrá asistir/)).toBeVisible();
+    await expect(participant.getByRole("button", { name: "Entrar al encuentro" })).toHaveCount(0);
+    await participant.getByRole("button", { name: "Quitar aviso" }).click();
+    await expect(participant.getByText(/Encuentro cancelado/)).toHaveCount(0);
+  } finally { await mod.close(); await user.close(); }
+});

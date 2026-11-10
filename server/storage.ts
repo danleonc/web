@@ -44,7 +44,12 @@ export class Storage {
       version !== 4 &&
       version !== 5 &&
       version !== 6 &&
-      version !== 7
+      version !== 7 &&
+      version !== 8 &&
+      version !== 9 &&
+      version !== 10 &&
+      version !== 11 &&
+      version !== 12
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -112,6 +117,31 @@ export class Storage {
       CREATE TABLE plaza_reports(id TEXT PRIMARY KEY, reporter_id TEXT NOT NULL REFERENCES accounts(id), target_id TEXT NOT NULL REFERENCES accounts(id), kind TEXT NOT NULL, content_id TEXT NOT NULL, reason TEXT NOT NULL, note TEXT NOT NULL, evidence_json TEXT NOT NULL, created_at INTEGER NOT NULL, status TEXT NOT NULL DEFAULT 'open', UNIQUE(reporter_id,kind,content_id,reason));
       CREATE TABLE plaza_moderation_actions(id TEXT PRIMARY KEY, report_id TEXT NOT NULL REFERENCES plaza_reports(id), moderator_id TEXT NOT NULL REFERENCES accounts(id), action TEXT NOT NULL, reason TEXT NOT NULL, created_at INTEGER NOT NULL);
       PRAGMA user_version=7; COMMIT;`);
+    if (version < 8)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE plaza_appeals(id TEXT PRIMARY KEY, report_id TEXT NOT NULL UNIQUE REFERENCES plaza_reports(id), user_id TEXT NOT NULL REFERENCES accounts(id), note TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending', created_at INTEGER NOT NULL);
+      CREATE TABLE plaza_appeal_actions(id TEXT PRIMARY KEY, appeal_id TEXT NOT NULL UNIQUE REFERENCES plaza_appeals(id), moderator_id TEXT NOT NULL REFERENCES accounts(id), decision TEXT NOT NULL, note TEXT NOT NULL, created_at INTEGER NOT NULL);
+      PRAGMA user_version=8; COMMIT;`);
+    if (version < 9)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE plaza_connections(id TEXT PRIMARY KEY, sender_id TEXT NOT NULL REFERENCES accounts(id), recipient_id TEXT NOT NULL REFERENCES accounts(id), low_id TEXT NOT NULL REFERENCES accounts(id), high_id TEXT NOT NULL REFERENCES accounts(id), note TEXT NOT NULL, origin_kind TEXT NOT NULL, origin_id TEXT NOT NULL, status TEXT NOT NULL, created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, CHECK(sender_id<>recipient_id));
+      CREATE UNIQUE INDEX plaza_connections_active ON plaza_connections(low_id,high_id) WHERE status IN ('pending','accepted');
+      CREATE TABLE plaza_private_messages(id TEXT PRIMARY KEY, connection_id TEXT NOT NULL REFERENCES plaza_connections(id) ON DELETE CASCADE, sender_id TEXT NOT NULL REFERENCES accounts(id), client_id TEXT NOT NULL, body TEXT NOT NULL, created_at INTEGER NOT NULL, UNIQUE(connection_id,sender_id,client_id));
+      CREATE INDEX plaza_private_messages_connection ON plaza_private_messages(connection_id,created_at,id);
+      PRAGMA user_version=9; COMMIT;`);
+    if (version < 10)
+      this.db.exec(`BEGIN IMMEDIATE;
+      ALTER TABLE plaza_private_messages ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+      PRAGMA user_version=10; COMMIT;`);
+    if (version < 11)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE scheduled_meetings(id TEXT PRIMARY KEY REFERENCES offerings(activity_id), theme_id TEXT NOT NULL, capacity INTEGER NOT NULL, duration INTEGER NOT NULL, created_at INTEGER NOT NULL, created_by TEXT NOT NULL REFERENCES accounts(id));
+      PRAGMA user_version=11; COMMIT;`);
+    if (version < 12)
+      this.db.exec(`BEGIN IMMEDIATE;
+      ALTER TABLE scheduled_meetings ADD COLUMN cancelled_at INTEGER;
+      ALTER TABLE scheduled_meetings ADD COLUMN cancellation_reason TEXT;
+      PRAGMA user_version=12; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");
@@ -191,9 +221,16 @@ export class Storage {
     return true;
   }
   block(userId: string, blockedId: string) {
-    this.db
-      .prepare("INSERT OR IGNORE INTO blocks VALUES(?,?)")
-      .run(userId, blockedId);
+    this.transaction(() => {
+      this.db.prepare("INSERT OR IGNORE INTO blocks VALUES(?,?)").run(userId, blockedId);
+      this.db.prepare("UPDATE plaza_connections SET status='closed' WHERE status IN ('pending','accepted') AND ((sender_id=? AND recipient_id=?) OR (sender_id=? AND recipient_id=?))").run(userId, blockedId, blockedId, userId);
+    });
+  }
+  unblock(userId: string, blockedId: string) {
+    return this.db.prepare("DELETE FROM blocks WHERE user_id=? AND blocked_id=?").run(userId, blockedId).changes === 1;
+  }
+  blockedAccounts(userId: string) {
+    return this.db.prepare("SELECT a.id,a.alias FROM blocks b JOIN accounts a ON a.id=b.blocked_id WHERE b.user_id=? ORDER BY a.alias,a.id").all(userId);
   }
   blocks(userId: string) {
     return new Set(
@@ -275,6 +312,7 @@ export class Storage {
     activityId: string,
     maximum: number,
     now: number,
+    duration = 40,
   ): "ok" | "full" | "conflict" | "closed" {
     return this.transaction(() => {
       if (this.reserved(userId, activityId)) return "ok";
@@ -282,9 +320,9 @@ export class Storage {
       if (
         this.db
           .prepare(
-            "SELECT 1 FROM reservations r JOIN offerings a ON a.activity_id=r.activity_id WHERE r.user_id=? AND a.starts_at=?",
+            "SELECT 1 FROM reservations r JOIN offerings a ON a.activity_id=r.activity_id LEFT JOIN scheduled_meetings m ON m.id=a.activity_id WHERE r.user_id=? AND a.starts_at<? AND a.starts_at+COALESCE(m.duration,40)*60000>?",
           )
-          .get(userId, this.startsAt(activityId))
+          .get(userId, this.startsAt(activityId) + duration * 60_000, this.startsAt(activityId))
       )
         return "conflict";
       if (this.countReservations(activityId) >= maximum) return "full";

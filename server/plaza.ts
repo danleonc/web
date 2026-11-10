@@ -18,6 +18,15 @@ export class PlazaStore {
   private blocked(first: string, second: string) {
     return !!this.storage.db.prepare("SELECT 1 FROM blocks WHERE (user_id=? AND blocked_id=?) OR (user_id=? AND blocked_id=?)").get(first, second, second, first);
   }
+  blockTarget(userId: string, kind: string, contentId: string) {
+    if (!/^[a-f0-9-]{36}$/.test(contentId) || !["post", "reply"].includes(kind)) throw Error("invalid_target");
+    const db = this.storage.db;
+    const content = kind === "post"
+      ? db.prepare("SELECT author_id AS authorId,author_id AS postAuthor FROM plaza_posts WHERE id=? AND hidden=0").get(contentId)
+      : db.prepare("SELECT r.author_id AS authorId,p.author_id AS postAuthor FROM plaza_replies r JOIN plaza_posts p ON p.id=r.post_id WHERE r.id=? AND r.hidden=0 AND p.hidden=0").get(contentId);
+    if (!content || content.authorId === userId || this.blocked(userId, String(content.authorId)) || this.blocked(userId, String(content.postAuthor))) throw Error("invalid_target");
+    return String(content.authorId);
+  }
   createPost(userId: string, value: PostInput, now: number) {
     const post = { id: randomUUID(), ...postValues(value) };
     this.storage.db.prepare("INSERT INTO plaza_posts(id,author_id,topic,title,body,created_at) VALUES(?,?,?,?,?,?)").run(post.id, userId, post.topic, post.title, post.body, now);

@@ -32,9 +32,17 @@ const mailbox = join(tmpdir(), "afinia-test-pilot-mailbox");
 await rm(mailbox, { recursive: true, force: true });
 await mkdir(mailbox, { mode: 0o700 });
 new ModerationStore(setup, Date.now).role("moderator_fixture", true);
+setup.createAccount(
+  { id: randomUUID(), username: "moderator_fixture_second", alias: "Revisión de prueba", passwordHash: await passwordHash("Una clave exclusiva del fixture 123"), recoveryHash: digest(randomUUID()) }, Date.now(),
+);
+const secondModerator = setup.account("moderator_fixture_second");
+setup.db.prepare("INSERT INTO account_emails(user_id,email,verified_at,adult_declared_at) VALUES(?,?,?,?)")
+  .run(secondModerator.id, "moderator2@example.test", Date.now(), Date.now());
+new ModerationStore(setup, Date.now).role("moderator_fixture_second", true);
 setup.close();
 const app = createRoomServer({
   plazaEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
+  meetingsEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
   push: { ...webpush.generateVAPIDKeys(), subject: "mailto:fixture@example.test", send: async () => {} },
   databasePath: join(directory, "test.sqlite"),
   google: await mockGoogle("http://127.0.0.1:4190"),

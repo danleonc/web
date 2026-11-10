@@ -30,6 +30,8 @@ import { EmailConfirmation } from "./email.ts";
 import type { SendVerificationEmail } from "./email.ts";
 import { handleFeatures } from "./features.ts";
 import { handlePlaza } from "./plaza-http.ts";
+import { meetingActivity, listMeetings } from "./meetings.ts";
+import { handleMeetingCreation } from "./meetings-http.ts";
 import { PushDelivery, handlePush } from "./push.ts";
 import type { PushConfig } from "./push.ts";
 
@@ -62,6 +64,7 @@ type Connection = {
 };
 type Options = {
   plazaEnabled?: boolean;
+  meetingsEnabled?: boolean;
   push?: PushConfig;
   google?: GoogleConfig;
   sendVerificationEmail?: SendVerificationEmail;
@@ -304,6 +307,13 @@ export function createRoomServer(options: Options = {}) {
       return;
     }
     if (await handlePush({ storage, delivery: pushDelivery, identity, sessionHash: tokenHash(req), originValid: validOrigin(req) }, req, res, path)) return;
+    if (options.meetingsEnabled && storage && moderation && path === "/api/meetings" && req.method === "POST") {
+      await handleMeetingCreation(storage, moderation, now, validOrigin, req, res, identity); return;
+    }
+    const cancelMeetingPath = path.match(/^\/api\/meetings\/([a-f0-9-]+)\/cancel$/);
+    if (options.meetingsEnabled && storage && moderation && cancelMeetingPath && req.method === "POST") {
+      await handleMeetingCreation(storage, moderation, now, validOrigin, req, res, identity, cancelMeetingPath[1]); return;
+    }
     if (
       await handleFeatures(
         {
@@ -327,31 +337,42 @@ export function createRoomServer(options: Options = {}) {
       )
     )
       return;
-    if (options.plazaEnabled && storage && await handlePlaza(storage, now, validOrigin, req, res, path, identity)) return;
+    if (options.plazaEnabled && storage && await handlePlaza(storage, now, validOrigin, req, res, path, identity,
+      (target) => {
+        if (!identity) throw Error("session_required");
+        storage.block(identity.id, target);
+        identity.blocks.add(target);
+        for (const peer of connections) if (peer.identity.id === identity.id) peer.socket.close(4003, "Bloqueo registrado; sales de esta sala");
+      },
+      (target) => {
+        if (!identity) return false;
+        const removed = storage.unblock(identity.id, target);
+        if (removed) identity.blocks.delete(target);
+        return removed;
+      })) return;
     if (storage && req.method === "GET" && path === "/api/activities") {
       if (!identity) {
         json(res, 401, { error: "session_required" });
         return;
       }
       json(res, 200, {
-        activities: featuredActivities.map((a) => ({
-          id: a.id,
-          title: a.title,
-          startsAt: new Date(storage.startsAt(a.id)).toISOString(),
-          minimum: a.minimum,
-          maximum: a.capacity,
-          reserved: storage.countReservations(a.id),
-          mine: storage.reserved(identity.id, a.id),
-          accessible:
-            !enforceSchedule ||
-            (now() >= storage.startsAt(a.id) - 300_000 &&
-              now() < storage.startsAt(a.id) + 300_000),
-          bookingOpen: now() < storage.startsAt(a.id),
-          ended:
-            rooms.get(a.id)?.session.phase === "closed" ||
-            rooms.get(a.id)?.session.phase === "insufficient" ||
-            (enforceSchedule && now() >= storage.startsAt(a.id) + 300_000),
-        })),
+        activities: (options.meetingsEnabled ? listMeetings(storage, now(), identity.id) : featuredActivities).map((a) => {
+          const start = storage.startsAt(a.id);
+          const room = rooms.get(a.id);
+          const cancelled = "cancelled" in a && a.cancelled;
+          const mine = storage.reserved(identity.id, a.id);
+          const ended = cancelled || room?.session.phase === "closed" || room?.session.phase === "insufficient";
+          const member = room?.session.participants.some((p) => p.id === identity.id) || false;
+          const entryClosed = enforceSchedule && now() >= start + 300_000 && !member;
+          return {
+            id: a.id, themeId: "themeId" in a ? a.themeId : a.id, title: a.title,
+            startsAt: new Date(start).toISOString(), minimum: a.minimum, maximum: a.capacity,
+            reserved: storage.countReservations(a.id), mine, cancelled, cancellationReason: cancelled && mine && "cancellationReason" in a ? a.cancellationReason : null,
+            accessible: !ended && (!enforceSchedule || (now() >= start - 300_000 && !entryClosed)),
+            bookingOpen: !cancelled && now() < start,
+            ended: ended || entryClosed,
+          };
+        }),
       });
       return;
     }
@@ -379,7 +400,7 @@ export function createRoomServer(options: Options = {}) {
       return;
     }
     const reservation =
-      storage && path.match(/^\/api\/reservations\/([a-z]+)$/);
+      storage && path.match(/^\/api\/reservations\/([a-z0-9-]+)$/);
     if (reservation && (req.method === "POST" || req.method === "DELETE")) {
       if (!validOrigin(req)) {
         json(res, 403, { error: "origin_rejected" });
@@ -389,7 +410,7 @@ export function createRoomServer(options: Options = {}) {
         json(res, 401, { error: "session_required" });
         return;
       }
-      const activity = featuredActivities.find((a) => a.id === reservation[1]);
+      const activity = options.meetingsEnabled ? meetingActivity(storage!, reservation[1]) : featuredActivities.find((a) => a.id === reservation[1]);
       if (!activity) {
         json(res, 404, { error: "not_found" });
         return;
@@ -408,11 +429,13 @@ export function createRoomServer(options: Options = {}) {
         json(res, 200, { ok: true });
         return;
       }
+      if ("cancelled" in activity && activity.cancelled) { json(res, 409, { error: "meeting_cancelled" }); return; }
       const result = storage!.reserve(
         identity.id,
         activity.id,
         activity.capacity,
         now(),
+        activity.duration,
       );
       json(
         res,
@@ -722,13 +745,14 @@ export function createRoomServer(options: Options = {}) {
       return;
     }
     const match = new URL(req.url || "/", "http://localhost").pathname.match(
-      /^\/api\/rooms\/([a-z]+)$/,
+      /^\/api\/rooms\/([a-z0-9-]+)$/,
     );
-    const activity = match && featuredActivities.find((a) => a.id === match[1]);
+    const activity = match && (options.meetingsEnabled && storage ? meetingActivity(storage, match[1]) : featuredActivities.find((a) => a.id === match[1]));
     if (!activity) {
       reject(socket, 404);
       return;
     }
+    if ("cancelled" in activity && activity.cancelled) { reject(socket, 410); return; }
     if (storage) {
       if (!storage.reserved(identity.id, activity.id)) {
         reject(socket, 403);

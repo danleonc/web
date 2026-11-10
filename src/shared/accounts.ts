@@ -32,7 +32,10 @@ export type AccountView = {
   } | null;
 };
 export type Offering = {
+  cancelled?: boolean;
+  cancellationReason?: string | null;
   id: string;
+  themeId?: string;
   title: string;
   startsAt: string;
   minimum: number;

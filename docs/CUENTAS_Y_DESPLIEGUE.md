@@ -61,7 +61,7 @@ Se incorporan imágenes normalizadas de acceso privado, votaciones de expulsión
 
 ## Copias y restauración
 
-La base usa claves foráneas, migración automática v1/v2/v3/v4/v5/v6 → `user_version=7`, WAL y transacciones. Las versiones 6 y 7 preparan almacenamiento de publicaciones, respuestas y reportes de Plaza. Una API y una interfaz de texto compartido con reportes y revisión de contenido se habilitan solo en una compilación y fixture internos de pruebas; el arranque normal las deja desactivadas. Faltan operación de moderación, apelaciones para retiradas de Plaza, controles antispam, exploración sin sesión, paginación, adjuntos, sincronización continua y conexiones antes de abrir Plaza real. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
+La base usa claves foráneas, migración automática hasta `user_version=10`, WAL y transacciones. Las versiones 6 a 10 preparan publicaciones, respuestas, reportes, apelaciones, solicitudes y mensajes privados. La API e interfaz compartidas se habilitan solo en una compilación y fixture internos de pruebas; el arranque normal las deja desactivadas. El chat privado no tiene cifrado de extremo a extremo. Faltan operación humana de moderación y revisión independiente, políticas de retención y datos, controles antispam, exploración sin sesión, paginación, adjuntos, sincronización continua y programación de encuentros antes de abrir la aplicación. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
 
 ```sh
 node scripts/backup-db.mjs .data/entre.sqlite backups/entre-fecha-unica.sqlite
@@ -117,7 +117,7 @@ Procedimiento, permisos y límites: [Acceso con Google](GOOGLE_LOGIN.md).
 
 ## Avisos en el teléfono
 
-El esquema vigente v5 añade suscripciones push por cuenta/dispositivo. La activación
+La migración v5 añadió suscripciones push por cuenta/dispositivo. El esquema interno actual es v12; incorpora Plaza, conexiones y convocatorias programadas con cancelación, todavía desactivadas en el servidor de despliegue. La activación
 es voluntaria y requiere configurar VAPID; sin sus variables el piloto conserva
 el acceso anterior y no ofrece activación. PWA, requisitos de iPhone, privacidad,
 baja/prueba y alcance pendiente de Plaza en [Notificaciones](NOTIFICACIONES.md).

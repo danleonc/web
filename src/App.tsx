@@ -40,6 +40,9 @@ import { clearHiddenImages } from "./media/ImageView";
 import { localReports, clearLocalReports } from "./safety/local";
 import { Plaza, blankDraft } from "./pages/Plaza";
 import { RealPlaza } from "./pages/RealPlaza";
+import { RealConnections } from "./pages/RealConnections";
+import { RealMeetings } from "./pages/RealMeetings";
+import type { Offering } from "./shared/accounts";
 import { activities } from "./data";
 import { plazaPeople } from "./plaza/data";
 import type { PlazaInvitation } from "./plaza/data";
@@ -109,6 +112,7 @@ function App() {
       : null
     : state.profile;
   const [page, setPage] = useState<Page>(getPage);
+  const [scheduledMeeting, setScheduledMeeting] = useState<Offering | null>(null);
   const tourOrigin = useRef({ page, scroll: 0 });
   const [detail, setDetail] = useState<Activity | null>(null);
   const [room, setRoom] = useState<Activity | null>(null);
@@ -610,8 +614,8 @@ function App() {
         <div className="demo-strip" role="region" aria-label="Aviso de maqueta">
           <Sparkles size={14} />
           <span>
-            {realPlazaEnabled && page === "plaza"
-              ? "La Plaza: conversaciones compartidas entre cuentas en el entorno de pruebas."
+            {realPlazaEnabled && (page === "plaza" || page === "connections" || page === "discover")
+              ? "Conversaciones compartidas entre cuentas en el entorno de pruebas."
               : page === "shared"
               ? accountsEnabled
                 ? "Piloto: tus reservas y mensajes se guardan en el servidor."
@@ -690,12 +694,15 @@ function App() {
           )}
           {sharedEnabled && page === "shared" && (
             <SharedRoom
+              key={scheduledMeeting?.id || "default"}
               {...stickerActions}
+              scheduled={realPlazaEnabled ? scheduledMeeting : undefined}
               profile={participationProfile}
               onProfile={() => prepareProfile("shared")}
             />
           )}
-          {page === "discover" && (
+          {page === "discover" && realPlazaEnabled && <RealMeetings onEnter={(meeting) => { setScheduledMeeting(meeting); navigate("shared"); }} onAccess={() => setAccessOpen(true)} />}
+          {page === "discover" && !realPlazaEnabled && (
             <Discover
               profile={participationProfile}
               reservations={state.reservations}
@@ -741,7 +748,8 @@ function App() {
               }}
             />
           )}
-          {page === "connections" && (
+          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onPlaza={() => navigate("plaza")} />}
+          {page === "connections" && !realPlazaEnabled && (
             <Connections
               {...stickerActions}
               onProfile={() => prepareProfile("connections")}

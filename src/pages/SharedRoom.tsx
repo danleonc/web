@@ -11,6 +11,7 @@ import { canChat, formatTime, presentPeople } from "../room/engine";
 import { GuidePanel } from "../room/SessionPanels";
 import { accountsEnabled } from "../shared/mode";
 import { useAccount } from "../shared/accounts";
+import type { Offering } from "../shared/accounts";
 import { AccountPanel } from "../shared/AccountPanel";
 
 import { RemovalPanel } from "../safety/RemovalPanel";
@@ -21,14 +22,15 @@ import { useConversationScroll } from "../room/useConversationScroll";
 export function SharedRoom({
   profile,
   onProfile,
+  scheduled,
   ...stickerActions
-}: StickerActions & { profile: Profile | null; onProfile: () => void }) {
+}: StickerActions & { profile: Profile | null; onProfile: () => void; scheduled?: Offering | null }) {
   const [report, setReport] = useState<{
     targetId: string;
     subject: string;
     messageId?: string;
   } | null>(null);
-  const [activityId, setActivityId] = useState("cafe");
+  const [activityId, setActivityId] = useState(scheduled?.id || "cafe");
   const [active, setActive] = useState(false);
   const [care, setCare] = useState(false);
   const [aware, setAware] = useState(false);
@@ -46,7 +48,7 @@ export function SharedRoom({
       setReport(null);
     }
   }, [account.account?.canParticipate, account.account?.restriction?.actionId]);
-  const activity = featuredActivities.find((a) => a.id === activityId)!;
+  const activity = featuredActivities.find((a) => a.id === (scheduled?.themeId || activityId)) || featuredActivities[0];
   const shared = useSharedRoom(
     activityId,
     account.account?.alias || profile?.alias || "Participante",
@@ -137,7 +139,7 @@ export function SharedRoom({
             value={activityId}
             onChange={(e) => setActivityId(e.target.value)}
           >
-            {featuredActivities.map((a) => (
+            {scheduled ? <option value={scheduled.id}>{scheduled.title}</option> : featuredActivities.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.title}
               </option>
