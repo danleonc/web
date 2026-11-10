@@ -1,6 +1,8 @@
 # Nexafia: infraestructura de pruebas y camino a publicación
 
-Evaluación del 5 de noviembre de 2026. Propuesta operativa, no una contratación ni una certificación. La beta completa no está terminada: La Plaza, solicitudes y chat privado todavía necesitan backend compartido; los encuentros existentes necesitan completar su operación. No es una aplicación de citas y no exige declarar intenciones románticas.
+Evaluación inicial del 5 de noviembre de 2026, actualizada con el estado interno del 10 de noviembre. Propuesta operativa, no una contratación ni una certificación. Existen versiones compartidas internas de La Plaza, solicitudes, chat privado y encuentros programados, pero siguen desactivadas en el arranque normal y falta completar su operación, pruebas y despliegue. No es una aplicación de citas y no exige declarar intenciones románticas.
+
+**Comprobación del 10 de noviembre:** la pestaña de Render estaba en la creación de un servicio web, paso de configuración, y ofrecía conectar un proveedor Git. Esa pantalla no confirma ningún despliegue y no demuestra si existen o no otros servicios en la cuenta. No se creó ni contrató un servicio durante esta comprobación; no se vinculó GitHub ni se cambió el plan.
 
 ## Selección provisional
 
