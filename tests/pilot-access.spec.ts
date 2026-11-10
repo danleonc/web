@@ -41,6 +41,11 @@ test("exploración abierta, cuenta pendiente, correo confirmado y retorno a La P
       exact: true,
     }),
   ).toBeVisible();
+  await access.getByText("Descargar mis datos", { exact: true }).click();
+  const downloadPromise = page.waitForEvent("download");
+  await access.getByRole("link", { name: "Descargar copia parcial de mis datos" }).click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe("nexafia-contenido-propio.json");
   expect(
     (await page.request.post("/api/reservations/cafe", { data: {} })).status(),
   ).toBe(403);

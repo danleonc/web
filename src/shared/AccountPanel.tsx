@@ -222,6 +222,11 @@ export function AccountPanel({
             La sesión dura cuatro horas. Tus reservas, bloqueos e historial
             permanecen guardados al salir.
           </p>
+          <details className="account-history">
+            <summary>Descargar mis datos</summary>
+            <p>Descarga una copia parcial del contenido propio guardado en el servidor. No incluye imágenes, registros administrativos ni datos guardados solo en este dispositivo. Cada sección indica si supera el límite de la descarga.</p>
+            <a className="button secondary" href="/api/account/export" download="nexafia-contenido-propio.json">Descargar copia parcial de mis datos</a>
+          </details>
           {state.recovery && (
             <div className="recovery-notice">
               <h3>Guarda tu clave de recuperación.</h3>

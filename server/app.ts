@@ -33,6 +33,7 @@ import { handlePlaza } from "./plaza-http.ts";
 import { meetingActivity, listMeetings } from "./meetings.ts";
 import { handleMeetingCreation } from "./meetings-http.ts";
 import { PushDelivery, handlePush } from "./push.ts";
+import { exportOwnContent } from "./account-export.ts";
 import type { PushConfig } from "./push.ts";
 
 type Identity = {
@@ -281,6 +282,11 @@ export function createRoomServer(options: Options = {}) {
       return;
     }
     const identity = authenticated(req);
+    if (storage && path === "/api/account/export" && req.method === "GET") {
+      if (!identity) { json(res, 401, { error: "session_required" }); return; }
+      res.setHeader("Content-Disposition", "attachment; filename=nexafia-contenido-propio.json");
+      json(res, 200, exportOwnContent(storage, identity.id, now())); return;
+    }
     if (
       storage &&
       identity &&
