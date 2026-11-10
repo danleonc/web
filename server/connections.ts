@@ -64,6 +64,14 @@ export class ConnectionsStore {
       return result.changes === 1;
     });
   }
+  seen(actor: string, connectionId: string, messageId: string) {
+    const connection = this.visible(connectionId, actor);
+    if (!connection || connection.status !== "accepted") return false;
+    const db = this.storage.db;
+    if (!db.prepare("SELECT 1 FROM plaza_private_messages WHERE id=? AND connection_id=? AND sender_id<>? AND hidden=0 AND body<>''").get(messageId, connectionId, actor)) return false;
+    db.prepare("DELETE FROM push_private_queue WHERE connection_id=? AND user_id=? AND message_id=?").run(connectionId, actor, messageId);
+    return true;
+  }
   send(actor: string, id: string, clientId: string, value: string) {
     const connection = this.visible(id, actor);
     if (!connection || connection.status !== "accepted") return null;

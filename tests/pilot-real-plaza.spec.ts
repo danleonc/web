@@ -214,10 +214,12 @@ test("dos personas aceptan una solicitud antes de conversar en privado", async (
     await second.getByLabel("Mensaje privado").fill("Hola, conversemos");
     await second.getByRole("button", { name: "Enviar mensaje" }).click();
     await expect(first.getByText("Conexión aceptada", { exact: true })).toBeVisible({ timeout: 12000 });
-    await first.getByRole("button", { name: "Abrir conversación" }).click();
+    await Promise.all([first.waitForResponse((response) => response.url().endsWith("/seen") && response.status() === 200, { timeout: 8000 }), first.getByRole("button", { name: "Abrir conversación" }).click()]);
+    const seenNewMessage = first.waitForResponse((response) => response.url().endsWith("/seen") && response.status() === 200, { timeout: 12000 });
     await second.getByLabel("Mensaje privado").fill("Mensaje nuevo sin actualizar la página");
     await second.getByRole("button", { name: "Enviar mensaje" }).click();
     await expect(first.getByText("Mensaje nuevo sin actualizar la página", { exact: true })).toBeVisible({ timeout: 12000 });
+    await seenNewMessage;
     second.once("dialog", (dialog) => void dialog.accept());
     await second.getByRole("article").filter({ hasText: "Mensaje nuevo sin actualizar la página" }).getByRole("button", { name: "Retirar mensaje" }).click();
     await expect(first.getByText("Mensaje nuevo sin actualizar la página", { exact: true })).toHaveCount(0, { timeout: 12000 });

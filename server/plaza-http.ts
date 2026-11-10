@@ -38,6 +38,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   const invitation = path.match(/^\/api\/plaza\/invitations\/([a-f0-9-]{36})\/decision$/);
   const privateMessages = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages$/);
   const privateMessage = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages\/([a-f0-9-]{36})$/);
+  const privateSeen = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/seen$/);
   const privateBlock = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/block$/);
   if (req.method === "GET") {
     if (path === "/api/plaza/posts") json(res, 200, { posts: plaza.listPosts(actor.id) });
@@ -53,7 +54,10 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   }
   if (!validOrigin(req)) { req.resume(); json(res, 403, { error: "origin_rejected" }); return true; }
   try {
-    if (req.method === "DELETE" && privateMessage) {
+    if (req.method === "POST" && privateSeen) {
+      const value = await body(req); if (!fields(value, ["messageId"])) throw Error("invalid_body");
+      const ok = connections.seen(actor.id, privateSeen[1], String(value.messageId)); json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
+    } else if (req.method === "DELETE" && privateMessage) {
       req.resume(); const ok = connections.remove(actor.id, privateMessage[1], privateMessage[2]); json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
     } else if (req.method === "POST" && privateBlock) {
       const value = await body(req);

@@ -49,6 +49,24 @@ test('push privado pendiente se descarta cuando se cierra la conexión',async t=
  await f.request(`/api/plaza/invitations/${inv.id}/decision`,'POST',{action:'withdraw'},ana.cookie);
  const storage=new Storage(f.path); try {await new PushDelivery(storage,{...config,send:async()=>sent.push(1)},Date.now).processMessages(); assert.deepEqual(sent,[]); assert.equal(storage.db.prepare('SELECT count(*) AS n FROM push_private_queue').get().n,0);} finally {storage.close();}
 });
+test('abrir mensajes solo retira avisos pendientes hasta el mensaje observado',async t=>{
+ const sent=[]; const f=await fixture(t,{plazaEnabled:true,push:{...config,send:async()=>{}}}); const ana=await f.signup('seen_ana'), bea=await f.signup('seen_bea'), cata=await f.signup('seen_cata');
+ await f.request('/api/push/subscribe','POST',{subscription:subscription('seen')},bea.cookie);
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Tema',body:'Texto'},bea.cookie)).body.post;
+ const inv=(await f.request('/api/plaza/invitations','POST',{kind:'post',contentId:post.id,note:''},ana.cookie)).body.invitation;
+ await f.request(`/api/plaza/invitations/${inv.id}/decision`,'POST',{action:'accept'},bea.cookie);
+ const path=`/api/plaza/connections/${inv.id}/messages`, ack=`/api/plaza/connections/${inv.id}/seen`;
+ const first=(await f.request(path,'POST',{clientId:'message-seen-one',body:'Primero'},ana.cookie)).body.message.id;
+ const second=(await f.request(path,'POST',{clientId:'message-seen-two',body:'Segundo'},ana.cookie)).body.message.id;
+ assert.equal((await f.request(ack,'POST',{messageId:second},cata.cookie)).status,404);
+ assert.equal((await f.request(ack,'POST',{messageId:second},ana.cookie)).status,404);
+ assert.equal((await f.request(ack,'POST',{messageId:second},bea.cookie,'https://ajeno.example')).status,403);
+ assert.equal((await f.request(ack,'POST',{messageId:first},bea.cookie)).status,200);
+ const storage=new Storage(f.path); try {const delivery=new PushDelivery(storage,{...config,send:async(sub,payload)=>sent.push({sub,payload})},Date.now); await delivery.processMessages(); assert.equal(sent.length,1);
+ const third=(await f.request(path,'POST',{clientId:'message-seen-three',body:'Tercero'},ana.cookie)).body.message.id;
+ assert.equal((await f.request(ack,'POST',{messageId:third},bea.cookie)).status,200); await delivery.processMessages(); assert.equal(sent.length,1);
+ } finally {storage.close();}
+});
 test('el servidor procesa automáticamente avisos privados con Plaza activa',async t=>{
  const sent=[]; const f=await fixture(t,{plazaEnabled:true,push:{...config,send:async(sub,payload)=>sent.push({sub,payload})}});
  const ana=await f.signup('private_auto_a'), bea=await f.signup('private_auto_b');
