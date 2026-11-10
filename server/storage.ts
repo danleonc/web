@@ -50,7 +50,8 @@ export class Storage {
       version !== 10 &&
       version !== 11 &&
       version !== 12 &&
-      version !== 13
+      version !== 13 &&
+      version !== 14
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -148,6 +149,11 @@ export class Storage {
       CREATE TABLE IF NOT EXISTS push_queue(meeting_id TEXT NOT NULL, endpoint_hash TEXT NOT NULL, user_id TEXT NOT NULL, created_at INTEGER NOT NULL, next_at INTEGER NOT NULL, attempts INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(meeting_id,endpoint_hash));
       CREATE INDEX IF NOT EXISTS push_queue_due ON push_queue(next_at);
       PRAGMA user_version=13; COMMIT;`);
+    if (version < 14)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS push_private_queue(connection_id TEXT NOT NULL,endpoint_hash TEXT NOT NULL,user_id TEXT NOT NULL,message_id TEXT NOT NULL,created_at INTEGER NOT NULL,next_at INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(connection_id,endpoint_hash));
+      CREATE INDEX IF NOT EXISTS push_private_due ON push_private_queue(next_at);
+      PRAGMA user_version=14; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

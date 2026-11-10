@@ -8,6 +8,58 @@ import {DatabaseSync} from 'node:sqlite';
 const keys=webpush.generateVAPIDKeys();
 const config={...keys,subject:'mailto:pilot@example.test'};
 const subscription=(suffix='one')=>({endpoint:`https://fcm.googleapis.com/fcm/send/test-${suffix}`,expirationTime:null,keys:{p256dh:keys.publicKey,auth:Buffer.alloc(16,2).toString('base64url')}});
+test('push privado agrupa mensajes, respeta consentimiento y no revela contenido',async t=>{
+ const sent=[]; const f=await fixture(t,{plazaEnabled:true,push:{...config,send:async()=>{}}});
+ const ana=await f.signup('priv_ana'), bea=await f.signup('priv_bea'), otra=await f.signup('priv_otra');
+ for(const [p,suffix] of [[ana,'ana'],[bea,'bea'],[otra,'otra']]) assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription(suffix)},p.cookie)).status,200);
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Tema',body:'Contenido'},bea.cookie)).body.post;
+ const invitation=(await f.request('/api/plaza/invitations','POST',{kind:'post',contentId:post.id,note:''},ana.cookie)).body.invitation;
+ await f.request(`/api/plaza/invitations/${invitation.id}/decision`,'POST',{action:'accept'},bea.cookie);
+ const path=`/api/plaza/connections/${invitation.id}/messages`;
+ for(const clientId of ['message-one','message-two']) assert.equal((await f.request(path,'POST',{clientId,body:'Contenido privado secreto'},ana.cookie)).status,201);
+ assert.equal((await f.request(path,'POST',{clientId:'message-two',body:'Contenido privado secreto'},ana.cookie)).status,201);
+ await f.restart(); const storage=new Storage(f.path);
+ try {const delivery=new PushDelivery(storage,{...config,send:async(sub,payload)=>sent.push({sub,payload})},Date.now); await delivery.processMessages(); assert.equal(sent.length,1); assert.equal(sent[0].sub.endpoint,subscription('bea').endpoint); assert.equal(sent[0].payload.includes('priv_ana'),false); assert.equal(sent[0].payload.includes('secreto'),false); await delivery.processMessages(); assert.equal(sent.length,1);
+ await f.request(path,'POST',{clientId:'message-three',body:'Otro mensaje'},ana.cookie);
+ await f.request(`/api/plaza/connections/${invitation.id}/block`,'POST',{},bea.cookie);
+ await delivery.processMessages(); assert.equal(sent.length,1);
+ } finally {storage.close();}
+});
+test('push privado reintenta y conserva un mensaje recibido durante el envío',async t=>{
+ const f=await fixture(t,{plazaEnabled:true,push:{...config,send:async()=>{}}}); const ana=await f.signup('race_ana'), bea=await f.signup('race_bea');
+ await f.request('/api/push/subscribe','POST',{subscription:subscription('race')},bea.cookie);
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Tema',body:'Texto'},bea.cookie)).body.post;
+ const inv=(await f.request('/api/plaza/invitations','POST',{kind:'post',contentId:post.id,note:''},ana.cookie)).body.invitation;
+ await f.request(`/api/plaza/invitations/${inv.id}/decision`,'POST',{action:'accept'},bea.cookie);
+ const path=`/api/plaza/connections/${inv.id}/messages`; await f.request(path,'POST',{clientId:'message-race-one',body:'Primero'},ana.cookie);
+ let attempts=0, clock=Date.now(); const storage=new Storage(f.path);
+ try {const delivery=new PushDelivery(storage,{...config,send:async()=>{attempts++; if(attempts===1)throw Error('fallo temporal'); if(attempts===2)await f.request(path,'POST',{clientId:'message-race-two',body:'Segundo'},ana.cookie);}},()=>clock);
+ await delivery.processMessages(); await delivery.processMessages(); assert.equal(attempts,1);
+ clock+=120000; await delivery.processMessages(); assert.equal(attempts,2);
+ await delivery.processMessages(); assert.equal(attempts,3);
+ } finally {storage.close();}
+});
+test('push privado pendiente se descarta cuando se cierra la conexión',async t=>{
+ const sent=[]; const f=await fixture(t,{plazaEnabled:true,push:{...config,send:async()=>{}}}); const ana=await f.signup('close_ana'), bea=await f.signup('close_bea');
+ await f.request('/api/push/subscribe','POST',{subscription:subscription('close')},bea.cookie);
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Tema',body:'Texto'},bea.cookie)).body.post;
+ const inv=(await f.request('/api/plaza/invitations','POST',{kind:'post',contentId:post.id,note:''},ana.cookie)).body.invitation;
+ await f.request(`/api/plaza/invitations/${inv.id}/decision`,'POST',{action:'accept'},bea.cookie);
+ await f.request(`/api/plaza/connections/${inv.id}/messages`,'POST',{clientId:'message-close',body:'Hola'},ana.cookie);
+ await f.request(`/api/plaza/invitations/${inv.id}/decision`,'POST',{action:'withdraw'},ana.cookie);
+ const storage=new Storage(f.path); try {await new PushDelivery(storage,{...config,send:async()=>sent.push(1)},Date.now).processMessages(); assert.deepEqual(sent,[]); assert.equal(storage.db.prepare('SELECT count(*) AS n FROM push_private_queue').get().n,0);} finally {storage.close();}
+});
+test('el servidor procesa automáticamente avisos privados con Plaza activa',async t=>{
+ const sent=[]; const f=await fixture(t,{plazaEnabled:true,push:{...config,send:async(sub,payload)=>sent.push({sub,payload})}});
+ const ana=await f.signup('private_auto_a'), bea=await f.signup('private_auto_b');
+ await f.request('/api/push/subscribe','POST',{subscription:subscription('private-auto')},bea.cookie);
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Tema',body:'Texto'},bea.cookie)).body.post;
+ const inv=(await f.request('/api/plaza/invitations','POST',{kind:'post',contentId:post.id,note:''},ana.cookie)).body.invitation;
+ await f.request(`/api/plaza/invitations/${inv.id}/decision`,'POST',{action:'accept'},bea.cookie);
+ await f.request(`/api/plaza/connections/${inv.id}/messages`,'POST',{clientId:'message-auto',body:'Hola'},ana.cookie);
+ const deadline=Date.now()+19000; while(!sent.length && Date.now()<deadline) await new Promise(resolve=>setTimeout(resolve,100));
+ assert.equal(sent.length,1); assert.equal(sent[0].sub.endpoint,subscription('private-auto').endpoint);
+});
 test('push de cancelación persiste, reintenta y solo alcanza dispositivos de inscritos',async t=>{
  const sent=[]; let fail=true; let clock=Date.now();
  const f=await fixture(t,{meetingsEnabled:true,push:{...config,send:async()=>{}}});

@@ -22,6 +22,8 @@ programan avisos falsos, métricas de actividad o recordatorios automáticos.
 
 En el entorno interno de encuentros, cancelar una convocatoria encola un aviso genérico para los dispositivos activados de quienes reservaron. La cola se guarda junto con la cancelación, se procesa en una sola instancia cada 15 segundos en lotes de hasta 20 y reintenta hasta cinco veces durante un máximo de 24 horas; un dispositivo dado de baja o una reserva retirada deja de ser destinatario. El proveedor puede aceptar el mensaje sin que esto confirme su visualización. Un reinicio durante el envío puede producir un duplicado. Al tocar el aviso se abre Encuentros en otra ventana. No se han configurado claves reales ni probado teléfonos reales, y faltan observabilidad, recuperación de fallos y avisos para otros eventos.
 
+En el entorno interno de Conexiones, los mensajes de una conexión aceptada generan un aviso genérico para los dispositivos habilitados del destinatario. Se agrupan los avisos pendientes por conversación y dispositivo; antes del envío se comprueban suscripción, estado de la conexión, bloqueos y visibilidad del mensaje. La cola es persistente y tiene el mismo límite de reintentos y caducidad que las cancelaciones. Al tocar el aviso se abre Conexiones en otra ventana. El aviso no incorpora identidad ni contenido, no confirma lectura y puede llegar después de que la persona haya leído el mensaje; todavía no hay preferencias por tipo de aviso ni pruebas en dispositivos reales.
+
 Se añaden manifest, iconos de la marca y worker push. El worker no cachea HTML/JS,
 por lo que no congela versiones de la app. No pide permisos al entrar. Una cuenta
 habilitada en un piloto configurado puede activar, probar y desactivar su propio

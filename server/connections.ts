@@ -63,8 +63,12 @@ export class ConnectionsStore {
     const old = db.prepare("SELECT id,body FROM plaza_private_messages WHERE connection_id=? AND sender_id=? AND client_id=?").get(id, actor, clientId);
     if (old) { if (old.body !== body) throw Error("client_id_conflict"); return { id: String(old.id) }; }
     if (!this.storage.takeLimit(digest(`plaza-private:${actor}`), 120, 60 * 60_000, this.now())) throw Error("rate_limited");
-    const messageId = randomUUID();
-    db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at) VALUES(?,?,?,?,?,?)").run(messageId, id, actor, clientId, body, this.now());
+    const messageId = randomUUID(), time = this.now();
+    const recipient = String(connection.sender_id === actor ? connection.recipient_id : connection.sender_id);
+    this.storage.transaction(() => {
+      db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at) VALUES(?,?,?,?,?,?)").run(messageId, id, actor, clientId, body, time);
+      db.prepare("INSERT INTO push_private_queue(connection_id,endpoint_hash,user_id,message_id,created_at,next_at) SELECT ?,endpoint_hash,user_id,?,?,? FROM push_subscriptions WHERE user_id=? ON CONFLICT(connection_id,endpoint_hash) DO UPDATE SET message_id=excluded.message_id,created_at=excluded.created_at,next_at=excluded.next_at,attempts=0").run(id, messageId, time, time, recipient);
+    });
     return { id: messageId };
   }
 }

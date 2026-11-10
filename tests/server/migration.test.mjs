@@ -95,7 +95,13 @@ test("actualizar v12 preserva convocatorias y crea cola de avisos", async () => 
     finally { updated.close(); }
   } finally { await rm(dir, { recursive: true, force: true }); }
 });
-test("migración v1 a v13 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
+test("actualizar v13 conserva la cola de cancelaciones y agrega cola privada", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "nexafia-v13-")); const path = join(dir, "old.sqlite");
+  try { const old = new Storage(path); old.db.prepare("INSERT INTO push_queue(meeting_id,endpoint_hash,user_id,created_at,next_at) VALUES(?,?,?,?,?)").run("meeting","device","person",1,1); old.db.exec("DROP TABLE push_private_queue; PRAGMA user_version=13;"); old.close();
+    const updated = new Storage(path); try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_queue").get().n,1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_private_queue").get().n,0); } finally {updated.close();}
+  } finally {await rm(dir, {recursive:true,force:true});}
+});
+test("migración v1 a v14 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
   const dir = await mkdtemp(join(tmpdir(), "afinia-upgrade-")),
     path = join(dir, "old.sqlite");
   try {
@@ -158,7 +164,7 @@ test("migración v1 a v13 conserva cuenta, reserva, sesión e historial con segu
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        13,
+        14,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);

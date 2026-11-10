@@ -51,6 +51,28 @@ export class PushDelivery {
   private now: () => number;
   constructor(storage: Storage, config: PushConfig, now: () => number) { validateConfig(config); this.storage = storage; this.config = config; this.now = now; }
   get publicKey() { return this.config.publicKey; }
+  async processMessages() {
+    const db = this.storage.db, now = this.now();
+    const eligible = `EXISTS (SELECT 1 FROM push_subscriptions s JOIN plaza_connections c ON c.id=push_private_queue.connection_id JOIN plaza_private_messages m ON m.id=push_private_queue.message_id AND m.connection_id=c.id WHERE s.endpoint_hash=push_private_queue.endpoint_hash AND s.user_id=push_private_queue.user_id AND c.status='accepted' AND (c.sender_id=s.user_id OR c.recipient_id=s.user_id) AND m.sender_id<>s.user_id AND m.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=c.sender_id AND b.blocked_id=c.recipient_id) OR (b.user_id=c.recipient_id AND b.blocked_id=c.sender_id)))`;
+    db.prepare(`DELETE FROM push_private_queue WHERE created_at<? OR attempts>=5 OR NOT ${eligible}`).run(now - 86400_000);
+    const rows = db.prepare("SELECT q.connection_id,q.endpoint_hash,q.user_id,q.message_id,q.attempts,s.subscription_json FROM push_private_queue q JOIN push_subscriptions s ON s.endpoint_hash=q.endpoint_hash AND s.user_id=q.user_id WHERE q.next_at<=? ORDER BY q.next_at LIMIT 20").all(now);
+    for (const row of rows) {
+      const connection = String(row.connection_id), endpoint = String(row.endpoint_hash), user = String(row.user_id), message = String(row.message_id);
+      if (!db.prepare(`SELECT 1 FROM push_private_queue WHERE connection_id=? AND endpoint_hash=? AND message_id=? AND ${eligible}`).get(connection, endpoint, message)) continue;
+      let sub: webpush.PushSubscription | null = null;
+      try { sub = validSubscription(JSON.parse(String(row.subscription_json))); } catch { /* Invalid stored subscription. */ }
+      if (!sub) { db.prepare("DELETE FROM push_subscriptions WHERE endpoint_hash=? AND user_id=?").run(endpoint, user); continue; }
+      try {
+        const payload = JSON.stringify({ title: "Nexafia", body: "Tienes un mensaje nuevo. Entra a Conexiones para verlo.", tag: "nexafia-private-message" });
+        await (this.config.send || ((s, p, o) => webpush.sendNotification(s, p, o)))(sub, payload, { vapidDetails: { subject: this.config.subject, publicKey: this.config.publicKey, privateKey: this.config.privateKey }, TTL: 60, timeout: 5000 });
+        db.prepare("DELETE FROM push_private_queue WHERE connection_id=? AND endpoint_hash=? AND message_id=?").run(connection, endpoint, message);
+      } catch (error) {
+        const status = (error as { statusCode?: number }).statusCode;
+        if (status === 404 || status === 410) db.prepare("DELETE FROM push_subscriptions WHERE endpoint_hash=? AND user_id=?").run(endpoint, user);
+        else db.prepare("UPDATE push_private_queue SET attempts=attempts+1,next_at=? WHERE connection_id=? AND endpoint_hash=? AND message_id=?").run(this.now() + Math.min(3600_000, 60_000 * 2 ** Number(row.attempts)), connection, endpoint, message);
+      }
+    }
+  }
   async processQueue() {
     const db = this.storage.db, now = this.now();
     db.prepare("DELETE FROM push_queue WHERE created_at<? OR attempts>=5 OR NOT EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.endpoint_hash=push_queue.endpoint_hash AND s.user_id=push_queue.user_id) OR NOT EXISTS (SELECT 1 FROM reservations r WHERE r.activity_id=push_queue.meeting_id AND r.user_id=push_queue.user_id)").run(now - 86400_000);

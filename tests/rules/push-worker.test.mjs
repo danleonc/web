@@ -23,3 +23,8 @@ test('worker: aviso de cancelación abre Encuentros sin interrumpir la ventana e
  w.handlers.notificationclick({notification:{tag:'nexafia-meeting-cancelled',close:()=>{}},waitUntil:p=>promise=p});await promise;
  assert.equal(w.opened.length,1); const target=new URL(w.opened[0]); assert.equal(target.origin,'https://example.test'); assert.equal(target.pathname,'/web/'); assert.equal(target.hash,'#discover');
 });
+test('worker: aviso privado abre Conexiones sin interrumpir una sala',async()=>{
+ const w=worker([{url:'https://example.test/web/#room',focus:async()=>{},postMessage:()=>{throw Error('no debe cambiar la sala');}}]);let promise;
+ w.handlers.notificationclick({notification:{tag:'nexafia-private-message',close:()=>{}},waitUntil:p=>promise=p});await promise;
+ assert.equal(new URL(w.opened[0]).hash,'#connections');
+});

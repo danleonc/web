@@ -117,7 +117,7 @@ Procedimiento, permisos y límites: [Acceso con Google](GOOGLE_LOGIN.md).
 
 ## Avisos en el teléfono
 
-La migración v5 añadió suscripciones push por cuenta/dispositivo. El esquema interno actual es v13; incorpora Plaza, conexiones, convocatorias programadas y cola de avisos de cancelación, todavía desactivadas en el servidor de despliegue. La activación
+La migración v5 añadió suscripciones push por cuenta/dispositivo. El esquema interno actual es v14; incorpora Plaza, conexiones, convocatorias y colas de avisos de cancelación y mensajes privados, todavía desactivadas en el servidor de despliegue. La activación
 es voluntaria y requiere configurar VAPID; sin sus variables el piloto conserva
 el acceso anterior y no ofrece activación. PWA, requisitos de iPhone, privacidad,
 baja/prueba y alcance pendiente de Plaza en [Notificaciones](NOTIFICACIONES.md).

@@ -1277,8 +1277,8 @@ export function createRoomServer(options: Options = {}) {
   maintenance.unref();
   let pushPending: Promise<void> | null = null;
   const pushTimer = setInterval(() => {
-    if (options.meetingsEnabled && pushDelivery && !pushPending) {
-      pushPending = pushDelivery.processQueue().catch(() => {}).finally(() => { pushPending = null; });
+    if ((options.meetingsEnabled || options.plazaEnabled) && pushDelivery && !pushPending) {
+      pushPending = (async () => { if (options.meetingsEnabled) await pushDelivery.processQueue(); if (options.plazaEnabled) await pushDelivery.processMessages(); })().catch(() => {}).finally(() => { pushPending = null; });
     }
   }, 15_000);
   pushTimer.unref();
