@@ -89,6 +89,10 @@ test("exploración abierta, cuenta pendiente, correo confirmado y retorno a La P
   ).toBeVisible();
   await page.goto("/#plaza");
   await page.getByRole("button", { name: "Mi cuenta", exact: true }).click();
+  await page.getByText("Descargar mis datos", { exact: true }).click();
+  await page.getByRole("button", { name: "Ver mis imágenes disponibles" }).click({ timeout: 5000 });
+  await expect(page.getByText("No hay imágenes propias disponibles para descargar.")).toBeVisible();
+  expect((await new AxeBuilder({ page }).include('[aria-label="Cuenta y reservas"]').withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
   await page
     .getByRole("button", { name: "Cerrar sesión", exact: true })
     .click();

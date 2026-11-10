@@ -149,6 +149,11 @@ test("piloto: imagen compartida, reporte, revisión, baneo apelable y expulsión
       .getByRole("button", { name: "Compartir imagen", exact: true })
       .click();
     await expect(pages[1].getByAltText("Un paisaje de prueba")).toBeVisible();
+    await page.getByText("Descargar mis datos", { exact: true }).click();
+    await page.getByRole("button", { name: "Ver mis imágenes disponibles" }).click();
+    const imageDownload = page.waitForEvent("download");
+    await page.getByRole("link", { name: "Descargar imagen 1" }).click();
+    expect((await imageDownload).suggestedFilename()).toMatch(/\.webp$/);
     await report(pages[1], "Reportar imagen");
     await decision(mod, names[0], "hide-image");
     await expect(

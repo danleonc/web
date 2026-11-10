@@ -1,5 +1,6 @@
 import { GoogleAccess, GoogleProfile } from "./GoogleAccess";
 import { EmailConfirmationForm } from "./EmailConfirmationForm";
+import { OwnImages } from "./OwnImages";
 import { AccountRestriction, ModerationDesk } from "../safety/ModerationDesk";
 import { useState, useId } from "react";
 import type { useAccount } from "./accounts";
@@ -228,6 +229,7 @@ export function AccountPanel({
             <p>Descarga una copia parcial del contenido propio guardado en el servidor. No incluye imágenes, registros administrativos ni datos guardados solo en este dispositivo. Cada página contiene hasta 1.000 registros por sección; si una sección tiene «truncated: true», descarga la página siguiente. Si los datos cambian entre descargas, algunos registros podrían repetirse o quedar fuera.</p>
             <label>Página de descarga <input type="number" min="1" max="999999" value={exportPage} onChange={(e) => setExportPage(e.target.value)} /></label>
             {/^[1-9]\d{0,5}$/.test(exportPage) ? <a className="button secondary" href={`/api/account/export?page=${exportPage}`} download="nexafia-contenido-propio.json">Descargar copia parcial de mis datos</a> : <p role="alert">Indica una página entre 1 y 999999.</p>}
+            {state.account.canParticipate && !state.account.restriction && <OwnImages key={state.account.id} />}
           </details>
           {state.recovery && (
             <div className="recovery-notice">

@@ -315,6 +315,15 @@ export function createRoomServer(options: Options = {}) {
       json(res, 403, { error: "account_restricted" });
       return;
     }
+    if (storage && path === "/api/account/media" && req.method === "GET") {
+      if (!identity) { json(res, 401, { error: "session_required" }); return; }
+      if (moderation?.restriction(identity.id)) { json(res, 403, { error: "account_restricted" }); return; }
+      const values = new URL(req.url!, "http://localhost").searchParams.getAll("page");
+      if (values.length > 1 || (values.length && !/^[1-9]\d{0,5}$/.test(values[0]))) { json(res, 422, { error: "invalid_page" }); return; }
+      const page = values.length ? Number(values[0]) : 1;
+      const images = storage.db.prepare("SELECT m.id,m.created_at AS createdAt FROM media m JOIN memberships p ON p.room_id=m.room_id AND p.user_id=m.owner_id WHERE m.owner_id=? AND m.hidden=0 ORDER BY m.created_at,m.id LIMIT 51 OFFSET ?").all(identity.id, (page - 1) * 50);
+      json(res, 200, { images: images.slice(0, 50), page, hasMore: images.length > 50 }); return;
+    }
     if (await handlePush({ storage, delivery: pushDelivery, identity, sessionHash: tokenHash(req), originValid: validOrigin(req) }, req, res, path)) return;
     if (options.meetingsEnabled && storage && moderation && path === "/api/meetings" && req.method === "POST") {
       await handleMeetingCreation(storage, moderation, now, validOrigin, req, res, identity); return;
