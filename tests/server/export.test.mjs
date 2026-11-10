@@ -24,4 +24,8 @@ test('descarga identifica cada sección truncada al superar mil registros',async
  const db=new DatabaseSync(f.path); try { const insert=db.prepare('INSERT INTO plaza_posts(id,author_id,topic,title,body,created_at) VALUES(?,?,?,?,?,?)'); db.exec('BEGIN'); for(let i=0;i<1001;i++)insert.run(`post-${i}`,user.id,'crear',`Título ${i}`,'Texto',i); db.exec('COMMIT'); } finally {db.close();}
  const result=await f.request('/api/account/export','GET',undefined,user.cookie);
  assert.equal(result.body.posts.items.length,1000); assert.equal(result.body.posts.truncated,true); assert.equal(result.body.replies.truncated,false);
+ const next=await f.request('/api/account/export?page=2','GET',undefined,user.cookie);
+ assert.equal(next.status,200); assert.equal(next.body.page,2); assert.equal(next.body.posts.items.length,1); assert.equal(next.body.posts.truncated,false);
+ assert.equal((await f.request('/api/account/export?page=0','GET',undefined,user.cookie)).status,422);
+ assert.equal((await f.request('/api/account/export?page=2x','GET',undefined,user.cookie)).status,422);
 });

@@ -58,6 +58,16 @@ export function RealConnections({ account, loaded, onAccess, onPlaza }: { accoun
     catch (e) { setError(e instanceof Error ? e.message : "No pudimos bloquear a esta persona."); }
     finally { setBusy(false); }
   }
+  async function remove(messageId: string) {
+    if (!selected || busy || !window.confirm("¿Retirar este mensaje de la conversación? Si fue reportado, puede conservarse una copia para revisión.")) return;
+    requestVersion.current++; setBusy(true); setError("");
+    try {
+      const response = await fetch(`/api/plaza/connections/${selected}/messages/${messageId}`, { method: "DELETE", credentials: "same-origin" });
+      if (!response.ok) throw Error("No pudimos retirar el mensaje. Inténtalo de nuevo.");
+      setMessages((current) => current.filter((message) => message.id !== messageId)); setNotice("Mensaje retirado de la conversación.");
+    } catch (e) { setError(e instanceof Error ? e.message : "No pudimos retirar el mensaje."); }
+    finally { setBusy(false); }
+  }
   const active = connections.find((c) => c.id === selected && c.status === "accepted");
   return <div className="page-content plaza-page real-plaza">
     <section className="plaza-welcome plaza-photo-hero"><div className="plaza-welcome-copy"><h1>Conexiones que siguen a tu ritmo.</h1><p>Revisa tus solicitudes y decide con quién continuar conversando.</p></div><HeroPhoto images={connectionsHeroPhoto} alt="Personas conversando desde sus propios espacios" /></section>
@@ -72,7 +82,7 @@ export function RealConnections({ account, loaded, onAccess, onPlaza }: { accoun
         </article>)}
       </section>
       {active && <section className="real-plaza-panel"><h2>Conversación con {active.person}</h2><p>Ambas personas aceptaron conversar. Puedes cerrar la conexión cuando quieras.</p><button className="button secondary" disabled={busy} onClick={() => void open(active.id)}>Actualizar conversación</button><button className="button text" disabled={busy} onClick={() => { requestVersion.current++; setSelected(null); setMessages([]); }}>Cerrar conversación</button><button className="button text" disabled={busy} onClick={() => void block(active.id)}>Bloquear persona</button>
-        {messages.length === 0 ? <p>Aún no hay mensajes.</p> : messages.map((m) => <article className="real-plaza-reply" key={m.id}><strong>{m.senderId === account?.id ? "Tú" : active.person}</strong><p>{m.body}</p>{m.senderId !== account?.id && <button className="button text" onClick={() => setReport(m.id)}>Reportar mensaje</button>}</article>)}
+        {messages.length === 0 ? <p>Aún no hay mensajes.</p> : messages.map((m) => <article className="real-plaza-reply" key={m.id}><strong>{m.senderId === account?.id ? "Tú" : active.person}</strong><p>{m.body}</p>{m.senderId !== account?.id ? <button className="button text" onClick={() => setReport(m.id)}>Reportar mensaje</button> : <button className="button text" disabled={busy} onClick={() => void remove(m.id)}>Retirar mensaje</button>}</article>)}
         <form className="real-plaza-form" onSubmit={(e) => void send(e)}><label>Mensaje privado<textarea value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={2000} required /></label><button className="button primary" disabled={busy}>Enviar mensaje</button></form>
       </section>}
       {report && active && <ReportDialog subject={`Mensaje de ${active.person}`} onClose={() => setReport(null)} onSubmit={async (reason, note) => { await api("/api/plaza/reports", { kind: "private", contentId: report, reason, note }); }} />}

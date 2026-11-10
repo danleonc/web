@@ -53,7 +53,16 @@ export class ConnectionsStore {
   messages(actor: string, id: string) {
     const connection = this.visible(id, actor);
     if (!connection || connection.status !== "accepted") return null;
-    return this.storage.db.prepare("SELECT id,sender_id AS senderId,body,created_at AS createdAt FROM plaza_private_messages WHERE connection_id=? AND hidden=0 ORDER BY rowid DESC LIMIT 100").all(id).reverse();
+    return this.storage.db.prepare("SELECT id,sender_id AS senderId,body,created_at AS createdAt FROM plaza_private_messages WHERE connection_id=? AND hidden=0 AND body<>'' ORDER BY rowid DESC LIMIT 100").all(id).reverse();
+  }
+  remove(actor: string, connectionId: string, messageId: string) {
+    const connection = this.visible(connectionId, actor);
+    if (!connection || connection.status !== "accepted") return false;
+    return this.storage.transaction(() => {
+      const result = this.storage.db.prepare("UPDATE plaza_private_messages SET body='',hidden=1 WHERE id=? AND connection_id=? AND sender_id=? AND body<>''").run(messageId, connectionId, actor);
+      if (result.changes) this.storage.db.prepare("DELETE FROM push_private_queue WHERE connection_id=? AND message_id=?").run(connectionId, messageId);
+      return result.changes === 1;
+    });
   }
   send(actor: string, id: string, clientId: string, value: string) {
     const connection = this.visible(id, actor);

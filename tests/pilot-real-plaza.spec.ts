@@ -218,6 +218,9 @@ test("dos personas aceptan una solicitud antes de conversar en privado", async (
     await second.getByLabel("Mensaje privado").fill("Mensaje nuevo sin actualizar la página");
     await second.getByRole("button", { name: "Enviar mensaje" }).click();
     await expect(first.getByText("Mensaje nuevo sin actualizar la página", { exact: true })).toBeVisible({ timeout: 12000 });
+    second.once("dialog", (dialog) => void dialog.accept());
+    await second.getByRole("article").filter({ hasText: "Mensaje nuevo sin actualizar la página" }).getByRole("button", { name: "Retirar mensaje" }).click();
+    await expect(first.getByText("Mensaje nuevo sin actualizar la página", { exact: true })).toHaveCount(0, { timeout: 12000 });
     expect((await new AxeBuilder({ page: first }).include(".real-plaza").withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
     await first.screenshot({ path: info.outputPath("conexiones.png"), fullPage: true });
     await first.getByRole("article").filter({ hasText: "Hola, conversemos" }).getByRole("button", { name: "Reportar mensaje" }).click();

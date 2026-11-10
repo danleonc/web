@@ -284,8 +284,11 @@ export function createRoomServer(options: Options = {}) {
     const identity = authenticated(req);
     if (storage && path === "/api/account/export" && req.method === "GET") {
       if (!identity) { json(res, 401, { error: "session_required" }); return; }
+      const params = new URL(req.url!, "http://localhost").searchParams, values = params.getAll("page");
+      if (values.length > 1 || (values.length && !/^[1-9]\d{0,5}$/.test(values[0]))) { json(res, 422, { error: "invalid_page" }); return; }
+      const page = values.length ? Number(values[0]) : 1;
       res.setHeader("Content-Disposition", "attachment; filename=nexafia-contenido-propio.json");
-      json(res, 200, exportOwnContent(storage, identity.id, now())); return;
+      json(res, 200, exportOwnContent(storage, identity.id, now(), page)); return;
     }
     if (
       storage &&

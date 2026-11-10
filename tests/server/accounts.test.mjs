@@ -343,6 +343,25 @@ test("Conexiones: consentimiento explícito, chat aislado y cierre por bloqueo",
   assert.equal((await f.request(`/api/plaza/connections/${id}/messages`, "GET", undefined, ana.cookie)).status, 404);
 });
 
+test("Conexiones: solo el autor retira su mensaje y se conserva evidencia de un reporte", async (t) => {
+  const f = await fixture(t, { plazaEnabled: true }); const ana = await f.signup("retira_ana"); const bea = await f.signup("retira_bea"); const mod = await f.signup("retira_mod");
+  const db = new DatabaseSync(f.path); db.prepare("INSERT INTO moderators(user_id) VALUES(?)").run(mod.id); db.close();
+  const post = (await f.request("/api/plaza/posts", "POST", { topic: "crear", title: "Tema", body: "Idea" }, bea.cookie)).body.post;
+  const id = (await f.request("/api/plaza/invitations", "POST", { kind: "post", contentId: post.id, note: "" }, ana.cookie)).body.invitation.id;
+  await f.request(`/api/plaza/invitations/${id}/decision`, "POST", { action: "accept" }, bea.cookie);
+  const msg = (await f.request(`/api/plaza/connections/${id}/messages`, "POST", { clientId: "remove-message-1", body: "Mensaje a retirar" }, ana.cookie)).body.message;
+  const report = await f.request("/api/plaza/reports", "POST", { kind: "private", contentId: msg.id, reason: "acoso", note: "" }, bea.cookie); assert.equal(report.status, 201);
+  const path = `/api/plaza/connections/${id}/messages/${msg.id}`;
+  assert.equal((await f.request(path, "DELETE", undefined, bea.cookie)).status, 404);
+  assert.equal((await f.request(path, "DELETE", undefined, ana.cookie, "https://ajeno.example")).status, 403);
+  assert.equal((await f.request(path, "DELETE", undefined, ana.cookie)).status, 200);
+  assert.equal((await f.request(`/api/plaza/connections/${id}/messages`, "POST", { clientId: "remove-message-1", body: "Mensaje a retirar" }, ana.cookie)).status, 422);
+  await f.restart();
+  assert.equal((await f.request(`/api/plaza/connections/${id}/messages`, "GET", undefined, bea.cookie)).body.messages.length, 0);
+  const queue = await f.request("/api/plaza/moderation/reports", "GET", undefined, mod.cookie); assert.equal(queue.body.reports[0].evidence.body, "Mensaje a retirar");
+  assert.equal(JSON.stringify((await f.request("/api/account/export", "GET", undefined, ana.cookie)).body.privateMessages).includes("Mensaje a retirar"), false);
+});
+
 test("Conexiones: solicitudes cruzadas no se aceptan automáticamente y el rechazo permite una solicitud nueva", async (t) => {
   const f = await fixture(t, { plazaEnabled: true }); const ana = await f.signup("solicita_ana"); const bea = await f.signup("solicita_bea");
   const data = { topic: "crear", title: "Tema", body: "Idea" };

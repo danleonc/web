@@ -30,6 +30,7 @@ export function AccountPanel({
   const [password, setPassword] = useState("");
   const [adult, setAdult] = useState(false);
   const [code, setCode] = useState("");
+  const [exportPage, setExportPage] = useState("1");
   function saveRecovery() {
     const blob = new Blob(
       [
@@ -224,8 +225,9 @@ export function AccountPanel({
           </p>
           <details className="account-history">
             <summary>Descargar mis datos</summary>
-            <p>Descarga una copia parcial del contenido propio guardado en el servidor. No incluye imágenes, registros administrativos ni datos guardados solo en este dispositivo. Cada sección indica si supera el límite de la descarga.</p>
-            <a className="button secondary" href="/api/account/export" download="nexafia-contenido-propio.json">Descargar copia parcial de mis datos</a>
+            <p>Descarga una copia parcial del contenido propio guardado en el servidor. No incluye imágenes, registros administrativos ni datos guardados solo en este dispositivo. Cada página contiene hasta 1.000 registros por sección; si una sección tiene «truncated: true», descarga la página siguiente. Si los datos cambian entre descargas, algunos registros podrían repetirse o quedar fuera.</p>
+            <label>Página de descarga <input type="number" min="1" max="999999" value={exportPage} onChange={(e) => setExportPage(e.target.value)} /></label>
+            {/^[1-9]\d{0,5}$/.test(exportPage) ? <a className="button secondary" href={`/api/account/export?page=${exportPage}`} download="nexafia-contenido-propio.json">Descargar copia parcial de mis datos</a> : <p role="alert">Indica una página entre 1 y 999999.</p>}
           </details>
           {state.recovery && (
             <div className="recovery-notice">
