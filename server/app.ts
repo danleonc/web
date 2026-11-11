@@ -66,6 +66,7 @@ type Connection = {
 };
 type Options = {
   plazaEnabled?: boolean;
+  privacyErasureEnabled?: boolean;
   meetingsEnabled?: boolean;
   push?: PushConfig;
   google?: GoogleConfig;
@@ -128,6 +129,7 @@ export function createRoomServer(options: Options = {}) {
   const identities = new Map<string, Identity>();
   const rooms = new Map<string, Room>();
   const connections = new Set<Connection>();
+  const activeRequests = new Map<string, number>();
   const creationLimits = new Map<string, { count: number; until: number }>();
   if (storage) {
     storage.prune(now());
@@ -204,6 +206,8 @@ export function createRoomServer(options: Options = {}) {
   const validOrigin = (req: IncomingMessage) =>
     typeof req.headers.origin === "string" && allowed.has(req.headers.origin);
   const server = createServer(async (req, res) => {
+    let trackedId: string | null = null;
+    try {
     const path = new URL(req.url || "/", "http://localhost").pathname;
     if (path === "/api/health" && req.method === "GET") {
       json(res, 200, {
@@ -283,8 +287,14 @@ export function createRoomServer(options: Options = {}) {
       return;
     }
     const identity = authenticated(req);
+    if (storage && identity) { trackedId = identity.id; activeRequests.set(identity.id, (activeRequests.get(identity.id) || 0) + 1); }
     if (options.plazaEnabled && storage && moderation && path.startsWith("/api/privacy/")) {
-      try { await handlePrivacy(storage, moderation, now, validOrigin, req, res, path, identity); }
+      try { await handlePrivacy(storage, moderation, now, validOrigin, req, res, path, identity, {
+        enabled: options.privacyErasureEnabled === true,
+        sessionHash: tokenHash(req),
+        isLive: (id) => !!google || (activeRequests.get(id) || 0) > 0 || Array.from(connections).some((connection) => connection.identity.id === id) || !!identities.get(id)?.room || Array.from(rooms.values()).some((room) => JSON.stringify({ session: room.session, safety: room.safety, messages: room.messages }).includes(id)),
+        onErased: (id) => { identities.delete(id); },
+      }); }
       catch { req.resume(); if (!res.headersSent) json(res, 503, { error: "privacy_unavailable" }); else res.destroy(); }
       return;
     }
@@ -488,6 +498,7 @@ export function createRoomServer(options: Options = {}) {
               alias: identity.alias,
               moderator: moderation?.moderator(identity.id) || false,
               privacyOperator: !!(options.plazaEnabled && storage?.db.prepare("SELECT 1 FROM privacy_operators WHERE user_id=?").get(identity.id)),
+              privacyErasureAvailable: !!(options.plazaEnabled && options.privacyErasureEnabled && !google && storage?.db.prepare("SELECT 1 FROM privacy_operators WHERE user_id=?").get(identity.id)),
               restriction: moderation?.restriction(identity.id) || null,
               imagesEnabled: moderation?.hasModerators() || false,
               ...(storage
@@ -653,6 +664,9 @@ export function createRoomServer(options: Options = {}) {
           error:
             e instanceof SyntaxError ? "invalid_json" : "service_unavailable",
         });
+    }
+    } finally {
+      if (trackedId) { const left = (activeRequests.get(trackedId) || 1) - 1; if (left) activeRequests.set(trackedId, left); else activeRequests.delete(trackedId); }
     }
   });
   const wss = new WebSocketServer({

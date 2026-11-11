@@ -15,6 +15,42 @@ async function register(context: BrowserContext, name: string) {
   const { code } = JSON.parse(await readFile(join(tmpdir(), "afinia-test-pilot-mailbox", createHash("sha256").update(email).digest("hex") + ".json"), "utf8"));
   expect((await context.request.post(`${origin}/api/auth/confirm-email`, { headers, data: { code } })).status()).toBe(200);
 }
+test("borrado limitado de una cuenta sin actividad en la base de pruebas", async ({ browser }, info) => {
+  test.skip(process.env.NEXAFIA_TEST_ERASURE !== "1", "Función de borrado limitada a fixture explícito");
+  const person = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const operator = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    await register(person, `erase_ui_${info.project.name}`); const headers = { Origin: "http://127.0.0.1:4190" };
+    expect((await person.request.post("/api/privacy/request", { headers, data: { action: "submit" } })).status()).toBe(200);
+    expect((await operator.request.post("/api/auth/login", { headers, data: { username: "moderator_fixture", password: "Una clave exclusiva del fixture 123" } })).status()).toBe(200);
+    const page = await operator.newPage(); await page.goto("/#plaza"); await page.getByRole("button", { name: "Mi cuenta", exact: true }).click();
+    await page.getByText("Cola de privacidad", { exact: true }).click(); const item = page.getByRole("article").filter({ hasText: `erase_ui_${info.project.name}` });
+    await item.getByRole("button", { name: "Acusar recibo" }).click(); await expect(item.getByText("Recibida para revisión", { exact: true })).toBeVisible();
+    await item.getByText("Borrado limitado de cuenta", { exact: true }).click({ timeout: 5000 });
+    if (info.project.name === "mobile") expect(await item.getByLabel("Confirmación de borrado").evaluate((input) => parseFloat(getComputedStyle(input).fontSize))).toBeGreaterThanOrEqual(16);
+    expect((await new AxeBuilder({ page }).include('[aria-label="Cuenta y reservas"]').withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+    await page.screenshot({ path: info.outputPath("borrado-limitado.png"), fullPage: true });
+    await item.getByLabel("Confirmación de borrado").fill("BORRAR CUENTA"); page.once("dialog", (dialog) => void dialog.accept());
+    await item.getByRole("button", { name: "Borrar cuenta de base activa" }).click();
+    await expect(page.getByText(/Cuenta retirada de la base activa/)).toBeVisible();
+    expect((await person.request.get("/api/session")).status()).toBe(401);
+  } finally { await person.close(); await operator.close(); }
+});
+test("borrado limitado se detiene si la cuenta tiene actividad", async ({ browser }, info) => {
+  test.skip(process.env.NEXAFIA_TEST_ERASURE !== "1", "Función de borrado limitada a fixture explícito");
+  const person = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use }); const operator = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    await register(person, `erase_busy_${info.project.name}`); const headers = { Origin: "http://127.0.0.1:4190" };
+    expect((await person.request.post("/api/plaza/posts", { headers, data: { topic: "crear", title: "Mi publicación", body: "No debe borrarse" } })).status()).toBe(201);
+    await person.request.post("/api/privacy/request", { headers, data: { action: "submit" } });
+    await operator.request.post("/api/auth/login", { headers, data: { username: "moderator_fixture", password: "Una clave exclusiva del fixture 123" } });
+    const page=await operator.newPage(); await page.goto("/#plaza"); await page.getByRole("button", { name: "Mi cuenta", exact: true }).click(); await page.getByText("Cola de privacidad", { exact: true }).click();
+    const item=page.getByRole("article").filter({ hasText: `erase_busy_${info.project.name}` }); await item.getByRole("button", { name: "Acusar recibo" }).click();
+    await item.getByText("Borrado limitado de cuenta", { exact: true }).click(); await item.getByLabel("Confirmación de borrado").fill("BORRAR CUENTA"); page.once("dialog", dialog=>void dialog.accept());
+    await item.getByRole("button", { name: "Borrar cuenta de base activa" }).click(); await expect(item.getByText(/requiere revisión manual; no se borró/)).toBeVisible();
+    expect((await person.request.get("/api/session")).status()).toBe(200);
+  } finally { await person.close(); await operator.close(); }
+});
 test("solicitud de eliminación se registra y acusa recibo sin borrar la cuenta", async ({ browser }, info) => {
   const person = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   const operator = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });

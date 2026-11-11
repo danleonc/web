@@ -234,7 +234,7 @@ export function AccountPanel({
             {state.account.canParticipate && !state.account.restriction && <OwnImages key={state.account.id} />}
           </details>
           {realPlazaEnabled && <PrivacyRequest key={state.account.id} />}
-          {realPlazaEnabled && state.account.privacyOperator && state.account.canParticipate && !state.account.restriction && <PrivacyDesk key={state.account.id} accountId={state.account.id} />}
+          {realPlazaEnabled && state.account.privacyOperator && state.account.canParticipate && !state.account.restriction && <PrivacyDesk key={state.account.id} accountId={state.account.id} canErase={!!state.account.privacyErasureAvailable} />}
           {state.recovery && (
             <div className="recovery-notice">
               <h3>Guarda tu clave de recuperación.</h3>

@@ -24,6 +24,7 @@ export type AccountView = {
   passwordEnabled?: boolean;
   moderator?: boolean;
   privacyOperator?: boolean;
+  privacyErasureAvailable?: boolean;
   imagesEnabled?: boolean;
   restriction?: {
     kind: "suspend" | "ban";

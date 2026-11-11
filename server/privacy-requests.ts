@@ -2,8 +2,9 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Storage } from "./storage.ts";
 import type { ModerationStore } from "./moderation.ts";
 import { privacyInventory } from "./privacy-inventory.ts";
+import { eraseEmptyAccount } from "./privacy-erasure.ts";
 
-export async function handlePrivacy(storage: Storage, moderation: ModerationStore, now: () => number, validOrigin: (req: IncomingMessage) => boolean, req: IncomingMessage, res: ServerResponse, path: string, actor: { id: string } | null) {
+export async function handlePrivacy(storage: Storage, moderation: ModerationStore, now: () => number, validOrigin: (req: IncomingMessage) => boolean, req: IncomingMessage, res: ServerResponse, path: string, actor: { id: string } | null, erasure: { enabled: boolean; sessionHash: string | null; isLive: (id: string) => boolean; onErased: (id: string) => void }) {
   const json = (status: number, value: unknown) => { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }); res.end(JSON.stringify(value)); };
   if (!actor) { req.resume(); json(401, { error: "session_required" }); return; }
   const db = storage.db;
@@ -27,6 +28,14 @@ export async function handlePrivacy(storage: Storage, moderation: ModerationStor
   let value: Record<string, unknown>;
   try { if (!req.headers["content-type"]?.startsWith("application/json")) throw Error(); let size = 0; const chunks: Buffer[] = []; for await (const chunk of req) { size += chunk.length; if (size > 1024) throw Error(); chunks.push(chunk); } const parsed: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8")); if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw Error(); value = parsed as Record<string, unknown>; }
   catch { req.resume(); json(422, { error: "invalid_fields" }); return; }
+  if (path === "/api/privacy/erase-empty") {
+    if (!erasure.enabled) { json(404, { error: "not_found" }); return; }
+    if (Object.keys(value).length !== 3 || typeof value.userId !== "string" || !/^[a-f0-9-]{36}$/.test(value.userId) || !Number.isSafeInteger(value.version) || Number(value.version) < 1 || value.confirmation !== "BORRAR CUENTA") { json(422, { error: "invalid_fields" }); return; }
+    if (value.userId === actor.id) { json(403, { error: "independent_operator_required" }); return; }
+    const result = eraseEmptyAccount(storage, value.userId, actor.id, Number(value.version), erasure.sessionHash, now(), erasure.isLive);
+    if ("error" in result) { json(result.error === "recent_auth_required" ? 403 : 409, { error: result.error }); return; }
+    erasure.onErased(value.userId); json(200, { receiptId: result.receiptId }); return;
+  }
   if (path === "/api/privacy/request" && Object.keys(value).length === 1 && (value.action === "submit" || value.action === "cancel")) {
     const result = storage.transaction(() => {
       const current = own(), time = now(); let changed = false;

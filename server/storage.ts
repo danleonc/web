@@ -53,7 +53,8 @@ export class Storage {
       version !== 13 &&
       version !== 14 &&
       version !== 15 &&
-      version !== 16
+      version !== 16 &&
+      version !== 17
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -166,6 +167,11 @@ export class Storage {
       CREATE TABLE IF NOT EXISTS privacy_request_events(user_id TEXT NOT NULL REFERENCES accounts(id),version INTEGER NOT NULL,action TEXT NOT NULL,actor_id TEXT REFERENCES accounts(id),created_at INTEGER NOT NULL,PRIMARY KEY(user_id,version));
       INSERT OR IGNORE INTO privacy_request_events(user_id,version,action,actor_id,created_at) SELECT user_id,version,'legacy_snapshot',NULL,updated_at FROM privacy_requests;
       PRAGMA user_version=16; COMMIT;`);
+    if (version < 17)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS privacy_erasure_receipts(id TEXT PRIMARY KEY,subject_hash TEXT NOT NULL UNIQUE,operator_id TEXT NOT NULL REFERENCES accounts(id),completed_at INTEGER NOT NULL,request_version INTEGER NOT NULL);
+      CREATE TABLE IF NOT EXISTS privacy_erasure_events(receipt_id TEXT NOT NULL REFERENCES privacy_erasure_receipts(id),version INTEGER NOT NULL,action TEXT NOT NULL,actor_id TEXT REFERENCES accounts(id),created_at INTEGER NOT NULL,PRIMARY KEY(receipt_id,version));
+      PRAGMA user_version=17; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");
