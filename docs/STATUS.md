@@ -422,3 +422,5 @@ Existe además un borrado lógico limitado para cuentas sin actividad compartida
 El rol de privacidad dispone también de un inventario interno de cantidades relacionadas con una solicitud vigente, sin mostrar contenidos. Es una ayuda técnica parcial: no inspecciona respaldos, proveedores externos ni todas las referencias incrustadas, y no ejecuta borrados. No sustituye un procedimiento de supresión ni una revisión legal.
 
 La revisión de Render encontró una pantalla de configuración con opción para conectar GitHub; no confirmó un despliegue ni inventarió todos los servicios. No se contrató ni configuró un servicio nuevo en esa revisión. Ninguna de estas implementaciones acredita cumplimiento legal, usuarios reales o capacidad de producción.
+
+La herramienta local de respaldo ahora comprueba integridad y claves foráneas en la copia, y la descarta si falla. No sobrescribe un destino existente. Esto no acredita que los datos sean correctos para la aplicación ni reemplaza restauraciones de prueba, cifrado, almacenamiento externo y una política de copias.

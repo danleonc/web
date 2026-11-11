@@ -12,6 +12,15 @@ export async function backupDatabase(source, destination) {
   try {
     db = new DatabaseSync(source, { readOnly: true });
     await backup(db, destination);
+    const copy = new DatabaseSync(destination, { readOnly: true });
+    try {
+      const integrity = copy.prepare('PRAGMA integrity_check').all();
+      const violations = copy.prepare('PRAGMA foreign_key_check').iterate().next();
+      if (integrity.length !== 1 || Object.values(integrity[0])[0] !== 'ok' || !violations.done)
+        throw new Error('Backup validation failed: integrity or foreign keys');
+    } finally {
+      copy.close();
+    }
   } catch (e) {
     await rm(destination, { force: true });
     throw e;
@@ -29,5 +38,5 @@ if (
       "Usage: node scripts/backup-db.mjs SOURCE.sqlite NEW-BACKUP.sqlite",
     );
   await backupDatabase(source, destination);
-  console.log("Consistent database backup created. Keep it private.");
+  console.log("Consistent database backup created and checked. Keep it private.");
 }
