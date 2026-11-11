@@ -32,6 +32,7 @@ const mailbox = join(tmpdir(), "afinia-test-pilot-mailbox");
 await rm(mailbox, { recursive: true, force: true });
 await mkdir(mailbox, { mode: 0o700 });
 new ModerationStore(setup, Date.now).role("moderator_fixture", true);
+if (process.env.NEXAFIA_TEST_PLAZA === "1") setup.db.prepare("INSERT INTO privacy_operators(user_id) VALUES(?)").run(moderator.id);
 setup.createAccount(
   { id: randomUUID(), username: "moderator_fixture_second", alias: "Revisión de prueba", passwordHash: await passwordHash("Una clave exclusiva del fixture 123"), recoveryHash: digest(randomUUID()) }, Date.now(),
 );

@@ -42,6 +42,18 @@ test('descarga incluye solicitudes, bloqueos y reportes propios sin incluir repo
  await f.request('/api/plaza/blocks','POST',{kind:'post',contentId:post.id},ana.cookie);
  assert.equal((await f.request('/api/account/export','GET',undefined,ana.cookie)).body.blocks.items[0].blockedId,bea.id);
 });
+test('descarga incluye solo apelaciones propias y omite datos internos del reporte',async t=>{
+ const f=await fixture(t,{plazaEnabled:true}); const ana=await f.signup('appeal_export_a'), bea=await f.signup('appeal_export_b'), mod=await f.signup('appeal_export_mod');
+ const db=new DatabaseSync(f.path); db.prepare('INSERT INTO moderators(user_id) VALUES(?)').run(mod.id); db.close();
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Tema',body:'Texto'},ana.cookie)).body.post;
+ const report=(await f.request('/api/plaza/reports','POST',{kind:'post',contentId:post.id,reason:'spam',note:'Nota privada de otra persona'},bea.cookie)).body;
+ await f.request('/api/plaza/moderation/actions','POST',{reportId:report.id,action:'hide',reason:'Revisión inicial'},mod.cookie);
+ const appeal=(await f.request('/api/plaza/appeals','POST',{reportId:report.id,note:'Mi apelación personal'},ana.cookie)).body;
+ const data=(await f.request('/api/account/export','GET',undefined,ana.cookie)).body;
+ const other=(await f.request('/api/account/export','GET',undefined,bea.cookie)).body;
+ assert.equal(data.plazaAppeals.items[0].id,appeal.id); assert.equal(data.plazaAppeals.items[0].note,'Mi apelación personal');
+ assert.equal(other.plazaAppeals.items.length,0); assert.equal(JSON.stringify(data).includes('Nota privada de otra persona'),false);
+});
 test('lista solo imágenes propias disponibles y respeta acceso por membresía y moderación',async t=>{
  const f=await fixture(t); const ana=await f.signup('media_ana'), bea=await f.signup('media_bea');
  const db=new DatabaseSync(f.path); const room='11111111-1111-4111-8111-111111111111', own='22222222-2222-4222-8222-222222222222', hidden='33333333-3333-4333-8333-333333333333', other='44444444-4444-4444-8444-444444444444';

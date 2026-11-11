@@ -1,6 +1,8 @@
 import { GoogleAccess, GoogleProfile } from "./GoogleAccess";
 import { EmailConfirmationForm } from "./EmailConfirmationForm";
 import { OwnImages } from "./OwnImages";
+import { PrivacyDesk, PrivacyRequest } from "./PrivacyRequests";
+import { realPlazaEnabled } from "./mode";
 import { AccountRestriction, ModerationDesk } from "../safety/ModerationDesk";
 import { useState, useId } from "react";
 import type { useAccount } from "./accounts";
@@ -231,6 +233,8 @@ export function AccountPanel({
             {/^[1-9]\d{0,5}$/.test(exportPage) ? <a className="button secondary" href={`/api/account/export?page=${exportPage}`} download="nexafia-contenido-propio.json">Descargar copia parcial de mis datos</a> : <p role="alert">Indica una página entre 1 y 999999.</p>}
             {state.account.canParticipate && !state.account.restriction && <OwnImages key={state.account.id} />}
           </details>
+          {realPlazaEnabled && <PrivacyRequest key={state.account.id} />}
+          {realPlazaEnabled && state.account.privacyOperator && state.account.canParticipate && !state.account.restriction && <PrivacyDesk key={state.account.id} accountId={state.account.id} />}
           {state.recovery && (
             <div className="recovery-notice">
               <h3>Guarda tu clave de recuperación.</h3>

@@ -34,6 +34,7 @@ import { meetingActivity, listMeetings } from "./meetings.ts";
 import { handleMeetingCreation } from "./meetings-http.ts";
 import { PushDelivery, handlePush } from "./push.ts";
 import { exportOwnContent } from "./account-export.ts";
+import { handlePrivacy } from "./privacy-requests.ts";
 import type { PushConfig } from "./push.ts";
 
 type Identity = {
@@ -282,6 +283,7 @@ export function createRoomServer(options: Options = {}) {
       return;
     }
     const identity = authenticated(req);
+    if (options.plazaEnabled && storage && moderation && path.startsWith("/api/privacy/")) { await handlePrivacy(storage, moderation, now, validOrigin, req, res, path, identity); return; }
     if (storage && path === "/api/account/export" && req.method === "GET") {
       if (!identity) { json(res, 401, { error: "session_required" }); return; }
       const params = new URL(req.url!, "http://localhost").searchParams, values = params.getAll("page");
@@ -481,6 +483,7 @@ export function createRoomServer(options: Options = {}) {
               id: identity.id,
               alias: identity.alias,
               moderator: moderation?.moderator(identity.id) || false,
+              privacyOperator: !!(options.plazaEnabled && storage?.db.prepare("SELECT 1 FROM privacy_operators WHERE user_id=?").get(identity.id)),
               restriction: moderation?.restriction(identity.id) || null,
               imagesEnabled: moderation?.hasModerators() || false,
               ...(storage

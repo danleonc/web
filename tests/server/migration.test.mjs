@@ -101,7 +101,13 @@ test("actualizar v13 conserva la cola de cancelaciones y agrega cola privada", a
     const updated = new Storage(path); try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_queue").get().n,1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_private_queue").get().n,0); } finally {updated.close();}
   } finally {await rm(dir, {recursive:true,force:true});}
 });
-test("migración v1 a v14 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
+test("actualizar v14 conserva avisos y crea permisos de privacidad vacíos", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "nexafia-v14-")); const path = join(dir, "old.sqlite");
+  try { const old = new Storage(path); old.db.prepare("INSERT INTO push_queue(meeting_id,endpoint_hash,user_id,created_at,next_at) VALUES(?,?,?,?,?)").run("meeting","device","person",1,1); old.db.exec("DROP TABLE privacy_requests; DROP TABLE privacy_operators; PRAGMA user_version=14;"); old.close();
+    const updated = new Storage(path); try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_queue").get().n,1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_requests").get().n,0); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_operators").get().n,0); } finally {updated.close();}
+  } finally {await rm(dir, {recursive:true,force:true});}
+});
+test("migración v1 a v15 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
   const dir = await mkdtemp(join(tmpdir(), "afinia-upgrade-")),
     path = join(dir, "old.sqlite");
   try {
@@ -164,7 +170,7 @@ test("migración v1 a v14 conserva cuenta, reserva, sesión e historial con segu
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        14,
+        15,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);

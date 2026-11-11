@@ -15,6 +15,31 @@ async function register(context: BrowserContext, name: string) {
   const { code } = JSON.parse(await readFile(join(tmpdir(), "afinia-test-pilot-mailbox", createHash("sha256").update(email).digest("hex") + ".json"), "utf8"));
   expect((await context.request.post(`${origin}/api/auth/confirm-email`, { headers, data: { code } })).status()).toBe(200);
 }
+test("solicitud de eliminación se registra y acusa recibo sin borrar la cuenta", async ({ browser }, info) => {
+  const person = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const operator = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    await register(person, `privacy_ui_${info.project.name}`);
+    const headers = { Origin: "http://127.0.0.1:4190" };
+    expect((await operator.request.post("/api/auth/login", { headers, data: { username: "moderator_fixture", password: "Una clave exclusiva del fixture 123" } })).status()).toBe(200);
+    const first = await person.newPage(); await first.goto("/#plaza"); await first.getByRole("button", { name: "Mi cuenta", exact: true }).click();
+    await first.getByText("Solicitud de eliminación de cuenta", { exact: true }).click({ timeout: 5000 });
+    await first.getByRole("button", { name: "Registrar solicitud" }).click();
+    await expect(first.getByText(/Solicitud registrada.*no se ha eliminado/i)).toBeVisible();
+    expect((await new AxeBuilder({ page: first }).include('[aria-label="Cuenta y reservas"]').withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+    await first.screenshot({ path: info.outputPath("solicitud-privacidad.png"), fullPage: true });
+    const second = await operator.newPage(); await second.goto("/#plaza"); await second.getByRole("button", { name: "Mi cuenta", exact: true }).click();
+    await second.getByText("Cola de privacidad", { exact: true }).click();
+    const item = second.getByRole("article").filter({ hasText: `privacy_ui_${info.project.name}` });
+    await item.getByRole("button", { name: "Acusar recibo" }).click();
+    await expect(item.getByText("Recibida para revisión", { exact: true })).toBeVisible();
+    await first.getByRole("button", { name: "Actualizar estado de solicitud" }).click();
+    await expect(first.getByText(/Recibida para revisión.*no se ha eliminado/i)).toBeVisible();
+    await first.getByRole("button", { name: "Cancelar solicitud" }).click();
+    await expect(first.getByText(/Solicitud cancelada/)).toBeVisible();
+    expect((await person.request.get("/api/session")).status()).toBe(200);
+  } finally { await person.close(); await operator.close(); }
+});
 test("dos cuentas comparten publicaciones y respuestas tras recargar", async ({ browser }, info) => {
   const a = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   const b = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });

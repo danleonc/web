@@ -51,7 +51,8 @@ export class Storage {
       version !== 11 &&
       version !== 12 &&
       version !== 13 &&
-      version !== 14
+      version !== 14 &&
+      version !== 15
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -154,6 +155,11 @@ export class Storage {
       CREATE TABLE IF NOT EXISTS push_private_queue(connection_id TEXT NOT NULL,endpoint_hash TEXT NOT NULL,user_id TEXT NOT NULL,message_id TEXT NOT NULL,created_at INTEGER NOT NULL,next_at INTEGER NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,PRIMARY KEY(connection_id,endpoint_hash));
       CREATE INDEX IF NOT EXISTS push_private_due ON push_private_queue(next_at);
       PRAGMA user_version=14; COMMIT;`);
+    if (version < 15)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS privacy_operators(user_id TEXT PRIMARY KEY REFERENCES accounts(id));
+      CREATE TABLE IF NOT EXISTS privacy_requests(user_id TEXT PRIMARY KEY REFERENCES accounts(id),status TEXT NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,version INTEGER NOT NULL,seen_by TEXT REFERENCES accounts(id));
+      PRAGMA user_version=15; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

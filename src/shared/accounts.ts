@@ -23,6 +23,7 @@ export type AccountView = {
   needsGoogleProfile?: boolean;
   passwordEnabled?: boolean;
   moderator?: boolean;
+  privacyOperator?: boolean;
   imagesEnabled?: boolean;
   restriction?: {
     kind: "suspend" | "ban";
