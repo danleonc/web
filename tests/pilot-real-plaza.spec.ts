@@ -31,6 +31,11 @@ test("solicitud de eliminación se registra y acusa recibo sin borrar la cuenta"
     const second = await operator.newPage(); await second.goto("/#plaza"); await second.getByRole("button", { name: "Mi cuenta", exact: true }).click();
     await second.getByText("Cola de privacidad", { exact: true }).click();
     const item = second.getByRole("article").filter({ hasText: `privacy_ui_${info.project.name}` });
+    await item.getByRole("button", { name: "Ver inventario de datos" }).click({ timeout: 5000 });
+    await expect(item.getByText("Cuentas: 1", { exact: true })).toBeVisible();
+    await expect(item.getByText(/No examina respaldos/)).toBeVisible();
+    expect((await new AxeBuilder({ page: second }).include('[aria-label="Cuenta y reservas"]').withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
+    await second.screenshot({ path: info.outputPath("inventario-privacidad.png"), fullPage: true });
     await item.getByRole("button", { name: "Acusar recibo" }).click();
     await expect(item.getByText("Recibida para revisión", { exact: true })).toBeVisible();
     await first.getByRole("button", { name: "Actualizar estado de solicitud" }).click();

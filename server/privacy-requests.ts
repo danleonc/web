@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Storage } from "./storage.ts";
 import type { ModerationStore } from "./moderation.ts";
+import { privacyInventory } from "./privacy-inventory.ts";
 
 export async function handlePrivacy(storage: Storage, moderation: ModerationStore, now: () => number, validOrigin: (req: IncomingMessage) => boolean, req: IncomingMessage, res: ServerResponse, path: string, actor: { id: string } | null) {
   const json = (status: number, value: unknown) => { res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" }); res.end(JSON.stringify(value)); };
@@ -10,6 +11,11 @@ export async function handlePrivacy(storage: Storage, moderation: ModerationStor
   const operator = () => !!db.prepare("SELECT 1 FROM privacy_operators WHERE user_id=?").get(actor.id) && storage.canParticipate(actor.id) && !moderation.restriction(actor.id);
   if (req.method === "GET" && path === "/api/privacy/request") { json(200, { request: own() }); return; }
   if (path !== "/api/privacy/request" && !operator()) { req.resume(); json(403, { error: "privacy_operator_required" }); return; }
+  const inventory = path.match(/^\/api\/privacy\/inventory\/([a-f0-9-]{36})$/);
+  if (req.method === "GET" && inventory) {
+    if (inventory[1] === actor.id || !db.prepare("SELECT 1 FROM privacy_requests WHERE user_id=? AND status IN ('pending','seen')").get(inventory[1])) { json(404, { error: "not_found" }); return; }
+    json(200, privacyInventory(storage, inventory[1])); return;
+  }
   if (req.method === "GET" && path === "/api/privacy/queue") {
     const requests = db.prepare("SELECT r.user_id AS userId,a.alias,r.status,r.created_at AS createdAt,r.updated_at AS updatedAt,r.version FROM privacy_requests r JOIN accounts a ON a.id=r.user_id WHERE r.status IN ('pending','seen') ORDER BY (r.status='pending') DESC,r.created_at,r.user_id LIMIT 100").all();
     json(200, { requests }); return;

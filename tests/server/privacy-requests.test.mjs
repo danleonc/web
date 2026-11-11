@@ -56,3 +56,22 @@ test('el permiso de privacidad se concede y revoca solo con herramienta administ
  assert.equal((await f.request('/api/privacy/queue','GET',undefined,user.cookie)).status,403);
  await assert.rejects(run(process.execPath,['scripts/privacy-operator.mjs','grant','cuenta_inexistente',f.path]));
 });
+test('inventario de solicitud muestra solo conteos al operador y deja de estar disponible al cancelar',async t=>{
+ const f=await fixture(t,{plazaEnabled:true}); const person=await f.signup('inventory_person'), other=await f.signup('inventory_other'), operator=await f.signup('inventory_operator');
+ await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Texto propio privado',body:'Contenido reservado'},person.cookie);
+ await f.request('/api/plaza/posts','POST',{topic:'crear',title:'De otra persona',body:'No corresponde'},other.cookie);
+ await f.request('/api/privacy/request','POST',{action:'submit'},person.cookie);
+ const db=new DatabaseSync(f.path); db.prepare('INSERT INTO privacy_operators(user_id) VALUES(?)').run(operator.id); db.close();
+ const path=`/api/privacy/inventory/${person.id}`;
+ assert.equal((await f.request(path)).status,401);
+ assert.equal((await f.request(path,'GET',undefined,other.cookie)).status,403);
+ assert.equal((await f.request(path,'GET',undefined,person.cookie)).status,403);
+ const result=await f.request(path,'GET',undefined,operator.cookie); assert.equal(result.status,200);
+ assert.equal((await f.request(`/api/privacy/inventory/${other.id}`,'GET',undefined,operator.cookie)).status,404);
+ assert.equal((await f.request(`/api/privacy/inventory/${operator.id}`,'GET',undefined,operator.cookie)).status,404);
+ assert.equal(result.body.counts.posts,1); assert.equal(result.body.counts.accounts,1); assert.equal(result.body.counts.emails,1);
+ assert.equal(JSON.stringify(result.body).includes('Contenido reservado'),false); assert.equal(JSON.stringify(result.body).includes('No corresponde'),false);
+ assert.match(result.body.limitations.join(' '),/respaldo/i);
+ await f.request('/api/privacy/request','POST',{action:'cancel'},person.cookie);
+ assert.equal((await f.request(path,'GET',undefined,operator.cookie)).status,404);
+});

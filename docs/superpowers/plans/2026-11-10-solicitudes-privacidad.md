@@ -5,6 +5,7 @@ Preparar una cola funcional y separada para solicitar eliminación, no una elimi
 - [x] Probar autorización por sesión y origen, aislamiento, idempotencia, versiones concurrentes, rol específico, cancelación y persistencia.
 - [x] Añadir migración, API y asignación local del rol de privacidad sin exponer escalada de permisos.
 - [x] Conectar controles internos para la cuenta y la cola autorizada, explicando que registrar o acusar recibo no borra nada.
+- [x] Añadir un inventario orientativo de cantidades en la base activa para solicitudes vigentes; restringirlo al rol de privacidad e impedir que consulte su propia solicitud.
 - [ ] Antes de operar: implementar eliminación efectiva y tratamiento de respaldos y evidencias, definir atención y plazos, añadir auditoría completa y paginación de cola, autenticación reforzada y revisión legal. No habilitar para público hasta completar estos puntos.
 
 El rol es independiente de moderación y se asigna o retira solamente desde la administración local de la base, usando `node scripts/privacy-operator.mjs grant|revoke USUARIO [RUTA_BASE]`. La cuenta ya debe existir; el script no crea usuarios. Es una herramienta técnica interna, no un procedimiento de producción ni una concesión de acceso ejecutada por este cambio. No se guardan notas libres ni se envían correos. La cola muestra como máximo 100 solicitudes y solo registra el último acuse: no sustituye un sistema de seguimiento ni una auditoría íntegra.
