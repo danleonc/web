@@ -61,7 +61,7 @@ Se incorporan imágenes normalizadas de acceso privado, votaciones de expulsión
 
 ## Copias y restauración
 
-La base usa claves foráneas, migración automática hasta `user_version=15`, WAL y transacciones. Las versiones 6 a 15 preparan publicaciones, reportes, conexiones, encuentros, colas de avisos y registro interno de solicitudes de privacidad. La API e interfaz compartidas se habilitan solo en una compilación y fixture internos de pruebas; el arranque normal las deja desactivadas. El registro y acuse de una solicitud no eliminan la cuenta y no envían avisos automáticos. Faltan operación humana de moderación, revisión independiente, políticas de retención y datos, exploración sin sesión, paginación, adjuntos, avisos probados en dispositivos reales y despliegue antes de abrir la aplicación. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
+La base usa claves foráneas, migración automática hasta `user_version=16`, WAL y transacciones. Las versiones 6 a 16 preparan publicaciones, reportes, conexiones, encuentros, colas de avisos y registro interno de solicitudes de privacidad con historial de cambios. La API e interfaz compartidas se habilitan solo en una compilación y fixture internos de pruebas; el arranque normal las deja desactivadas. El registro y acuse de una solicitud no eliminan la cuenta y no envían avisos automáticos. Faltan operación humana de moderación, revisión independiente, políticas de retención y datos, exploración sin sesión, paginación, adjuntos, avisos probados en dispositivos reales y despliegue antes de abrir la aplicación. Copiar únicamente el `.sqlite` mientras funciona puede perder información del WAL. Usar la copia consistente:
 
 ```sh
 node scripts/backup-db.mjs .data/entre.sqlite backups/entre-fecha-unica.sqlite
@@ -117,7 +117,7 @@ Procedimiento, permisos y límites: [Acceso con Google](GOOGLE_LOGIN.md).
 
 ## Avisos en el teléfono
 
-La migración v5 añadió suscripciones push por cuenta/dispositivo. El esquema interno actual es v15; incorpora Plaza, conexiones, convocatorias, colas de avisos y registro interno de solicitudes de privacidad, todavía desactivadas en el servidor de despliegue. La activación
+La migración v5 añadió suscripciones push por cuenta/dispositivo. El esquema interno actual es v16; incorpora Plaza, conexiones, convocatorias, colas de avisos y registro interno de solicitudes de privacidad, todavía desactivadas en el servidor de despliegue. La activación
 es voluntaria y requiere configurar VAPID; sin sus variables el piloto conserva
 el acceso anterior y no ofrece activación. PWA, requisitos de iPhone, privacidad,
 baja/prueba y alcance pendiente de Plaza en [Notificaciones](NOTIFICACIONES.md).

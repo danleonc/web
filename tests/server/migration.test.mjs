@@ -107,7 +107,13 @@ test("actualizar v14 conserva avisos y crea permisos de privacidad vacíos", asy
     const updated = new Storage(path); try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_queue").get().n,1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_requests").get().n,0); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_operators").get().n,0); } finally {updated.close();}
   } finally {await rm(dir, {recursive:true,force:true});}
 });
-test("migración v1 a v15 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
+test("actualizar v15 conserva solicitud y marca el estado previo sin inventar su historia", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "nexafia-v15-")); const path = join(dir, "old.sqlite");
+  try { const old = new Storage(path); old.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1); old.db.prepare("INSERT INTO privacy_requests(user_id,status,created_at,updated_at,version) VALUES(?,'pending',?,?,?)").run("a",1,2,3); old.db.exec("DROP TABLE privacy_request_events; PRAGMA user_version=15;"); old.close();
+    const updated = new Storage(path); try { const event=updated.db.prepare("SELECT version,action,actor_id,created_at FROM privacy_request_events WHERE user_id='a'").get(); assert.equal(event.version,3); assert.equal(event.action,'legacy_snapshot'); assert.equal(event.actor_id,null); assert.equal(event.created_at,2); } finally {updated.close();}
+  } finally {await rm(dir, {recursive:true,force:true});}
+});
+test("migración v1 a v16 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
   const dir = await mkdtemp(join(tmpdir(), "afinia-upgrade-")),
     path = join(dir, "old.sqlite");
   try {
@@ -170,7 +176,7 @@ test("migración v1 a v15 conserva cuenta, reserva, sesión e historial con segu
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        15,
+        16,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);

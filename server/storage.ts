@@ -52,7 +52,8 @@ export class Storage {
       version !== 12 &&
       version !== 13 &&
       version !== 14 &&
-      version !== 15
+      version !== 15 &&
+      version !== 16
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -160,6 +161,11 @@ export class Storage {
       CREATE TABLE IF NOT EXISTS privacy_operators(user_id TEXT PRIMARY KEY REFERENCES accounts(id));
       CREATE TABLE IF NOT EXISTS privacy_requests(user_id TEXT PRIMARY KEY REFERENCES accounts(id),status TEXT NOT NULL,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,version INTEGER NOT NULL,seen_by TEXT REFERENCES accounts(id));
       PRAGMA user_version=15; COMMIT;`);
+    if (version < 16)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS privacy_request_events(user_id TEXT NOT NULL REFERENCES accounts(id),version INTEGER NOT NULL,action TEXT NOT NULL,actor_id TEXT REFERENCES accounts(id),created_at INTEGER NOT NULL,PRIMARY KEY(user_id,version));
+      INSERT OR IGNORE INTO privacy_request_events(user_id,version,action,actor_id,created_at) SELECT user_id,version,'legacy_snapshot',NULL,updated_at FROM privacy_requests;
+      PRAGMA user_version=16; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

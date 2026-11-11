@@ -32,6 +32,7 @@ export function privacyInventory(storage: Storage, userId: string) {
     restrictions: "SELECT count(*) AS n FROM restrictions WHERE user_id=?",
     plannedMeetings: "SELECT count(*) AS n FROM scheduled_meetings WHERE created_by=?",
     privacyRequests: "SELECT count(*) AS n FROM privacy_requests WHERE user_id=?",
+    privacyEvents: "SELECT count(*) AS n FROM privacy_request_events WHERE user_id=? OR actor_id=?",
     privacyAcknowledgements: "SELECT count(*) AS n FROM privacy_requests WHERE seen_by=?",
     privacyOperatorRole: "SELECT count(*) AS n FROM privacy_operators WHERE user_id=?",
     moderationRole: "SELECT count(*) AS n FROM moderators WHERE user_id=?",

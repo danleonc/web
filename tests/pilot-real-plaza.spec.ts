@@ -30,6 +30,7 @@ test("solicitud de eliminación se registra y acusa recibo sin borrar la cuenta"
     await first.screenshot({ path: info.outputPath("solicitud-privacidad.png"), fullPage: true });
     const second = await operator.newPage(); await second.goto("/#plaza"); await second.getByRole("button", { name: "Mi cuenta", exact: true }).click();
     await second.getByText("Cola de privacidad", { exact: true }).click();
+    await expect(second.getByText("Página 1", { exact: true })).toBeVisible();
     const item = second.getByRole("article").filter({ hasText: `privacy_ui_${info.project.name}` });
     await item.getByRole("button", { name: "Ver inventario de datos" }).click({ timeout: 5000 });
     await expect(item.getByText("Cuentas: 1", { exact: true })).toBeVisible();

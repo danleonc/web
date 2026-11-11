@@ -283,7 +283,11 @@ export function createRoomServer(options: Options = {}) {
       return;
     }
     const identity = authenticated(req);
-    if (options.plazaEnabled && storage && moderation && path.startsWith("/api/privacy/")) { await handlePrivacy(storage, moderation, now, validOrigin, req, res, path, identity); return; }
+    if (options.plazaEnabled && storage && moderation && path.startsWith("/api/privacy/")) {
+      try { await handlePrivacy(storage, moderation, now, validOrigin, req, res, path, identity); }
+      catch { req.resume(); if (!res.headersSent) json(res, 503, { error: "privacy_unavailable" }); else res.destroy(); }
+      return;
+    }
     if (storage && path === "/api/account/export" && req.method === "GET") {
       if (!identity) { json(res, 401, { error: "session_required" }); return; }
       const params = new URL(req.url!, "http://localhost").searchParams, values = params.getAll("page");

@@ -30,6 +30,10 @@ test('solicitud interna de eliminación es privada, reversible y no elimina la c
  assert.equal((await f.request('/api/privacy/ack','POST',{userId:ana.id,version:submitted.body.request.version},operator.cookie)).status,409);
  await f.request('/api/privacy/request','POST',{action:'cancel'},ana.cookie);
  await f.restart(); assert.equal((await f.request('/api/privacy/request','GET',undefined,ana.cookie)).body.request.status,'cancelled');
+ const historyDb=new DatabaseSync(f.path); try { const events=historyDb.prepare('SELECT action,version FROM privacy_request_events WHERE user_id=? ORDER BY version').all(ana.id); assert.deepEqual(events.map(e=>e.action),['submit','acknowledge','cancel','submit','cancel']); assert.deepEqual(events.map(e=>e.version),[1,2,3,4,5]); } finally { historyDb.close(); }
+ const exported=(await f.request('/api/account/export','GET',undefined,ana.cookie)).body;
+ assert.deepEqual(exported.privacyRequestEvents.items.map(e=>e.action),['submit','acknowledge','cancel','submit','cancel']);
+ assert.equal(JSON.stringify(exported.privacyRequestEvents).includes(operator.id),false);
  assert.equal((await f.request('/api/session','GET',undefined,ana.cookie)).status,200);
 });
 test('solicitudes de privacidad están desactivadas por defecto',async t=>{
@@ -74,4 +78,24 @@ test('inventario de solicitud muestra solo conteos al operador y deja de estar d
  assert.match(result.body.limitations.join(' '),/respaldo/i);
  await f.request('/api/privacy/request','POST',{action:'cancel'},person.cookie);
  assert.equal((await f.request(path,'GET',undefined,operator.cookie)).status,404);
+});
+test('fallo al registrar un evento revierte la solicitud y no deja de responder',async t=>{
+ const f=await fixture(t,{plazaEnabled:true}); const user=await f.signup('privacy_rollback');
+ const db=new DatabaseSync(f.path); db.exec("CREATE TRIGGER fail_privacy_event BEFORE INSERT ON privacy_request_events BEGIN SELECT RAISE(ABORT,'test failure'); END;"); db.close();
+ const result=await f.request('/api/privacy/request','POST',{action:'submit'},user.cookie);
+ assert.equal(result.status,503); assert.equal((await f.request('/api/privacy/request','GET',undefined,user.cookie)).body.request,null);
+});
+test('fallo al registrar un acuse no cambia el estado de la solicitud',async t=>{
+ const f=await fixture(t,{plazaEnabled:true}); const user=await f.signup('privacy_ack_person'), operator=await f.signup('privacy_ack_operator');
+ const db=new DatabaseSync(f.path); db.prepare('INSERT INTO privacy_operators(user_id) VALUES(?)').run(operator.id); db.exec("CREATE TRIGGER fail_privacy_ack BEFORE INSERT ON privacy_request_events WHEN NEW.action='acknowledge' BEGIN SELECT RAISE(ABORT,'test failure'); END;"); db.close();
+ const request=(await f.request('/api/privacy/request','POST',{action:'submit'},user.cookie)).body.request;
+ const result=await f.request('/api/privacy/ack','POST',{userId:user.id,version:request.version},operator.cookie);
+ assert.equal(result.status,503); const after=(await f.request('/api/privacy/request','GET',undefined,user.cookie)).body.request; assert.equal(after.status,'pending'); assert.equal(after.version,request.version);
+});
+test('cola de privacidad permite recorrer más de 100 solicitudes sin exponerla a terceros',async t=>{
+ const f=await fixture(t,{plazaEnabled:true}); const operator=await f.signup('privacy_pages'); const db=new DatabaseSync(f.path);
+ try {db.prepare('INSERT INTO privacy_operators(user_id) VALUES(?)').run(operator.id); const account=db.prepare('INSERT INTO accounts(id,username,alias,password_hash,recovery_hash,created_at) VALUES(?,?,?,?,?,?)'); const request=db.prepare("INSERT INTO privacy_requests(user_id,status,created_at,updated_at,version) VALUES(?,'pending',?,?,1)"); db.exec('BEGIN'); for(let i=0;i<101;i++){const id=`queue-${i}`;account.run(id,id,id,'hash','hash',i); request.run(id,i,i);} db.exec('COMMIT');} finally {db.close();}
+ const first=await f.request('/api/privacy/queue?page=1','GET',undefined,operator.cookie), last=await f.request('/api/privacy/queue?page=3','GET',undefined,operator.cookie);
+ assert.equal(first.body.requests.length,50); assert.equal(first.body.hasMore,true); assert.equal(last.body.requests.length,1); assert.equal(last.body.hasMore,false);
+ assert.equal((await f.request('/api/privacy/queue?page=0','GET',undefined,operator.cookie)).status,422);
 });
