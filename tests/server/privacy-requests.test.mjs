@@ -79,6 +79,14 @@ test('inventario de solicitud muestra solo conteos al operador y deja de estar d
  await f.request('/api/privacy/request','POST',{action:'cancel'},person.cookie);
  assert.equal((await f.request(path,'GET',undefined,operator.cookie)).status,404);
 });
+test('inventario detecta referencias del identificador en estados y evidencias sin revelar su contenido',async t=>{
+ const f=await fixture(t,{plazaEnabled:true}); const person=await f.signup('embedded_person'), operator=await f.signup('embedded_operator');
+ await f.request('/api/privacy/request','POST',{action:'submit'},person.cookie);
+ const db=new DatabaseSync(f.path);
+ try { db.prepare('INSERT INTO privacy_operators(user_id) VALUES(?)').run(operator.id); db.prepare('INSERT INTO rooms(id,activity_id,session_json,revision,idle_at) VALUES(?,?,?,?,?)').run('embedded-room','cafe',JSON.stringify({person:person.id,private:'contenido secreto'}),1,0); } finally {db.close();}
+ const result=await f.request(`/api/privacy/inventory/${person.id}`,'GET',undefined,operator.cookie);
+ assert.equal(result.status,200); assert.equal(result.body.counts.roomsWithEmbeddedId,1); assert.equal(JSON.stringify(result.body).includes('contenido secreto'),false);
+});
 test('fallo al registrar un evento revierte la solicitud y no deja de responder',async t=>{
  const f=await fixture(t,{plazaEnabled:true}); const user=await f.signup('privacy_rollback');
  const db=new DatabaseSync(f.path); db.exec("CREATE TRIGGER fail_privacy_event BEFORE INSERT ON privacy_request_events BEGIN SELECT RAISE(ABORT,'test failure'); END;"); db.close();

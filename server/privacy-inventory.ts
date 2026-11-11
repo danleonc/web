@@ -17,6 +17,10 @@ export function privacyInventory(storage: Storage, userId: string) {
     images: "SELECT count(*) AS n FROM media WHERE owner_id=?",
     reservations: "SELECT count(*) AS n FROM reservations WHERE user_id=?",
     memberships: "SELECT count(*) AS n FROM memberships WHERE user_id=?",
+    roomsWithEmbeddedId: "SELECT count(*) AS n FROM rooms WHERE instr(session_json,?)>0 OR instr(safety_json,?)>0",
+    roomMessagesWithEmbeddedId: "SELECT count(*) AS n FROM messages WHERE instr(payload,?)>0",
+    plazaEvidenceWithEmbeddedId: "SELECT count(*) AS n FROM plaza_reports WHERE instr(evidence_json,?)>0",
+    roomEvidenceWithEmbeddedId: "SELECT count(*) AS n FROM reports WHERE instr(evidence_json,?)>0",
     blocksMade: "SELECT count(*) AS n FROM blocks WHERE user_id=?",
     blocksReceived: "SELECT count(*) AS n FROM blocks WHERE blocked_id=?",
     connections: "SELECT count(*) AS n FROM plaza_connections WHERE sender_id=? OR recipient_id=?",
@@ -38,6 +42,8 @@ export function privacyInventory(storage: Storage, userId: string) {
     moderationRole: "SELECT count(*) AS n FROM moderators WHERE user_id=?",
     notificationQueue: "SELECT count(*) AS n FROM push_queue WHERE user_id=?",
     privateNotificationQueue: "SELECT count(*) AS n FROM push_private_queue WHERE user_id=?",
+    sentPrivateNotificationQueue: "SELECT count(*) AS n FROM push_private_queue q JOIN plaza_private_messages m ON m.id=q.message_id WHERE m.sender_id=?",
+    createdMeetingNotificationQueue: "SELECT count(*) AS n FROM push_queue q JOIN scheduled_meetings m ON m.id=q.meeting_id WHERE m.created_by=?",
   };
   const counts: Record<string, number> = {};
   for (const [name, sql] of Object.entries(queries)) counts[name] = Number(db.prepare(sql).get(...(sql.includes(" OR ") ? [userId, userId] : [userId]))!.n);
