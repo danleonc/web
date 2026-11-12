@@ -424,3 +424,5 @@ El rol de privacidad dispone también de un inventario interno de cantidades rel
 La revisión de Render encontró una pantalla de configuración con opción para conectar GitHub; no confirmó un despliegue ni inventarió todos los servicios. No se contrató ni configuró un servicio nuevo en esa revisión. Ninguna de estas implementaciones acredita cumplimiento legal, usuarios reales o capacidad de producción.
 
 La herramienta local de respaldo ahora comprueba integridad y claves foráneas en la copia, y la descarta si falla. No sobrescribe un destino existente. Esto no acredita que los datos sean correctos para la aplicación ni reemplaza restauraciones de prueba, cifrado, almacenamiento externo y una política de copias.
+
+La agenda compartida interna permite recorrer convocatorias y avisos propios de cancelación en páginas de hasta 200. Las páginas no son una instantánea: cambios concurrentes pueden desplazar resultados. La interfaz y API compartidas siguen desactivadas en el arranque normal y pendientes de despliegue y operación.

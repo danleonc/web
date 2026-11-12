@@ -9,8 +9,8 @@ export function meetingActivity(storage: Storage, id: string): (Activity & { the
   const theme = featuredActivities.find((a) => a.id === row.themeId);
   return theme ? { ...theme, id: String(row.id), themeId: String(row.themeId), capacity: Number(row.capacity), duration: Number(row.duration), startsAt: new Date(Number(row.startsAt)).toISOString(), occupied: 0, people: [], cancelled: row.cancelled_at !== null, cancellationReason: row.cancellation_reason === null ? null : String(row.cancellation_reason) } : undefined;
 }
-export function listMeetings(storage: Storage, now: number, userId: string) {
-  const rows = storage.db.prepare("SELECT m.id FROM scheduled_meetings m JOIN offerings o ON o.activity_id=m.id WHERE (m.cancelled_at IS NULL AND o.starts_at + m.duration*60000 + 300000 > ?) OR (m.cancelled_at IS NOT NULL AND EXISTS (SELECT 1 FROM reservations r WHERE r.activity_id=m.id AND r.user_id=?)) ORDER BY o.starts_at,m.id LIMIT 200").all(now, userId);
+export function listMeetings(storage: Storage, now: number, userId: string, offset = 0) {
+  const rows = storage.db.prepare("SELECT m.id FROM scheduled_meetings m JOIN offerings o ON o.activity_id=m.id WHERE (m.cancelled_at IS NULL AND o.starts_at + m.duration*60000 + 300000 > ?) OR (m.cancelled_at IS NOT NULL AND EXISTS (SELECT 1 FROM reservations r WHERE r.activity_id=m.id AND r.user_id=?)) ORDER BY o.starts_at,m.id LIMIT 201 OFFSET ?").all(now, userId, offset);
   return rows.flatMap((row) => { const meeting = meetingActivity(storage, String(row.id)); return meeting ? [meeting] : []; });
 }
 export function scheduleMeeting(storage: Storage, userId: string, value: Record<string, unknown>, now: number) {

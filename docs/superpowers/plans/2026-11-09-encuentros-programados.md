@@ -8,4 +8,7 @@
 - [x] Implementar migración y API de convocatorias, resolución de temática y rutas de reservas/salas sin alterar las convocatorias históricas ni la maqueta existente.
 - [x] Conectar programación y reserva a la interfaz interna; probar al menos dos cuentas, móvil/escritorio y ausencia de asistentes ficticios.
 - [x] Permitir cancelación anticipada por moderación, bloquear nuevas reservas e ingresos y conservar aviso con motivo en la cuenta de cada persona inscrita.
-- [ ] Implementar y operar avisos externos fiables, verificar su entrega y definir respuesta para cancelaciones urgentes; el aviso interno requiere que la persona entre a Nexafia y la lista actual tiene un límite de 200 convocatorias.
+- [x] Permitir recorrer la lista interna en páginas de hasta 200 convocatorias, incluidos avisos de cancelación propios.
+- [ ] Implementar y operar avisos externos fiables, verificar su entrega y definir respuesta para cancelaciones urgentes; el aviso interno requiere que la persona entre a Nexafia.
+
+La paginación usa desplazamiento: si cambia la lista entre consultas, una convocatoria puede moverse entre páginas. No es una instantánea y la pantalla lo advierte. La API limita el desplazamiento a menos de un millón; antes de operar a esa escala se necesita otro método y evaluación de rendimiento.

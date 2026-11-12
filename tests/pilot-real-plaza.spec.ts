@@ -6,6 +6,26 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import AxeBuilder from "@axe-core/playwright";
 
+test("páginas de encuentros permiten avanzar y volver", async ({ browser }, info) => {
+  const context = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    await register(context, `pages_${info.project.name}`);
+    await context.route("**/api/activities?*", async route => {
+      const offset = new URL(route.request().url()).searchParams.get("offset");
+      const meeting = { id: offset === "200" ? "segundo" : "primero", title: offset === "200" ? "Encuentro siguiente" : "Primer encuentro", startsAt: "2030-01-01T12:00:00.000Z", minimum: 3, maximum: 4, reserved: 0, mine: false, accessible: false, bookingOpen: true, ended: false };
+      await route.fulfill({ json: { activities: [meeting], nextOffset: offset === "200" ? null : 200 } });
+    });
+    const page = await context.newPage(); await page.goto('/#discover');
+    await expect(page.getByRole('heading', { name: 'Primer encuentro' })).toBeVisible();
+    await page.getByRole('button', { name: 'Más encuentros' }).click();
+    await expect(page.getByRole('heading', { name: 'Encuentro siguiente' })).toBeVisible();
+    expect((await new AxeBuilder({ page }).include('nav[aria-label="Páginas de encuentros"]').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+    await page.screenshot({ path: info.outputPath('paginas-encuentros.png'), fullPage: true });
+    await page.getByRole('button', { name: 'Encuentros anteriores' }).click();
+    await expect(page.getByRole('heading', { name: 'Primer encuentro' })).toBeVisible();
+  } finally { await context.close(); }
+});
+
 async function register(context: BrowserContext, name: string) {
   const origin = "http://127.0.0.1:4190";
   const headers = { Origin: origin };

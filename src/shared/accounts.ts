@@ -100,6 +100,11 @@ function useAccountState() {
   const [googleResult, setGoogleResult] = useState("");
   const [activeRoom, setActiveRoom] = useState(false);
   const [activities, setActivities] = useState<Offering[]>([]);
+  const [activityOffset, setActivityOffset] = useState(0);
+  const [activityPageLoading, setActivityPageLoading] = useState(false);
+  const [nextActivityOffset, setNextActivityOffset] = useState<number | null>(null);
+  const activityOffsetRef = useRef(0);
+  const activityAccountRef = useRef<string | null>(null);
   const [rooms, setRooms] = useState<HistoryRoom[]>([]);
   const [messages, setMessages] = useState<SharedMessage[]>([]);
   const [selectedHistory, setSelectedHistory] = useState("");
@@ -118,6 +123,8 @@ function useAccountState() {
       });
       if (current !== generation.current) return;
       if (response.status === 401) {
+        setActivityPageLoading(false);
+        activityAccountRef.current = null; activityOffsetRef.current = 0; setActivityOffset(0); setNextActivityOffset(null);
         setAccount(null);
         setActivities([]);
         setRooms([]);
@@ -127,8 +134,10 @@ function useAccountState() {
       }
       if (!response.ok) throw Error("El servidor no pudo consultar tu sesión.");
       const user = (await response.json()) as AccountView;
+      if (activityAccountRef.current !== user.id) { activityAccountRef.current = user.id; activityOffsetRef.current = 0; setActivityOffset(0); setNextActivityOffset(null); }
       setAccount(user);
       if (user.restriction || !user.canParticipate) {
+        setActivityPageLoading(false);
         setActivities([]);
         setRooms([]);
         setMessages([]);
@@ -136,7 +145,7 @@ function useAccountState() {
         return;
       }
       const [offers, history] = await Promise.all([
-        fetch("/api/activities"),
+        fetch(`/api/activities?offset=${activityOffsetRef.current}`),
         fetch("/api/history"),
       ]);
       if (!offers.ok || !history.ok)
@@ -148,15 +157,28 @@ function useAccountState() {
       if (current !== generation.current) return;
       setAccount(user);
       setActivities(offerData.activities);
+      setActivityPageLoading(false);
+      setNextActivityOffset(typeof offerData.nextOffset === "number" ? offerData.nextOffset : null);
       setRooms(historyData.rooms);
       setLoaded(true);
     } catch (e) {
       if (current === generation.current) {
+        setActivityPageLoading(false);
         setError(e instanceof Error ? e.message : "No se pudo conectar.");
         setLoaded(true);
       }
     }
   }, []);
+  function changeActivityPage(offset: number) {
+    if (busyRef.current) return;
+    generation.current++;
+    activityOffsetRef.current = offset;
+    setActivityPageLoading(true);
+    setActivityOffset(offset);
+    setActivities([]);
+    setNextActivityOffset(null);
+    void refresh();
+  }
   useEffect(() => {
     if (!accountsEnabled) return;
     let alive = true;
@@ -341,6 +363,10 @@ function useAccountState() {
     setActiveRoom,
     startGoogle,
     activities,
+    activityOffset,
+    activityPageLoading,
+    nextActivityOffset,
+    changeActivityPage,
     rooms,
     messages,
     selectedHistory,

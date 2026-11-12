@@ -301,6 +301,7 @@ export function AccountPanel({
           )}
           {!compact && state.account.canParticipate && (
             <div className="account-offerings">
+              {state.activityPageLoading && <p role="status">Cargando encuentros…</p>}
               {state.activities.map((a) => (
                 <article className="account-offering" key={a.id}>
                   <h4>{a.title}</h4>
@@ -338,6 +339,7 @@ export function AccountPanel({
               ))}
             </div>
           )}
+          {!compact && state.account.canParticipate && (state.activityOffset > 0 || state.nextActivityOffset !== null) && <nav aria-label="Páginas de reservas"><p className="small-text muted">La lista puede cambiar si se crean o cancelan encuentros.</p><div className="session-actions">{state.activityOffset > 0 && <button className="button secondary" disabled={state.busy || active} onClick={() => state.changeActivityPage(Math.max(0, state.activityOffset - 200))}>Encuentros anteriores</button>}{state.nextActivityOffset !== null && <button className="button secondary" disabled={state.busy || active} onClick={() => state.changeActivityPage(state.nextActivityOffset!)}>Más encuentros</button>}</div></nav>}
           {!compact &&
             state.account.canParticipate &&
             state.rooms.length > 0 && (

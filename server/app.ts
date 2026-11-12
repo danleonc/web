@@ -389,8 +389,14 @@ export function createRoomServer(options: Options = {}) {
         json(res, 401, { error: "session_required" });
         return;
       }
+      const params = new URL(req.url || "/", "http://localhost").searchParams;
+      const offsetText = params.get("offset") ?? "0";
+      if (!/^(0|[1-9]\d{0,5})$/.test(offsetText) || params.getAll("offset").length > 1) { json(res, 400, { error: "invalid_offset" }); return; }
+      const offset = Number(offsetText);
+      const meetings = options.meetingsEnabled ? listMeetings(storage, now(), identity.id, offset) : featuredActivities;
       json(res, 200, {
-        activities: (options.meetingsEnabled ? listMeetings(storage, now(), identity.id) : featuredActivities).map((a) => {
+        nextOffset: options.meetingsEnabled && meetings.length > 200 && offset < 999800 ? offset + 200 : null,
+        activities: meetings.slice(0, 200).map((a) => {
           const start = storage.startsAt(a.id);
           const room = rooms.get(a.id);
           const cancelled = "cancelled" in a && a.cancelled;
