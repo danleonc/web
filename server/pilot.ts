@@ -28,6 +28,7 @@ if (
 )
   throw new Error("Run npm run build:pilot before npm start");
 const app = createRoomServer({
+  ...(process.env.ENTRE_STAGING_PASSWORD !== undefined ? { stagingPassword: process.env.ENTRE_STAGING_PASSWORD } : {}),
   sendVerificationEmail: smtpMailer(),
   google: googleFromEnv(process.env,origin.origin),
   push: pushFromEnv(process.env),

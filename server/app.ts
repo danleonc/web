@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { randomBytes, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { resolve, extname, relative as relativePath, isAbsolute, sep } from "node:path";
@@ -65,6 +65,7 @@ type Connection = {
   expires: number;
 };
 type Options = {
+  stagingPassword?: string;
   plazaEnabled?: boolean;
   privacyErasureEnabled?: boolean;
   meetingsEnabled?: boolean;
@@ -95,6 +96,14 @@ function record(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 export function createRoomServer(options: Options = {}) {
+  if (options.stagingPassword !== undefined && (!/^[A-Za-z0-9_+/-]{43,128}={0,2}$/.test(options.stagingPassword) || options.stagingPassword.length > 128)) throw Error("Invalid staging password");
+  const gateHash = options.stagingPassword === undefined ? null : createHash("sha256").update(`nexafia:${options.stagingPassword}`).digest();
+  function gateAllowed(req: IncomingMessage) {
+    if (!gateHash) return true;
+    const match = /^Basic ([A-Za-z0-9+/]+={0,2})$/i.exec(req.headers.authorization || "");
+    const received = createHash("sha256").update(match ? Buffer.from(match[1], "base64") : Buffer.alloc(0)).digest();
+    return timingSafeEqual(received, gateHash);
+  }
   const now = options.now || Date.now;
   const storage = options.databasePath
     ? new Storage(options.databasePath)
@@ -209,6 +218,10 @@ export function createRoomServer(options: Options = {}) {
     let trackedId: string | null = null;
     try {
     const path = new URL(req.url || "/", "http://localhost").pathname;
+    if (!(path === "/api/health" && req.method === "GET") && !gateAllowed(req)) {
+      res.writeHead(401, { "WWW-Authenticate": 'Basic realm="Nexafia pruebas", charset="UTF-8"', "Cache-Control": "no-store" });
+      res.end(); return;
+    }
     if (path === "/api/health" && req.method === "GET") {
       json(res, 200, {
         service: storage ? "entre-accounts" : "entre-shared-development",
@@ -772,6 +785,10 @@ export function createRoomServer(options: Options = {}) {
     );
   }
   server.on("upgrade", (req, socket, head) => {
+    if (!gateAllowed(req)) {
+      socket.end('HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm="Nexafia pruebas", charset="UTF-8"\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
+      return;
+    }
     if (!validOrigin(req)) {
       reject(socket, 403);
       return;

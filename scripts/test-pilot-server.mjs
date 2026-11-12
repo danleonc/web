@@ -42,6 +42,7 @@ setup.db.prepare("INSERT INTO account_emails(user_id,email,verified_at,adult_dec
 new ModerationStore(setup, Date.now).role("moderator_fixture_second", true);
 setup.close();
 const app = createRoomServer({
+  ...(process.env.NEXAFIA_TEST_GATE === "1" ? { stagingPassword: "0123456789abcdef0123456789abcdef0123456789abcdef" } : {}),
   plazaEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
   privacyErasureEnabled: process.env.NEXAFIA_TEST_ERASURE === "1",
   meetingsEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
