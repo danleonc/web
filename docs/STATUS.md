@@ -426,3 +426,7 @@ La revisión de Render encontró una pantalla de configuración con opción para
 La herramienta local de respaldo ahora comprueba integridad y claves foráneas en la copia, y la descarta si falla. No sobrescribe un destino existente. Esto no acredita que los datos sean correctos para la aplicación ni reemplaza restauraciones de prueba, cifrado, almacenamiento externo y una política de copias.
 
 La agenda compartida interna permite recorrer convocatorias y avisos propios de cancelación en páginas de hasta 200. Las páginas no son una instantánea: cambios concurrentes pueden desplazar resultados. La interfaz y API compartidas siguen desactivadas en el arranque normal y pendientes de despliegue y operación.
+
+## Actualización · 12 de noviembre de 2026 · Render
+
+Se desplegó el entorno público de pruebas `nexafia-pruebas` desde el commit `79704ff`. Responde por HTTPS y el disco de 1 GB conservó un marcador sintético tras reiniciar; el archivo de base también permaneció disponible. El servicio pagado fue autorizado por el propietario. La versión servida conserva la Plaza de maqueta y no configura correo, Google ni push real. No existe barrera de acceso y no está lista para datos reales. Detalles y pendientes: [infraestructura](INFRAESTRUCTURA_BETA.md).

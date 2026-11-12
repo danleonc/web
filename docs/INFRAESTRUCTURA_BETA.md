@@ -1,5 +1,13 @@
 # Nexafia: infraestructura de pruebas y camino a publicación
 
+## Estado verificado · 12 de noviembre de 2026
+
+Se creó en Render el servicio `nexafia-pruebas`, en el workspace del propietario, con el commit `79704ff` de `codex/nexafia-desarrollo`. La URL es https://nexafia-pruebas.onrender.com y es pública: no dispone de una barrera de acceso. Usar solo datos ficticios; no es un entorno autorizado para información personal ni lanzamiento público. La compilación y `/api/health` respondieron correctamente. Render creó el proyecto con el nombre de entorno `Production`; esa etiqueta predeterminada no convierte este servicio en producción de Nexafia.
+
+Servicio Node 24.19.0, una instancia de 0,5 CPU y 512 MB, disco persistente de 1 GB montado en `/var/data`, base en `/var/data/entre.sqlite`, despliegue automático desactivado y health check `/api/health`. Arranque: `ENTRE_PUBLIC_ORIGIN="$RENDER_EXTERNAL_URL" npm start`. El propietario autorizó una estimación de USD 7,25 mensuales más impuestos y eventuales excedentes; revisar la facturación real en Render.
+
+Verificación: el archivo SQLite existía y el directorio admitía escritura. Se escribió un marcador sintético, se reinició el servicio, se comprobó que el marcador y el archivo SQLite seguían disponibles en la nueva instancia y se eliminó el marcador. La API de salud volvió a responder. Esto comprueba persistencia de archivos en un reinicio, no una restauración de respaldo ni la integridad de transacciones bajo carga. El correo SMTP, Google y push real no están configurados; Plaza, conexiones y encuentros compartidos siguen desactivados en este despliegue. La UI de la Plaza muestra explícitamente contenido de ejemplo. No se probaron cuentas reales ni WebSocket en el proveedor. No hay control de acceso ni revisión legal completados.
+
 Evaluación inicial del 5 de noviembre de 2026, actualizada con el estado interno del 10 de noviembre. Propuesta operativa, no una contratación ni una certificación. Existen versiones compartidas internas de La Plaza, solicitudes, chat privado y encuentros programados, pero siguen desactivadas en el arranque normal y falta completar su operación, pruebas y despliegue. No es una aplicación de citas y no exige declarar intenciones románticas.
 
 **Comprobación del 10 de noviembre:** la pestaña de Render estaba en la creación de un servicio web, paso de configuración, y ofrecía conectar un proveedor Git. Esa pantalla no confirma ningún despliegue y no demuestra si existen o no otros servicios en la cuenta. No se creó ni contrató un servicio durante esta comprobación; no se vinculó GitHub ni se cambió el plan.
