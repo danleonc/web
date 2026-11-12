@@ -33,6 +33,13 @@ test('una contraseña débil o vacía no desactiva silenciosamente la protecció
 });
 
 test('el diagnóstico no expone la contraseña configurada', () => {
-  const secret = 'a'.repeat(42);
-  assert.throws(() => createRoomServer({ stagingPassword: secret }), error => /length=42/.test(error.message) && !error.message.includes(secret));
+  const secret = 'a'.repeat(31);
+  assert.throws(() => createRoomServer({ stagingPassword: secret }), error => /length=31/.test(error.message) && !error.message.includes(secret));
+});
+
+test('admite el formato de 32 caracteres generado por el panel de Render', async t => {
+  const password = '0123456789abcdef0123456789abcdef';
+  const app = createRoomServer({stagingPassword:password}); app.server.listen(0,'127.0.0.1'); await once(app.server,'listening'); t.after(() => app.close());
+  const response = await fetch(`http://127.0.0.1:${app.server.address().port}/api/health`);
+  assert.equal(response.status,200);
 });
