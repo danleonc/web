@@ -14,6 +14,10 @@ El servidor incorpora una puerta HTTP Basic opcional para pruebas. En Render se 
 
 La puerta cubre la aplicación, la API y WebSocket; solo permite sin clave `GET /api/health`. Es una contraseña compartida para un entorno de datos sintéticos, no reemplaza cuentas individuales, MFA, protección ante fuerza bruta, revisión independiente ni un sistema empresarial de acceso. Navegadores pueden guardar las credenciales durante su sesión. Durante la activación hubo una interrupción temporal por incompatibilidad con el formato generado; se corrigió y el servicio volvió a estar en línea.
 
+### Modo compartido de pruebas
+
+La rama prepara un modo interno que habilita la API y las pantallas compartidas de Plaza, Conexiones y Encuentros con `ENTRE_STAGING_SHARED=1` y `VITE_ENTRE_PLAZA_REAL=1`. El primero se verifica al arrancar y el segundo se aplica durante la compilación. El servidor rechaza el arranque si falta la puerta de acceso o si la compilación y el modo no coinciden. El borrado limitado de cuentas sigue desactivado. No se debe usar con información real: faltan correo transaccional, equipo de moderación, políticas y revisiones de seguridad y privacidad. La activación en Render requiere guardar ambas variables y reconstruir; hasta verificar el despliegue, no se considera activo.
+
 Evaluación inicial del 5 de noviembre de 2026, actualizada con el estado interno del 10 de noviembre. Propuesta operativa, no una contratación ni una certificación. Existen versiones compartidas internas de La Plaza, solicitudes, chat privado y encuentros programados, pero siguen desactivadas en el arranque normal y falta completar su operación, pruebas y despliegue. No es una aplicación de citas y no exige declarar intenciones románticas.
 
 **Comprobación del 10 de noviembre:** la pestaña de Render estaba en la creación de un servicio web, paso de configuración, y ofrecía conectar un proveedor Git. Esa pantalla no confirma ningún despliegue y no demuestra si existen o no otros servicios en la cuenta. No se creó ni contrató un servicio durante esta comprobación; no se vinculó GitHub ni se cambió el plan.

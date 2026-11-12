@@ -7,7 +7,7 @@ const pilotMarker: Plugin = {
     this.emitFile({
       type: "asset",
       fileName: "entre-build.json",
-      source: JSON.stringify({ mode: "accounts", version: 1 }),
+      source: JSON.stringify({ mode: "accounts", version: 1, realPlaza: process.env.VITE_ENTRE_PLAZA_REAL === "1" }),
     });
   },
 };

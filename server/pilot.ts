@@ -4,6 +4,7 @@ import { pushFromEnv } from "./push.ts";
 import { googleFromEnv } from "./google.ts";
 import { smtpMailer } from "./email.ts";
 import { createRoomServer } from "./app.ts";
+import { pilotMode } from "./pilot-mode.ts";
 const publicOrigin = process.env.ENTRE_PUBLIC_ORIGIN;
 if (!publicOrigin)
   throw new Error(
@@ -22,12 +23,9 @@ const host = process.env.ENTRE_BIND || "127.0.0.1";
 if (!["127.0.0.1", "0.0.0.0"].includes(host))
   throw new Error("Unsupported ENTRE_BIND");
 const root = resolve("dist-pilot");
-if (
-  JSON.parse(readFileSync(resolve(root, "entre-build.json"), "utf8")).mode !==
-  "accounts"
-)
-  throw new Error("Run npm run build:pilot before npm start");
+const featureMode = pilotMode(process.env, JSON.parse(readFileSync(resolve(root, "entre-build.json"), "utf8")));
 const app = createRoomServer({
+  ...featureMode,
   ...(process.env.ENTRE_STAGING_PASSWORD !== undefined ? { stagingPassword: process.env.ENTRE_STAGING_PASSWORD } : {}),
   sendVerificationEmail: smtpMailer(),
   google: googleFromEnv(process.env,origin.origin),
