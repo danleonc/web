@@ -96,7 +96,7 @@ function record(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 export function createRoomServer(options: Options = {}) {
-  if (options.stagingPassword !== undefined && (!/^[A-Za-z0-9_+/-]{43,128}={0,2}$/.test(options.stagingPassword) || options.stagingPassword.length > 128)) throw Error("Invalid staging password");
+  if (options.stagingPassword !== undefined && (!/^[A-Za-z0-9_+/-]{43,128}={0,2}$/.test(options.stagingPassword) || options.stagingPassword.length > 128)) throw Error(`Invalid staging password (length=${options.stagingPassword.length}, charset=${/^[A-Za-z0-9_+/=-]*$/.test(options.stagingPassword) ? "supported" : "unsupported"})`);
   const gateHash = options.stagingPassword === undefined ? null : createHash("sha256").update(`nexafia:${options.stagingPassword}`).digest();
   function gateAllowed(req: IncomingMessage) {
     if (!gateHash) return true;

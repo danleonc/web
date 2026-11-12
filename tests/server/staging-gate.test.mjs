@@ -31,3 +31,8 @@ test('una contraseña débil o vacía no desactiva silenciosamente la protecció
   assert.throws(() => createRoomServer({ stagingPassword: '' }), /Invalid staging password/);
   assert.throws(() => createRoomServer({ stagingPassword: 'corta' }), /Invalid staging password/);
 });
+
+test('el diagnóstico no expone la contraseña configurada', () => {
+  const secret = 'a'.repeat(42);
+  assert.throws(() => createRoomServer({ stagingPassword: secret }), error => /length=42/.test(error.message) && !error.message.includes(secret));
+});
