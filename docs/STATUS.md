@@ -430,3 +430,5 @@ La agenda compartida interna permite recorrer convocatorias y avisos propios de 
 ## Actualización · 12 de noviembre de 2026 · Render
 
 Se desplegó el entorno público de pruebas `nexafia-pruebas` desde el commit `79704ff`. Responde por HTTPS y el disco de 1 GB conservó un marcador sintético tras reiniciar; el archivo de base también permaneció disponible. El servicio pagado fue autorizado por el propietario. La versión servida conserva la Plaza de maqueta y no configura correo, Google ni push real. No existe barrera de acceso y no está lista para datos reales. Detalles y pendientes: [infraestructura](INFRAESTRUCTURA_BETA.md).
+
+Actualización posterior: se activó una barrera de acceso y se desplegó el commit `41c618a` con las pantallas y API compartidas en el entorno de pruebas. La puerta rechaza solicitudes sin credenciales; la instancia confirmó el modo compartido y la API exige cuenta. Falta correo, comprobación entre cuentas en Render y operación humana; no usar datos reales ni considerar terminado el producto.
