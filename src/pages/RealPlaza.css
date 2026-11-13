@@ -13,3 +13,7 @@
 .real-plaza button { min-height: 44px; }
 
 .real-sticker { display: block; width: min(160px, 55%); height: auto; object-fit: contain; margin: 0.75rem 0; }
+
+.real-compose-actions { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
+.real-compose-actions .send-button { margin-left: auto; }
+.real-plaza-reply .reply-quote { margin: .5rem 0; }

@@ -13,12 +13,13 @@ import "./RealPlaza.css";
 import { ImagePicker } from "../media/ImagePicker";
 import { ImageView } from "../media/ImageView";
 import { StickerPicker } from "../chat/StickerPicker";
-import { ImagePlus, Sticker } from "lucide-react";
+import { ImagePlus, Sticker, Send } from "lucide-react";
+import { ReplyDraft, ReplyQuote } from "../chat/replies";
 import { getSticker } from "../chat/stickers";
 import type { StickerActions } from "../chat/stickers";
 
 type Post = { imageId?: string | null; imageDescription?: string | null; stickerId?: string | null; id: string; topic: string; title: string; body: string; authorId: string; author: string };
-type Reply = { imageId?: string | null; imageDescription?: string | null; stickerId?: string | null; id: string; body: string; authorId: string; author: string };
+type Reply = { replyTo?: string | null; imageId?: string | null; imageDescription?: string | null; stickerId?: string | null; id: string; body: string; authorId: string; author: string };
 type BlockedPerson = { id: string; alias: string };
 async function request<T>(path: string, method = "GET", body?: object): Promise<T> {
   const response = await fetch(path, { method, credentials: "same-origin", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
@@ -36,6 +37,9 @@ export function RealPlaza({ account, loaded, onAccess, noticeTarget, ...stickers
   const [picker, setPicker] = useState<"post" | "reply" | null>(null);
   const [postSticker, setPostSticker] = useState("");
   const [imageTarget, setImageTarget] = useState<{kind: "post" | "reply"; id: string} | null>(null);
+  const [quoteId, setQuoteId] = useState<string | null>(null);
+  const replyInput = useRef<HTMLTextAreaElement>(null);
+  const pendingImage = useRef<{postId: string; id: string} | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editingReply, setEditingReply] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -67,7 +71,7 @@ export function RealPlaza({ account, loaded, onAccess, noticeTarget, ...stickers
   async function openPost(id: string) {
     navigation.enter();
     const current = ++threadRequest.current;
-    setError(""); setActive(id); setReplies([]); setReply(""); setEditingReply(null); setThreadLoading(true);
+    setError(""); setActive(id); setReplies([]); setReply(""); setQuoteId(null); pendingImage.current = null; setEditingReply(null); setThreadLoading(true);
     try { const result = await request<{ replies: Reply[] }>(`/api/plaza/posts/${id}/replies`); if (current === threadRequest.current) setReplies(result.replies); }
     catch { if (current === threadRequest.current) setError("No pudimos cargar las respuestas. Inténtalo de nuevo."); }
     finally { if (current === threadRequest.current) setThreadLoading(false); }
@@ -86,8 +90,8 @@ export function RealPlaza({ account, loaded, onAccess, noticeTarget, ...stickers
   async function submitReply(e: FormEvent) {
     e.preventDefault(); if (!active || busy) return; setBusy(true); setError("");
     try {
-      await request(editingReply ? `/api/plaza/replies/${editingReply}` : `/api/plaza/posts/${active}/replies`, editingReply ? "PATCH" : "POST", { body: reply });
-      setReply(""); setEditingReply(null);
+      await request(editingReply ? `/api/plaza/replies/${editingReply}` : `/api/plaza/posts/${active}/replies`, editingReply ? "PATCH" : "POST", { body: reply, ...(!editingReply && quoteId ? { replyTo: quoteId } : {}) });
+      setReply(""); setEditingReply(null); setQuoteId(null);
       try { setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies); }
       catch { setError("Tu respuesta se guardó, pero no pudimos actualizar la conversación. Vuelve a abrirla para verla."); }
     } catch (e) { setError(e instanceof Error ? e.message : "No pudimos responder."); }
@@ -135,6 +139,8 @@ export function RealPlaza({ account, loaded, onAccess, noticeTarget, ...stickers
     finally { setBusy(false); }
   }
   const selected = posts.find((post) => post.id === active);
+  const quote = replies.find(item => item.id === quoteId);
+  const asTarget = (item: Reply) => ({ id: item.id, name: item.author, summary: item.body.slice(0, 160) || (item.imageId ? "Imagen" : "Sticker") });
   return <div className="page-content plaza-page real-plaza">
     {!active && <section className="plaza-welcome plaza-photo-hero" aria-labelledby="real-plaza-title">
       <div className="plaza-welcome-copy"><h1 id="real-plaza-title">Las buenas conexiones empiezan compartiendo.</h1><p>Un espacio para conversar a tu ritmo y descubrir ideas de otras personas.</p></div>
@@ -177,17 +183,29 @@ export function RealPlaza({ account, loaded, onAccess, noticeTarget, ...stickers
       </div>
       {selected && <section className="real-plaza-panel" aria-labelledby="thread-title"><button className="button text" disabled={busy} onClick={navigation.back}>← Volver a La Plaza</button><h2 id="thread-title" ref={threadHeading} tabIndex={-1}>{selected.title}</h2><p>{selected.author} · {plazaTopics.find((t) => t.id === selected.topic)?.short}</p><p>{selected.body}</p>{selected.stickerId && <StickerImage id={selected.stickerId}/>}
         {selected.imageId && <ImageView plaza image={{id:selected.imageId,description:selected.imageDescription || ""}} />}
-        {threadLoading ? <p role="status">Cargando respuestas…</p> : replies.length === 0 ? <p>Aún no hay respuestas.</p> : replies.map((item) => <article key={item.id} className="real-plaza-reply"><strong>{item.author}</strong><p>{item.body}</p>{item.stickerId && <StickerImage id={item.stickerId}/>}
+        {threadLoading ? <p role="status">Cargando respuestas…</p> : replies.length === 0 ? <p>Aún no hay respuestas.</p> : <div className="plaza-replies">{replies.map((item) => <article key={item.id} className="real-plaza-reply" data-message-id={item.id} tabIndex={-1}><strong>{item.author}</strong>{item.replyTo && <ReplyQuote target={replies.find(original => original.id === item.replyTo) ? asTarget(replies.find(original => original.id === item.replyTo)!) : undefined} />}<p>{item.body}</p>{item.stickerId && <StickerImage id={item.stickerId}/>}
         {item.imageId && <ImageView plaza image={{id:item.imageId,description:item.imageDescription || ""}} />}
-        {item.authorId === account?.id && !item.imageId && <button className="button text" disabled={busy} onClick={() => setImageTarget({kind:"reply",id:item.id})}><ImagePlus size={16} aria-hidden="true" /> Agregar imagen</button>}{item.authorId !== account?.id && <><button className="button text" onClick={() => setReport({ kind: "reply", id: item.id, author: item.author })}>Reportar respuesta</button><button className="button text" disabled={busy} onClick={() => { setNotice(""); setInvitationNote(""); setInvitation({ kind: "reply", id: item.id, author: item.author }); }}>Seguir conversando</button><button className="button text" disabled={busy} onClick={() => void blockPerson("reply", item.id, item.authorId)}>Bloquear persona</button></>}{item.authorId === account?.id && <>{item.body && <button className="button text" onClick={() => { setEditingReply(item.id); setReply(item.body); }}>Editar respuesta</button>}<button className="button text" disabled={busy} onClick={() => { if (window.confirm("¿Eliminar esta respuesta?")) void remove(`/api/plaza/replies/${item.id}`, async () => { setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${selected.id}/replies`)).replies); }); }}>Eliminar respuesta</button></>}</article>)}
-        <form onSubmit={(e) => void submitReply(e)} className="real-plaza-form"><button type="button" className="button secondary" disabled={busy || !!editingReply} onClick={() => setPicker("reply")}><Sticker size={16} aria-hidden="true" /> Enviar sticker</button><label>Tu respuesta<textarea value={reply} onChange={(e) => setReply(e.target.value)} maxLength={5000} required /></label><div><button className="button primary" disabled={busy}>{editingReply ? "Guardar respuesta" : "Responder"}</button>{editingReply && <button type="button" className="button text" onClick={() => { setEditingReply(null); setReply(""); }}>Cancelar edición</button>}</div></form>
+        <button className="button text" disabled={busy} onClick={() => { setEditingReply(null); setQuoteId(item.id); replyInput.current?.focus(); }}>Responder a este comentario</button>
+        {item.authorId === account?.id && !item.imageId && <button className="button text" disabled={busy} onClick={() => setImageTarget({kind:"reply",id:item.id})}><ImagePlus size={16} aria-hidden="true" /> Agregar imagen</button>}{item.authorId !== account?.id && <><button className="button text" onClick={() => setReport({ kind: "reply", id: item.id, author: item.author })}>Reportar respuesta</button><button className="button text" disabled={busy} onClick={() => { setNotice(""); setInvitationNote(""); setInvitation({ kind: "reply", id: item.id, author: item.author }); }}>Seguir conversando</button><button className="button text" disabled={busy} onClick={() => void blockPerson("reply", item.id, item.authorId)}>Bloquear persona</button></>}{item.authorId === account?.id && <>{item.body && <button className="button text" onClick={() => { setEditingReply(item.id); setReply(item.body); }}>Editar respuesta</button>}<button className="button text" disabled={busy} onClick={() => { if (window.confirm("¿Eliminar esta respuesta?")) void remove(`/api/plaza/replies/${item.id}`, async () => { setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${selected.id}/replies`)).replies); }); }}>Eliminar respuesta</button></>}</article>)}</div>}
+        {quote && !editingReply && <ReplyDraft target={asTarget(quote)} onCancel={() => setQuoteId(null)} disabled={busy} />}
+        <form onSubmit={(e) => void submitReply(e)} className="real-plaza-form"><label>Tu respuesta<textarea ref={replyInput} value={reply} onChange={(e) => setReply(e.target.value)} maxLength={5000} required /></label><div className="real-compose-actions"><button type="button" className="sticker-trigger" aria-label="Enviar sticker" title="Enviar sticker" disabled={busy || !!editingReply} onClick={() => setPicker("reply")}><Sticker size={22} aria-hidden="true" /></button><button type="button" className="sticker-trigger" aria-label="Adjuntar imagen" title="Adjuntar imagen" disabled={busy || !!editingReply} onClick={() => setImageTarget({kind:"reply",id:"new"})}><ImagePlus size={22} aria-hidden="true" /></button><button className="send-button" aria-label={editingReply ? "Guardar respuesta" : "Responder"} disabled={busy}><Send size={18} aria-hidden="true" /></button>{editingReply && <button type="button" className="button text" onClick={() => { setEditingReply(null); setReply(""); }}>Cancelar edición</button>}</div></form>
       </section>}
       {imageTarget && <ImagePicker onClose={() => setImageTarget(null)} onChoose={async (image, blob) => {
-        const result = await fetch(`/api/plaza/images/${imageTarget.kind}/${imageTarget.id}?description=${encodeURIComponent(image.description)}`, {method:"POST",credentials:"same-origin",headers:{"Content-Type":blob.type},body:blob});
+        let targetId = imageTarget.id;
+        if (imageTarget.kind === "reply" && targetId === "new") {
+          if (!active) throw Error("La conversación ya no está disponible.");
+          if (!pendingImage.current || pendingImage.current.postId !== active) {
+            const created = await request<{ reply: {id:string} }>(`/api/plaza/posts/${active}/replies`, "POST", {body: "Imagen compartida", ...(quoteId ? {replyTo: quoteId} : {})});
+            pendingImage.current = {postId: active, id: created.reply.id};
+          }
+          targetId = pendingImage.current.id;
+        }
+        const result = await fetch(`/api/plaza/images/${imageTarget.kind}/${targetId}?description=${encodeURIComponent(image.description)}`, {method:"POST",credentials:"same-origin",headers:{"Content-Type":blob.type},body:blob});
         if (!result.ok) throw Error("No pudimos agregar la imagen. Comprueba que el contenido siga disponible e inténtalo nuevamente.");
+        pendingImage.current = null; setQuoteId(null);
         await refresh(); if (active) setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies);
       }} />}
-      {picker && <StickerPicker preferences={stickers.stickerPreferences} onToggleFavorite={stickers.onToggleFavorite} onToggleFavoritePack={stickers.onToggleFavoritePack} onClose={() => setPicker(null)} onSend={(id) => { if (picker === "post") { setPostSticker(id); setPicker(null); } else if (active && !busy) { setBusy(true); void request(`/api/plaza/posts/${active}/replies`, "POST", { body: "", stickerId: id }).then(async () => { stickers.onStickerUsed(id); setPicker(null); setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies); }).catch(() => setError("No pudimos enviar el sticker. Inténtalo de nuevo.")).finally(() => setBusy(false)); } }} />}
+      {picker && <StickerPicker preferences={stickers.stickerPreferences} onToggleFavorite={stickers.onToggleFavorite} onToggleFavoritePack={stickers.onToggleFavoritePack} onClose={() => setPicker(null)} onSend={(id) => { if (picker === "post") { setPostSticker(id); setPicker(null); } else if (active && !busy) { setBusy(true); void request(`/api/plaza/posts/${active}/replies`, "POST", { body: "", stickerId: id, ...(quoteId ? {replyTo: quoteId} : {}) }).then(async () => { setQuoteId(null); stickers.onStickerUsed(id); setPicker(null); setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies); }).catch(() => setError("No pudimos enviar el sticker. Inténtalo de nuevo.")).finally(() => setBusy(false)); } }} />}
       {report && <ReportDialog subject={`Contenido de ${report.author}`} onClose={() => setReport(null)} onSubmit={async (reason, note) => { await request("/api/plaza/reports", "POST", { kind: report.kind, contentId: report.id, reason, note }); }} />}
       {invitation && <Modal title={`Seguir conversando con ${invitation.author}`} onClose={() => setInvitation(null)}><div className="modal-content"><p>La otra persona decide si acepta. El chat se abre solo después de su aceptación.</p><form className="real-plaza-form" onSubmit={(e) => void sendInvitation(e)}><label>Mensaje de invitación<textarea value={invitationNote} maxLength={500} onChange={(e) => setInvitationNote(e.target.value)} /></label>{error && <p role="alert">{error}</p>}<button className="button primary" disabled={busy}>Enviar solicitud</button></form></div></Modal>}
     </>}

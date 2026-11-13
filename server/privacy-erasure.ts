@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Storage } from "./storage.ts";
 import { digest } from "./storage.ts";
 
-// Pinned to the v20 tables, columns and foreign keys; schema changes require review.
-const supportedSchema = "664d662b82a96d8788d14f334dac03118561f05579b970aa016a321e90d429b8";
+// Pinned to the v21 tables, columns and foreign keys; schema changes require review.
+const supportedSchema = "3827ed79457c837a3290987d42c2d54cbe4aa8d70524b1994a7f3828a4b73730";
 function schemaFingerprint(storage: Storage) {
   const db = storage.db;
   const names = db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all();
@@ -23,7 +23,7 @@ export function eraseEmptyAccount(storage: Storage, target: string, actor: strin
     if (!request || request.status !== "seen" || Number(request.version) !== version) return { error: "request_changed" } as const;
     const triggers = db.prepare("SELECT 1 FROM sqlite_schema WHERE type='trigger' UNION ALL SELECT 1 FROM sqlite_temp_schema WHERE type='trigger' LIMIT 1").get();
     const attached = db.prepare("PRAGMA database_list").all().some((row) => row.name !== "main" && row.name !== "temp");
-    if (Number(db.prepare("PRAGMA user_version").get()!.user_version) !== 20 || triggers || attached || schemaFingerprint(storage) !== supportedSchema) return { error: "manual_review_required" } as const;
+    if (Number(db.prepare("PRAGMA user_version").get()!.user_version) !== 21 || triggers || attached || schemaFingerprint(storage) !== supportedSchema) return { error: "manual_review_required" } as const;
     if (target === actor || isLive(target)) return { error: "manual_review_required" } as const;
     const account = db.prepare("SELECT a.username,a.alias,e.email FROM accounts a LEFT JOIN account_emails e ON e.user_id=a.id WHERE a.id=?").get(target);
     if (!account) return { error: "request_changed" } as const;

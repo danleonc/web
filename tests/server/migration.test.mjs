@@ -8,7 +8,7 @@ import { Storage, digest } from "../../server/storage.ts";
 import { ModerationStore } from "../../server/moderation.ts";
 import { createSession } from "../../src/room/engine.ts";
 import { PlazaStore } from "../../server/plaza.ts";
-function removeV20(storage) { storage.db.exec("DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image"); }
+function removeV20(storage) { storage.db.exec("ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image"); }
 test("actualizar v5 conserva cuentas y permite guardar contenido de Plaza", async () => {
   const dir = await mkdtemp(join(tmpdir(), "nexafia-v5-"));
   const path = join(dir, "old.sqlite");
@@ -30,11 +30,12 @@ test("actualizar v6 preserva publicaciones y respuestas y habilita reportes", as
   const dir = await mkdtemp(join(tmpdir(), "nexafia-v6-"));
   const path = join(dir, "old.sqlite");
   try {
-    const original = new Storage(path); removeV20(original);
+    const original = new Storage(path);
     original.createAccount({ id: "legacy", username: "legacy", alias: "Persona", passwordHash: "test", recoveryHash: "test" }, 1);
     const plaza = new PlazaStore(original);
     const post = plaza.createPost("legacy", { topic: "crear", title: "Idea", body: "Anterior" }, 2);
     plaza.createReply("legacy", post.id, "Respuesta anterior", 3);
+    removeV20(original);
     original.db.exec("DROP TABLE scheduled_meetings; DROP TABLE plaza_private_messages; DROP TABLE plaza_connections; DROP TABLE plaza_appeal_actions; DROP TABLE plaza_appeals; DROP TABLE plaza_moderation_actions; DROP TABLE plaza_reports; ALTER TABLE plaza_posts DROP COLUMN hidden; ALTER TABLE plaza_replies DROP COLUMN hidden; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=6;");
     original.close();
     const upgraded = new Storage(path);
@@ -120,7 +121,7 @@ test("actualizar v16 conserva eventos y crea comprobantes vacíos", async () => 
     const updated = new Storage(path); try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_request_events WHERE user_id='a'").get().n,1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_erasure_receipts").get().n,0); } finally {updated.close();}
   } finally {await rm(dir, {recursive:true,force:true});}
 });
-test("migración v1 a v20 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
+test("migración v1 a v21 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
   const dir = await mkdtemp(join(tmpdir(), "afinia-upgrade-")),
     path = join(dir, "old.sqlite");
   try {
@@ -183,7 +184,7 @@ test("migración v1 a v20 conserva cuenta, reserva, sesión e historial con segu
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        20,
+        21,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);
@@ -201,9 +202,16 @@ test("migración de v17 a v20 conserva datos y habilita avisos y multimedia", as
     const old = new Storage(path);
     old.createAccount({id:"legacy17",username:"legacy17",alias:"Persona",passwordHash:"x",recoveryHash:"x"},1);
     const post=new PlazaStore(old).createPost("legacy17",{topic:"cultura",title:"Conservar",body:"Contenido previo"},2);
-    old.db.exec("DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; PRAGMA user_version=17"); old.close();
+    old.db.exec("ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; PRAGMA user_version=17"); old.close();
     const updated=new Storage(path);
-    try { assert.equal(updated.db.prepare('PRAGMA user_version').get().user_version,20); assert.equal(new PlazaStore(updated).listPosts('legacy17')[0].id,post.id); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM plaza_images').get().n,0); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM notifications').get().n,0); }
+    try { assert.equal(updated.db.prepare('PRAGMA user_version').get().user_version,21); assert.equal(new PlazaStore(updated).listPosts('legacy17')[0].id,post.id); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM plaza_images').get().n,0); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM notifications').get().n,0); }
     finally {updated.close();}
   } finally { await rm(dir,{recursive:true,force:true}); }
+});
+
+test('actualizar v20 preserva respuestas y permite referencias entre ellas', async () => {
+ const dir=await mkdtemp(join(tmpdir(),'nexafia-v20-'));const path=join(dir,'old.sqlite');
+ try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);const p=new PlazaStore(old).createPost('a',{topic:'cultura',title:'Tema',body:'Texto'},1);const original=new PlazaStore(old).createReply('a',p.id,'Anterior',2);old.db.exec('ALTER TABLE plaza_replies DROP COLUMN reply_to; PRAGMA user_version=20');old.close();
+ const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,21);const reply=new PlazaStore(next).createReply('a',p.id,'Nueva',3,'',original.id);assert.equal(new PlazaStore(next).listReplies('a',p.id).find(x=>x.id===reply.id).replyTo,original.id);} finally {next.close();}
+ } finally {await rm(dir,{recursive:true,force:true});}
 });

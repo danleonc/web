@@ -9,7 +9,7 @@ import "./RealPlaza.css";
 import { ImagePicker } from "../media/ImagePicker";
 import { ImageView } from "../media/ImageView";
 import { StickerPicker } from "../chat/StickerPicker";
-import { ImagePlus, Sticker } from "lucide-react";
+import { ImagePlus, Sticker, Send } from "lucide-react";
 import { getSticker } from "../chat/stickers";
 import type { StickerActions } from "../chat/stickers";
 
@@ -27,6 +27,7 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, noticeTarg
   const [report, setReport] = useState<string | null>(null);
   const [picker, setPicker] = useState(false);
   const [imageTarget, setImageTarget] = useState<string | null>(null);
+  const pendingImage = useRef<{connection: string; clientId: string; messageId?: string} | null>(null);
   const pending = useRef<{ id: string; body: string; connection: string } | null>(null); const requestVersion = useRef(0); const seenKey = useRef("");
   const chatHeading = useRef<HTMLHeadingElement>(null);
   const navigation = useConversationNavigation("connections", () => { requestVersion.current++; setSelected(null); setMessages([]); });
@@ -108,11 +109,21 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, noticeTarg
         {messages.length === 0 ? <p>Aún no hay mensajes.</p> : messages.map((m) => <article className="real-plaza-reply" key={m.id}><strong>{m.senderId === account?.id ? "Tú" : active.person}</strong><p>{m.body}</p>{m.stickerId && getSticker(m.stickerId) && <img className="real-sticker" src={getSticker(m.stickerId)!.src} alt={`Sticker: ${getSticker(m.stickerId)!.label}`} />}{m.imageId && <ImageView plaza image={{id:m.imageId,description:m.imageDescription || ""}} />}
           {m.senderId === account?.id && !m.imageId && <button className="button text" disabled={busy} onClick={() => setImageTarget(m.id)}><ImagePlus size={16} aria-hidden="true" /> Agregar imagen</button>}
           {m.senderId !== account?.id ? <button className="button text" onClick={() => setReport(m.id)}>Reportar mensaje</button> : <button className="button text" disabled={busy} onClick={() => void remove(m.id)}>Retirar mensaje</button>}</article>)}
-        <form className="real-plaza-form" onSubmit={(e) => void send(e)}><button type="button" className="button secondary" disabled={busy} onClick={() => setPicker(true)}><Sticker size={16} aria-hidden="true" /> Enviar sticker</button><label>Mensaje privado<textarea value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={2000} required /></label><button className="button primary" disabled={busy}>Enviar mensaje</button></form>
+        <form className="real-plaza-form" onSubmit={(e) => void send(e)}><label>Mensaje privado<textarea value={draft} onChange={(e) => setDraft(e.target.value)} maxLength={2000} required /></label><div className="real-compose-actions"><button type="button" className="sticker-trigger" aria-label="Enviar sticker" title="Enviar sticker" disabled={busy} onClick={() => setPicker(true)}><Sticker size={22} aria-hidden="true" /></button><button type="button" className="sticker-trigger" aria-label="Adjuntar imagen" title="Adjuntar imagen" disabled={busy} onClick={() => setImageTarget("new")}><ImagePlus size={22} aria-hidden="true" /></button><button className="send-button" aria-label="Enviar mensaje" disabled={busy}><Send size={18} aria-hidden="true" /></button></div></form>
       </section>}
       {imageTarget && active && <ImagePicker onClose={() => setImageTarget(null)} onChoose={async (image, blob) => {
-        const result = await fetch(`/api/plaza/images/private/${imageTarget}?description=${encodeURIComponent(image.description)}`, {method:"POST",credentials:"same-origin",headers:{"Content-Type":blob.type},body:blob});
+        let targetId = imageTarget;
+        if (targetId === "new") {
+          if (!pendingImage.current || pendingImage.current.connection !== active.id) pendingImage.current = {connection:active.id,clientId:crypto.randomUUID()};
+          if (!pendingImage.current.messageId) {
+            const sent = await api<{message:{id:string}}>(`/api/plaza/connections/${active.id}/messages`, {clientId:pendingImage.current.clientId,body:"Imagen compartida"});
+            pendingImage.current.messageId = sent.message.id;
+          }
+          targetId = pendingImage.current.messageId;
+        }
+        const result = await fetch(`/api/plaza/images/private/${targetId}?description=${encodeURIComponent(image.description)}`, {method:"POST",credentials:"same-origin",headers:{"Content-Type":blob.type},body:blob});
         if (!result.ok) throw Error("No pudimos agregar la imagen. Comprueba que la conversación siga disponible e inténtalo nuevamente.");
+        pendingImage.current = null;
         setMessages((await api<{ messages: Message[] }>(`/api/plaza/connections/${active.id}/messages`)).messages);
       }} />}
       {picker && active && <StickerPicker preferences={stickers.stickerPreferences} onToggleFavorite={stickers.onToggleFavorite} onToggleFavoritePack={stickers.onToggleFavoritePack} onClose={() => setPicker(false)} onSend={(id) => { if (busy) return; setBusy(true); const clientId = crypto.randomUUID(); void api(`/api/plaza/connections/${active.id}/messages`, { clientId, body: "", stickerId: id }).then(async () => { stickers.onStickerUsed(id); setPicker(false); setMessages((await api<{ messages: Message[] }>(`/api/plaza/connections/${active.id}/messages`)).messages); }).catch(() => setError("No pudimos enviar el sticker. Inténtalo de nuevo.")).finally(() => setBusy(false)); }} />}

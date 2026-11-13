@@ -138,8 +138,8 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
     } else if (req.method === "POST" && replies) {
       const value = await body(req);
-      if (!(fields(value, ["body"]) || fields(value, ["body", "stickerId"]))) throw Error("invalid_body");
-      const result = plaza.createReply(actor.id, replies[1], value.body as string, now(), String(value.stickerId || ""));
+      if (typeof value.body !== "string" || Object.keys(value).some(k => !["body", "stickerId", "replyTo"].includes(k)) || (value.stickerId !== undefined && typeof value.stickerId !== "string") || (value.replyTo !== undefined && typeof value.replyTo !== "string")) throw Error("invalid_body");
+      const result = plaza.createReply(actor.id, replies[1], value.body as string, now(), String(value.stickerId || ""), String(value.replyTo || ""));
       json(res, 201, { reply: result });
     } else if (req.method === "PATCH" && reply) {
       const value = await body(req);

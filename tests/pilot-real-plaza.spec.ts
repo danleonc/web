@@ -475,3 +475,42 @@ test("Conexiones comparte stickers e imágenes en el chat aceptado", async ({bro
   await expect(pb.getByRole('button',{name:'Ampliar imagen compartida'})).toBeVisible(); await expect(pb.getByAltText('Sticker: Moka: Saludando')).toBeVisible();
  } finally {await a.close();await b.close();}
 });
+
+test('La Plaza responde a un comentario con cita y acciones compactas', async ({browser},info)=>{
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use}); const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`quote_a_${info.project.name}`); await register(b,`quote_b_${info.project.name}`); const h={Origin:'http://127.0.0.1:4190'};
+  const p=await (await a.request.post('/api/plaza/posts',{headers:h,data:{topic:'cultura',title:`Cita ${info.project.name}`,body:'Hola'}})).json();
+  await b.request.post(`/api/plaza/posts/${p.post.id}/replies`,{headers:h,data:{body:'Me encanta caminar'}});
+  const page=await a.newPage();await page.goto('/#plaza');await page.getByRole('article').filter({hasText:`Cita ${info.project.name}`}).getByRole('button',{name:'Ver conversación'}).click();
+  await page.getByRole('article').filter({hasText:'Me encanta caminar'}).getByRole('button',{name:'Responder a este comentario'}).click();
+  await expect(page.getByRole('group',{name:`Respondiendo a quote_b_${info.project.name}`})).toBeVisible();
+  await page.getByLabel('Tu respuesta').fill('Vamos al parque');await page.getByRole('button',{name:'Responder',exact:true}).click();
+  const answer=page.getByRole('article').filter({hasText:'Vamos al parque'});await expect(answer.getByRole('button',{name:`Ver mensaje original de quote_b_${info.project.name}`})).toBeVisible();
+  await expect(page.getByRole('button',{name:'Adjuntar imagen'})).toBeVisible();await expect(page.getByRole('button',{name:'Enviar sticker',exact:true})).toBeVisible();
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:info.outputPath('respuesta-citada.png'),fullPage:true});
+ } finally {await a.close();await b.close();}
+});
+
+test('adjuntar imagen desde el compositor crea una respuesta visible',async ({browser},info)=>{
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {await register(a,`compose_a_${info.project.name}`);await register(b,`compose_b_${info.project.name}`);const h={Origin:'http://127.0.0.1:4190'};
+ const p=await (await a.request.post('/api/plaza/posts',{headers:h,data:{topic:'cultura',title:`Foto directa ${info.project.name}`,body:'Hola'}})).json();
+ const pa=await a.newPage();await pa.goto('/#plaza');await pa.getByRole('article').filter({hasText:`Foto directa ${info.project.name}`}).getByRole('button',{name:'Ver conversación'}).click();
+ await pa.getByRole('button',{name:'Adjuntar imagen'}).click();const sharp=(await import('sharp')).default;const buffer=await sharp({create:{width:80,height:80,channels:3,background:'#285d4c'}}).png().toBuffer();
+ await pa.locator('input[type=file]').setInputFiles({name:'foto.png',mimeType:'image/png',buffer});await pa.getByRole('button',{name:'Compartir imagen',exact:true}).click();
+ await expect(pa.getByRole('button',{name:'Ampliar imagen compartida'})).toBeVisible();
+ const replies=await (await b.request.get(`/api/plaza/posts/${p.post.id}/replies`)).json();expect(replies.replies[0].imageId).toBeTruthy();
+ } finally {await a.close();await b.close();}
+});
+
+test('adjuntar imagen desde Conexiones envía un mensaje a la otra cuenta',async ({browser},info)=>{
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {await register(a,`direct_a_${info.project.name}`);await register(b,`direct_b_${info.project.name}`);const h={Origin:'http://127.0.0.1:4190'};
+ const post=await (await a.request.post('/api/plaza/posts',{headers:h,data:{topic:'crear',title:'Directo',body:'Hola'}})).json();const inv=await (await b.request.post('/api/plaza/invitations',{headers:h,data:{kind:'post',contentId:post.post.id,note:''}})).json();await a.request.post(`/api/plaza/invitations/${inv.invitation.id}/decision`,{headers:h,data:{action:'accept'}});
+ const pa=await a.newPage();await pa.goto('/#connections');await pa.getByRole('article').filter({hasText:`direct_b_${info.project.name}`}).getByRole('button',{name:'Abrir conversación'}).click();await pa.getByRole('button',{name:'Adjuntar imagen'}).click();
+ const sharp=(await import('sharp')).default;const buffer=await sharp({create:{width:80,height:80,channels:3,background:'#285d4c'}}).png().toBuffer();await pa.locator('input[type=file]').setInputFiles({name:'foto.png',mimeType:'image/png',buffer});await pa.getByRole('button',{name:'Compartir imagen',exact:true}).click();await expect(pa.getByRole('button',{name:'Ampliar imagen compartida'})).toBeVisible();
+ const messages=await (await b.request.get(`/api/plaza/connections/${inv.invitation.id}/messages`)).json();expect(messages.messages[0].imageId).toBeTruthy();
+ } finally {await a.close();await b.close();}
+});

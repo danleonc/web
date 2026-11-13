@@ -442,3 +442,8 @@ En el espacio de trabajo se implementó una campana con avisos persistentes de r
 ### Multimedia y notificaciones reales (13 de noviembre, trabajo local)
 
 Se incorporaron stickers del catálogo en publicaciones, respuestas y mensajes privados. Las imágenes se adjuntan a contenido ya publicado desde «Agregar imagen»; se normalizan en el servidor y solo se sirven a cuentas autorizadas. Los reportes conservan la imagen adjunta y el identificador del sticker. El silencio por conversación también retira avisos push privados pendientes. Se probaron recorridos de dos cuentas en escritorio y móvil, acceso denegado a terceros y migraciones. Antes del despliegue se generó una copia consistente de la base de Render en su propio disco y se comprobó la apertura de una restauración aislada; no existe todavía una copia verificada fuera del servicio. El entorno sigue protegido y no constituye un lanzamiento público.
+
+
+### Respuestas citadas y compositor de conversaciones (13 de noviembre, trabajo local)
+
+La Plaza incorpora referencias a un comentario de la misma conversación, validadas por el servidor y ocultas si el original está bloqueado. Los compositores compartidos de Plaza y Conexiones agrupan stickers e imágenes en controles compactos; la imagen también puede enviarse desde el compositor. Pruebas locales incluyen persistencia, bloqueo y navegador en escritorio y móvil. Pendiente de despliegue y verificación en Render.
