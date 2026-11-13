@@ -514,3 +514,16 @@ test('adjuntar imagen desde Conexiones envía un mensaje a la otra cuenta',async
  const messages=await (await b.request.get(`/api/plaza/connections/${inv.invitation.id}/messages`)).json();expect(messages.messages[0].imageId).toBeTruthy();
  } finally {await a.close();await b.close();}
 });
+
+test('Conexiones responde a un mensaje y conserva la cita',async ({browser},info)=>{
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {await register(a,`cq_a_${info.project.name}`);await register(b,`cq_b_${info.project.name}`);const h={Origin:'http://127.0.0.1:4190'};
+ const post=await (await a.request.post('/api/plaza/posts',{headers:h,data:{topic:'crear',title:'Cita privada',body:'Hola'}})).json();const inv=await (await b.request.post('/api/plaza/invitations',{headers:h,data:{kind:'post',contentId:post.post.id,note:''}})).json();const id=inv.invitation.id;await a.request.post(`/api/plaza/invitations/${id}/decision`,{headers:h,data:{action:'accept'}});
+ await b.request.post(`/api/plaza/connections/${id}/messages`,{headers:h,data:{clientId:'cita-original-01',body:'Me encanta leer'}});
+ const page=await a.newPage();await page.goto('/#connections');await page.getByRole('article').filter({hasText:`cq_b_${info.project.name}`}).getByRole('button',{name:'Abrir conversación'}).click();
+ await page.getByRole('article').filter({hasText:'Me encanta leer'}).getByRole('button',{name:'Responder a este mensaje'}).click();await expect(page.getByRole('group',{name:`Respondiendo a cq_b_${info.project.name}`})).toBeVisible();
+ await page.getByLabel('Mensaje privado').fill('Yo también');await page.getByRole('button',{name:'Enviar mensaje',exact:true}).click();
+ await expect(page.getByRole('article').filter({hasText:'Yo también'}).getByRole('button',{name:`Ver mensaje original de cq_b_${info.project.name}`})).toBeVisible();
+ const messages=await (await b.request.get(`/api/plaza/connections/${id}/messages`)).json();expect(messages.messages[1].replyTo).toBe(messages.messages[0].id);
+ } finally {await a.close();await b.close();}
+});

@@ -62,7 +62,7 @@ test('borrado limitado se mantiene desactivado por defecto',async t=>{
 });
 test('borrado limitado funciona tras migrar una base existente desde v16',async t=>{
  const {f,person,operator,version}=await setup(t); const db=new DatabaseSync(f.path);
- db.exec('ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; DROP TABLE privacy_erasure_events; DROP TABLE privacy_erasure_receipts; PRAGMA user_version=16'); db.close();
+ db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; DROP TABLE privacy_erasure_events; DROP TABLE privacy_erasure_receipts; PRAGMA user_version=16'); db.close();
  await f.restart();
  const result=await f.request('/api/privacy/erase-empty','POST',{userId:person.id,version,confirmation:'BORRAR CUENTA'},operator.cookie);
  assert.equal(result.status,200);

@@ -447,3 +447,8 @@ Se incorporaron stickers del catálogo en publicaciones, respuestas y mensajes p
 ### Respuestas citadas y compositor de conversaciones (13 de noviembre, trabajo local)
 
 La Plaza incorpora referencias a un comentario de la misma conversación, validadas por el servidor y ocultas si el original está bloqueado. Los compositores compartidos de Plaza y Conexiones agrupan stickers e imágenes en controles compactos; la imagen también puede enviarse desde el compositor. Pruebas locales incluyen persistencia, bloqueo y navegador en escritorio y móvil. Pendiente de despliegue y verificación en Render.
+
+
+### Citas en Conexiones (13 de noviembre, trabajo local)
+
+El chat compartido de Conexiones admite responder a mensajes con texto, sticker o imagen, conservando referencias a mensajes visibles de la misma conexión. Se mantiene la validación de pertenencia y la cita deja de mostrar el original si se retira. Encuentros y La Plaza ya disponen de respuestas citadas. Pruebas locales de servidor y navegador; pendiente despliegue.

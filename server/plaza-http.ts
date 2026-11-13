@@ -98,8 +98,8 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
     } else if (req.method === "POST" && privateMessages) {
       const value = await body(req);
-      if (!(fields(value, ["clientId", "body"]) || fields(value, ["clientId", "body", "stickerId"]))) throw Error("invalid_body");
-      const message = connections.send(actor.id, privateMessages[1], String(value.clientId), String(value.body), String(value.stickerId || ""));
+      if (typeof value.clientId !== "string" || typeof value.body !== "string" || Object.keys(value).some(k => !["clientId", "body", "stickerId", "replyTo"].includes(k)) || (value.stickerId !== undefined && typeof value.stickerId !== "string") || (value.replyTo !== undefined && typeof value.replyTo !== "string")) throw Error("invalid_body");
+      const message = connections.send(actor.id, privateMessages[1], value.clientId, value.body, String(value.stickerId || ""), String(value.replyTo || ""));
       json(res, message ? 201 : 404, message ? { message } : { error: "not_found" });
     } else if (req.method === "POST" && path === "/api/plaza/appeals") {
       const value = await body(req);

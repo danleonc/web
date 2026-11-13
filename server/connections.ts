@@ -55,7 +55,7 @@ export class ConnectionsStore {
   messages(actor: string, id: string) {
     const connection = this.visible(id, actor);
     if (!connection || connection.status !== "accepted") return null;
-    return this.storage.db.prepare("SELECT m.id,m.sender_id AS senderId,m.body,m.sticker_id AS stickerId,(SELECT id FROM plaza_images i WHERE i.message_id=m.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.message_id=m.id) AS imageDescription,m.created_at AS createdAt FROM plaza_private_messages m WHERE m.connection_id=? AND m.hidden=0 AND (m.body<>'' OR m.sticker_id IS NOT NULL OR EXISTS (SELECT 1 FROM plaza_images i WHERE i.message_id=m.id)) ORDER BY rowid DESC LIMIT 100").all(id).reverse();
+    return this.storage.db.prepare("SELECT m.id,m.sender_id AS senderId,m.body,m.sticker_id AS stickerId,CASE WHEN EXISTS (SELECT 1 FROM plaza_private_messages q WHERE q.id=m.reply_to AND q.connection_id=m.connection_id AND q.hidden=0) THEN m.reply_to ELSE NULL END AS replyTo,(SELECT id FROM plaza_images i WHERE i.message_id=m.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.message_id=m.id) AS imageDescription,m.created_at AS createdAt FROM plaza_private_messages m WHERE m.connection_id=? AND m.hidden=0 AND (m.body<>'' OR m.sticker_id IS NOT NULL OR EXISTS (SELECT 1 FROM plaza_images i WHERE i.message_id=m.id)) ORDER BY rowid DESC LIMIT 100").all(id).reverse();
   }
   remove(actor: string, connectionId: string, messageId: string) {
     const connection = this.visible(connectionId, actor);
@@ -78,18 +78,19 @@ export class ConnectionsStore {
     db.prepare("UPDATE notifications SET read_at=COALESCE(read_at,?) WHERE recipient_id=? AND kind='message' AND target_id=? AND event_id IN (SELECT id FROM plaza_private_messages WHERE connection_id=? AND rowid <= (SELECT rowid FROM plaza_private_messages WHERE id=?))").run(this.now(), actor, connectionId, connectionId, messageId);
     return true;
   }
-  send(actor: string, id: string, clientId: string, value: string, stickerId = "") {
+  send(actor: string, id: string, clientId: string, value: string, stickerId = "", replyTo = "") {
     const connection = this.visible(id, actor);
     if (!connection || connection.status !== "accepted") return null;
     if (!/^[a-zA-Z0-9-]{8,64}$/.test(clientId) || typeof value !== "string" || (!value.trim() && !stickerId) || value.length > 2000 || (stickerId && !validSticker(stickerId))) throw Error("invalid_message");
     const body = value.trim(); const db = this.storage.db;
-    const old = db.prepare("SELECT id,body,sticker_id FROM plaza_private_messages WHERE connection_id=? AND sender_id=? AND client_id=?").get(id, actor, clientId);
-    if (old) { if (old.body !== body || (old.sticker_id || "") !== stickerId) throw Error("client_id_conflict"); return { id: String(old.id) }; }
+    const old = db.prepare("SELECT id,body,sticker_id,reply_to FROM plaza_private_messages WHERE connection_id=? AND sender_id=? AND client_id=?").get(id, actor, clientId);
+    if (old) { if (old.body !== body || (old.sticker_id || "") !== stickerId || (old.reply_to || "") !== replyTo) throw Error("client_id_conflict"); return { id: String(old.id) }; }
+    if (replyTo && !db.prepare("SELECT 1 FROM plaza_private_messages WHERE id=? AND connection_id=? AND hidden=0").get(replyTo,id)) throw Error("invalid_reply");
     if (!this.storage.takeLimit(digest(`plaza-private:${actor}`), 120, 60 * 60_000, this.now())) throw Error("rate_limited");
     const messageId = randomUUID(), time = this.now();
     const recipient = String(connection.sender_id === actor ? connection.recipient_id : connection.sender_id);
     this.storage.transaction(() => {
-      db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at,sticker_id) VALUES(?,?,?,?,?,?,?)").run(messageId, id, actor, clientId, body, time, stickerId || null);
+      db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at,sticker_id,reply_to) VALUES(?,?,?,?,?,?,?,?)").run(messageId, id, actor, clientId, body, time, stickerId || null, replyTo || null);
       new Notifications(this.storage, this.now).privateMessage(id, messageId, actor);
       db.prepare("INSERT INTO push_private_queue(connection_id,endpoint_hash,user_id,message_id,created_at,next_at) SELECT ?,endpoint_hash,user_id,?,?,? FROM push_subscriptions WHERE user_id=? AND NOT EXISTS (SELECT 1 FROM notification_mutes WHERE user_id=? AND kind='connection' AND target_id=?) ON CONFLICT(connection_id,endpoint_hash) DO UPDATE SET message_id=excluded.message_id,created_at=excluded.created_at,next_at=excluded.next_at,attempts=0").run(id, messageId, time, time, recipient, recipient, id);
     });
