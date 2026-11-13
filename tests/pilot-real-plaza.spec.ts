@@ -411,3 +411,67 @@ test("una cancelación muestra el motivo a la persona con reserva", async ({ bro
     await expect(participant.getByText(/Encuentro cancelado/)).toHaveCount(0);
   } finally { await mod.close(); await user.close(); }
 });
+
+test("la campana muestra respuestas reales y permite silenciar", async ({ browser }, info) => {
+  const a = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const b = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  try {
+    await register(a, `bell_a_${info.project.name}`); await register(b, `bell_b_${info.project.name}`);
+    const headers = { Origin: "http://127.0.0.1:4190" };
+    const created = await a.request.post("/api/plaza/posts", { headers, data: { topic: "cultura", title: `Aviso ${info.project.name}`, body: "Hola" } });
+    const { post } = await created.json();
+    expect((await b.request.post(`/api/plaza/posts/${post.id}/replies`, { headers, data: { body: "Una respuesta" } })).status()).toBe(201);
+    const page = await a.newPage(); await page.goto('/#plaza');
+    const bell = page.getByRole('button', { name: /Notificaciones, 1 aviso sin leer/ }); await expect(bell).toBeVisible(); await bell.click();
+    await expect(page.getByText('Nueva respuesta', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /Silenciar/ }).click();
+    await expect(page.getByRole('button', { name: /Reactivar/ })).toBeVisible();
+    await page.getByRole('button', { name: /Nueva respuesta/ }).click();
+    await expect(page.getByRole('heading', { name: `Aviso ${info.project.name}` })).toBeVisible();
+    await expect(page.getByText('Una respuesta', { exact: true })).toBeVisible();
+  } finally { await a.close(); await b.close(); }
+});
+
+test("La Plaza comparte imágenes y stickers entre cuentas", async ({browser}, info) => {
+ const a=await browser.newContext({baseURL:"http://127.0.0.1:4190",...info.project.use});
+ const b=await browser.newContext({baseURL:"http://127.0.0.1:4190",...info.project.use});
+ try {
+  await register(a,`media_a_${info.project.name}`); await register(b,`media_b_${info.project.name}`);
+  const pa=await a.newPage(); await pa.goto('/#plaza');
+  await pa.getByLabel('Título de la conversación').fill(`Imágenes ${info.project.name}`);
+  await pa.getByLabel('Tu publicación').fill('Una foto para compartir'); await pa.getByRole('button',{name:'Publicar',exact:true}).click();
+  const card=pa.getByRole('article').filter({hasText:`Imágenes ${info.project.name}`}); await card.getByRole('button',{name:'Agregar imagen'}).click();
+  const sharp=(await import('sharp')).default; const buffer=await sharp({create:{width:100,height:100,channels:3,background:'#285d4c'}}).png().toBuffer();
+  await pa.locator('input[type=file]').setInputFiles({name:'foto.png',mimeType:'image/png',buffer});
+  await pa.getByRole('button',{name:'Compartir imagen',exact:true}).click();
+  await expect(card.getByRole('button',{name:'Ampliar imagen compartida'})).toBeVisible();
+  const pb=await b.newPage(); await pb.goto('/#plaza'); const other=pb.getByRole('article').filter({hasText:`Imágenes ${info.project.name}`});
+  await expect(other.getByRole('button',{name:'Ampliar imagen compartida'})).toBeVisible();
+  await other.getByRole('button',{name:'Ver conversación'}).click(); await pb.getByRole('button',{name:'Enviar sticker'}).click();
+  await pb.getByRole('button',{name:'Seleccionar sticker: Moka: Saludando'}).click(); await pb.getByRole('button',{name:'Enviar sticker',exact:true}).last().click();
+  await expect(pb.getByAltText('Sticker: Moka: Saludando')).toBeVisible();
+  await pa.reload(); await pa.getByRole('article').filter({hasText:`Imágenes ${info.project.name}`}).getByRole('button',{name:'Ver conversación'}).click();
+  await expect(pa.getByAltText('Sticker: Moka: Saludando')).toBeVisible();
+ } finally {await a.close(); await b.close();}
+});
+
+test("Conexiones comparte stickers e imágenes en el chat aceptado", async ({browser},info)=>{
+ const a=await browser.newContext({baseURL:"http://127.0.0.1:4190",...info.project.use}); const b=await browser.newContext({baseURL:"http://127.0.0.1:4190",...info.project.use});
+ try {
+  await register(a,`pm_a_${info.project.name}`); await register(b,`pm_b_${info.project.name}`);
+  const headers={Origin:"http://127.0.0.1:4190"};
+  const p=await (await a.request.post('/api/plaza/posts',{headers,data:{topic:'crear',title:'Conexión imagen',body:'Hola'}})).json();
+  const invite=await (await b.request.post('/api/plaza/invitations',{headers,data:{kind:'post',contentId:p.post.id,note:''}})).json();
+  await a.request.post(`/api/plaza/invitations/${invite.invitation.id}/decision`,{headers,data:{action:'accept'}});
+  const pa=await a.newPage(); await pa.goto('/#connections');
+  const person=pa.getByRole('article').filter({hasText:`pm_b_${info.project.name}`}); await person.getByRole('button',{name:'Abrir conversación'}).click();
+  await pa.getByLabel('Mensaje privado').fill('Para ti'); await pa.getByRole('button',{name:'Enviar mensaje',exact:true}).click();
+  const msg=pa.getByRole('article').filter({hasText:'Para ti'}); await msg.getByRole('button',{name:'Agregar imagen'}).click();
+  const sharp=(await import('sharp')).default; const buffer=await sharp({create:{width:80,height:80,channels:3,background:'#285d4c'}}).png().toBuffer();
+  await pa.locator('input[type=file]').setInputFiles({name:'foto.png',mimeType:'image/png',buffer}); await pa.getByRole('button',{name:'Compartir imagen',exact:true}).click();
+  await expect(msg.getByRole('button',{name:'Ampliar imagen compartida'})).toBeVisible();
+  await pa.getByRole('button',{name:'Enviar sticker',exact:true}).click(); await pa.getByRole('button',{name:'Seleccionar sticker: Moka: Saludando'}).click(); await pa.getByRole('button',{name:'Enviar sticker',exact:true}).last().click();
+  const pb=await b.newPage(); await pb.goto('/#connections'); await pb.getByRole('article').filter({hasText:`pm_a_${info.project.name}`}).getByRole('button',{name:'Abrir conversación'}).click();
+  await expect(pb.getByRole('button',{name:'Ampliar imagen compartida'})).toBeVisible(); await expect(pb.getByAltText('Sticker: Moka: Saludando')).toBeVisible();
+ } finally {await a.close();await b.close();}
+});

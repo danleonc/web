@@ -53,6 +53,7 @@ import { useNotices } from "./notifications/useNotices";
 import { DevicePush } from "./notifications/DevicePush";
 import { prepareServiceWorker } from "./notifications/pushClient";
 import { NoticeCenter } from "./notifications/NoticeCenter";
+import { RealNoticeCenter, useRealNotices } from "./notifications/RealNoticeCenter";
 type Page =
   | "plaza"
   | "discover"
@@ -87,6 +88,9 @@ function App() {
   const [noticesOpen, setNoticesOpen] = useState(false);
   const noticeOwner = accountsEnabled ? (account.account ? `account:${account.account.id}` : null) : "prototype";
   const notices = useNotices(state, setState, noticeOwner);
+  const realNotices = useRealNotices(realPlazaEnabled && account.account?.canParticipate ? account.account.id : null);
+  const [noticeTarget, setNoticeTarget] = useState<{ kind: "reply" | "message"; id: string; serial: number } | null>(null);
+  const unread = realPlazaEnabled ? realNotices.unread : notices.unread;
   useEffect(() => {
     void prepareServiceWorker().catch(() => {});
     const location = new URL(window.location.href);
@@ -599,8 +603,8 @@ function App() {
                   : "Entrar"
                 : "Acceso"}
             </button>
-            <button className="icon-button notice-trigger" aria-label={`Notificaciones, ${notices.unread === 0 ? "sin avisos sin leer" : notices.unread === 1 ? "1 aviso sin leer" : `${notices.unread} avisos sin leer`}`} onClick={() => setNoticesOpen(true)}>
-              <Bell size={21} aria-hidden="true" />{notices.unread > 0 && <span className="notice-badge" aria-hidden="true">{notices.unread}</span>}
+            <button className="icon-button notice-trigger" aria-label={`Notificaciones, ${unread === 0 ? "sin avisos sin leer" : unread === 1 ? "1 aviso sin leer" : `${unread} avisos sin leer`}`} onClick={() => setNoticesOpen(true)}>
+              <Bell size={21} aria-hidden="true" />{unread > 0 && <span className="notice-badge" aria-hidden="true">{unread}</span>}
             </button>
             <button
               className="top-avatar"
@@ -643,7 +647,7 @@ function App() {
         )}
         <main id="main-content" ref={mainRef} tabIndex={-1}>
           {page === "plaza" && realPlazaEnabled && (
-            <RealPlaza key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} />
+            <RealPlaza key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} noticeTarget={noticeTarget?.kind === "reply" ? noticeTarget : null} {...stickerActions} />
           )}
           {page === "plaza" && !realPlazaEnabled && (
             <Plaza
@@ -748,7 +752,7 @@ function App() {
               }}
             />
           )}
-          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onPlaza={() => navigate("plaza")} />}
+          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onPlaza={() => navigate("plaza")} noticeTarget={noticeTarget?.kind === "message" ? noticeTarget : null} {...stickerActions} />}
           {page === "connections" && !realPlazaEnabled && (
             <Connections
               {...stickerActions}
@@ -886,7 +890,8 @@ function App() {
           requestAnimationFrame(() => mainRef.current?.focus({ preventScroll: true }));
         }} />
       )}
-      {noticesOpen && (
+      {noticesOpen && realPlazaEnabled && <RealNoticeCenter notices={realNotices} signedIn={!!account.account?.canParticipate} onClose={() => setNoticesOpen(false)} onAccess={() => { setNoticesOpen(false); setAccessOpen(true); }} onOpen={(kind, id) => { setNoticesOpen(false); setNoticeTarget({ kind, id, serial: Date.now() }); navigate(kind === "reply" ? "plaza" : "connections"); }}><DevicePush key={noticeOwner || "guest"} owner={noticeOwner} canParticipate={!!account.account?.canParticipate} /></RealNoticeCenter>}
+      {noticesOpen && !realPlazaEnabled && (
         <NoticeCenter key={noticeOwner || "guest"} notices={notices} signedIn={!!noticeOwner} activeRoom={page === "room" || account.activeRoom}
           onClose={() => setNoticesOpen(false)} onAccess={() => { setNoticesOpen(false); setAccessOpen(true); }}
           onOpen={(postId, commentId) => { notices.readThread(postId); setNoticesOpen(false); openPlaza(postId, commentId); }}>

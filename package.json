@@ -10,7 +10,7 @@
     "check:stickers": "node scripts/check-sticker-assets.mjs",
     "start": "node server/pilot.ts",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "npm run test:rules && npm run test:server && playwright test",
+    "test": "npm run test:rules && npm run test:server && playwright test && playwright test --config playwright.staging-gate.config.ts",
     "typecheck": "tsc -b",
     "deploy:pages": "npm run build && node scripts/publish-pages.mjs",
     "test:rules": "node --test tests/rules/*.test.mjs",

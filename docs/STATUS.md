@@ -432,3 +432,13 @@ La agenda compartida interna permite recorrer convocatorias y avisos propios de 
 Se desplegó el entorno público de pruebas `nexafia-pruebas` desde el commit `79704ff`. Responde por HTTPS y el disco de 1 GB conservó un marcador sintético tras reiniciar; el archivo de base también permaneció disponible. El servicio pagado fue autorizado por el propietario. La versión servida conserva la Plaza de maqueta y no configura correo, Google ni push real. No existe barrera de acceso y no está lista para datos reales. Detalles y pendientes: [infraestructura](INFRAESTRUCTURA_BETA.md).
 
 Actualización posterior: se activó una barrera de acceso y se desplegó el commit `41c618a` con las pantallas y API compartidas en el entorno de pruebas. La puerta rechaza solicitudes sin credenciales; la instancia confirmó el modo compartido y la API exige cuenta. Falta correo, comprobación entre cuentas en Render y operación humana; no usar datos reales ni considerar terminado el producto.
+
+
+### Avisos reales en desarrollo (13 de noviembre)
+
+En el espacio de trabajo se implementó una campana con avisos persistentes de respuestas de Plaza y mensajes privados, contador de no leídos y silencio por conversación. Las pruebas locales cubren dos cuentas, silencio, migración y privacidad, además de la campana en escritorio y móvil. No se ha desplegado: falta completar la revisión y el respaldo previo de la base del entorno. Los adjuntos de Plaza y Conexiones siguen pendientes; no confundirlos con los de encuentros.
+
+
+### Multimedia y notificaciones reales (13 de noviembre, trabajo local)
+
+Se incorporaron stickers del catálogo en publicaciones, respuestas y mensajes privados. Las imágenes se adjuntan a contenido ya publicado desde «Agregar imagen»; se normalizan en el servidor y solo se sirven a cuentas autorizadas. Los reportes conservan la imagen adjunta y el identificador del sticker. El silencio por conversación también retira avisos push privados pendientes. Se probaron recorridos de dos cuentas en escritorio y móvil, acceso denegado a terceros y migraciones. Antes del despliegue se generó una copia consistente de la base de Render en su propio disco y se comprobó la apertura de una restauración aislada; no existe todavía una copia verificada fuera del servicio. El entorno sigue protegido y no constituye un lanzamiento público.

@@ -54,7 +54,10 @@ export class Storage {
       version !== 14 &&
       version !== 15 &&
       version !== 16 &&
-      version !== 17
+      version !== 17 &&
+      version !== 18 &&
+      version !== 19 &&
+      version !== 20
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -172,6 +175,23 @@ export class Storage {
       CREATE TABLE IF NOT EXISTS privacy_erasure_receipts(id TEXT PRIMARY KEY,subject_hash TEXT NOT NULL UNIQUE,operator_id TEXT NOT NULL REFERENCES accounts(id),completed_at INTEGER NOT NULL,request_version INTEGER NOT NULL);
       CREATE TABLE IF NOT EXISTS privacy_erasure_events(receipt_id TEXT NOT NULL REFERENCES privacy_erasure_receipts(id),version INTEGER NOT NULL,action TEXT NOT NULL,actor_id TEXT REFERENCES accounts(id),created_at INTEGER NOT NULL,PRIMARY KEY(receipt_id,version));
       PRAGMA user_version=17; COMMIT;`);
+    if (version < 18)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE notifications(id TEXT PRIMARY KEY,recipient_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,actor_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,kind TEXT NOT NULL,target_id TEXT NOT NULL,event_id TEXT NOT NULL,created_at INTEGER NOT NULL,read_at INTEGER,UNIQUE(recipient_id,kind,event_id));
+      CREATE INDEX notifications_recipient ON notifications(recipient_id,created_at DESC);
+      CREATE TABLE notification_mutes(user_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,kind TEXT NOT NULL,target_id TEXT NOT NULL,PRIMARY KEY(user_id,kind,target_id));
+      PRAGMA user_version=18; COMMIT;`);
+    if (version < 19)
+      this.db.exec(`BEGIN IMMEDIATE;
+      ALTER TABLE plaza_posts ADD COLUMN sticker_id TEXT;
+      ALTER TABLE plaza_replies ADD COLUMN sticker_id TEXT;
+      ALTER TABLE plaza_private_messages ADD COLUMN sticker_id TEXT;
+      PRAGMA user_version=19; COMMIT;`);
+    if (version < 20)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE plaza_images(id TEXT PRIMARY KEY,owner_id TEXT NOT NULL REFERENCES accounts(id),post_id TEXT UNIQUE REFERENCES plaza_posts(id) ON DELETE CASCADE,reply_id TEXT UNIQUE REFERENCES plaza_replies(id) ON DELETE CASCADE,message_id TEXT UNIQUE REFERENCES plaza_private_messages(id) ON DELETE CASCADE,body BLOB NOT NULL,description TEXT NOT NULL,created_at INTEGER NOT NULL,CHECK((post_id IS NOT NULL)+(reply_id IS NOT NULL)+(message_id IS NOT NULL)=1));
+      ALTER TABLE plaza_reports ADD COLUMN evidence_image BLOB;
+      PRAGMA user_version=20; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

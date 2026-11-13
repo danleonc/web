@@ -23,11 +23,13 @@ export function clearHiddenImages() {
 export function ImageView({
   image,
   shared = false,
+  plaza = false,
   removed = false,
   onReport,
 }: {
   image: ImageRef;
   shared?: boolean;
+  plaza?: boolean;
   removed?: boolean;
   onReport?: () => void;
 }) {
@@ -53,9 +55,9 @@ export function ImageView({
       setExpanded(false);
       return;
     }
-    if (shared) {
+    if (shared || plaza) {
       setExtension("webp");
-      setSrc(`/api/media/${image.id}`);
+      setSrc(`${plaza ? "/api/plaza/images" : "/api/media"}/${image.id}`);
       return;
     }
     let cancelled = false;
@@ -82,7 +84,7 @@ export function ImageView({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [image.id, shared, hidden, removed]);
+  }, [image.id, shared, plaza, hidden, removed]);
   function hide(value: boolean) {
     setHidden(value);
     setExpanded(false);

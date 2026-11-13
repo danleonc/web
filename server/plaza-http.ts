@@ -3,6 +3,9 @@ import type { Storage } from "./storage.ts";
 import { PlazaStore } from "./plaza.ts";
 import { PlazaModeration } from "./plaza-moderation.ts";
 import { ConnectionsStore } from "./connections.ts";
+import { Notifications } from "./notifications.ts";
+import { PlazaImages } from "./plaza-images.ts";
+import { normalizeUpload } from "./images.ts";
 
 function json(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
@@ -30,6 +33,11 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   const plaza = new PlazaStore(storage);
   const moderation = new PlazaModeration(storage, now);
   const connections = new ConnectionsStore(storage, now);
+  const notifications = new Notifications(storage, now);
+  const images = new PlazaImages(storage, now);
+  const reportImage = path.match(/^\/api\/plaza\/moderation\/images\/([a-f0-9-]{36})$/);
+  const image = path.match(/^\/api\/plaza\/images\/([a-f0-9-]{36})$/);
+  const imageUpload = path.match(/^\/api\/plaza\/images\/(post|reply|private)\/([a-f0-9-]{36})$/);
   if (path.startsWith("/api/plaza/moderation/") && !moderation.canReview(actor.id)) { req.resume(); json(res, 403, { error: "moderator_required" }); return true; }
   const post = path.match(/^\/api\/plaza\/posts\/([a-f0-9-]{36})$/);
   const replies = path.match(/^\/api\/plaza\/posts\/([a-f0-9-]{36})\/replies$/);
@@ -41,7 +49,10 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   const privateSeen = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/seen$/);
   const privateBlock = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/block$/);
   if (req.method === "GET") {
-    if (path === "/api/plaza/posts") json(res, 200, { posts: plaza.listPosts(actor.id) });
+    if (reportImage) { const found = storage.db.prepare("SELECT evidence_image AS body FROM plaza_reports WHERE id=? AND evidence_image IS NOT NULL").get(reportImage[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
+    else if (image) { const found = images.get(actor.id, image[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
+    else if (path === "/api/plaza/notifications") json(res, 200, notifications.list(actor.id));
+    else if (path === "/api/plaza/posts") json(res, 200, { posts: plaza.listPosts(actor.id) });
     else if (path === "/api/plaza/blocks") json(res, 200, { blocks: storage.blockedAccounts(actor.id) });
     else if (path === "/api/plaza/my-moderation") json(res, 200, { actions: moderation.myActions(actor.id) });
     else if (path === "/api/plaza/connections") json(res, 200, { connections: connections.list(actor.id) });
@@ -54,7 +65,18 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   }
   if (!validOrigin(req)) { req.resume(); json(res, 403, { error: "origin_rejected" }); return true; }
   try {
-    if (req.method === "POST" && privateSeen) {
+    if (req.method === "POST" && imageUpload) {
+      const normalized = await normalizeUpload(req);
+      const description = new URL(req.url || "", "http://localhost").searchParams.get("description") || "";
+      const id = images.put(actor.id, imageUpload[1], imageUpload[2], normalized, description);
+      json(res, 201, { id });
+    } else if (req.method === "POST" && path === "/api/plaza/notifications/read") {
+      const value = await body(req); if (!fields(value, ["id"])) throw Error("invalid_body");
+      const ok = notifications.read(actor.id, String(value.id)); json(res, ok ? 200 : 404, ok ? {ok:true} : {error:'not_found'});
+    } else if (req.method === "POST" && path === "/api/plaza/notifications/mute") {
+      const value = await body(req); if (Object.keys(value).length !== 3 || typeof value.kind !== 'string' || typeof value.targetId !== 'string' || typeof value.muted !== 'boolean') throw Error('invalid_body');
+      const ok = notifications.mute(actor.id, value.kind, value.targetId, value.muted); json(res, ok ? 200 : 404, ok ? {ok:true} : {error:'not_found'});
+    } else if (req.method === "POST" && privateSeen) {
       const value = await body(req); if (!fields(value, ["messageId"])) throw Error("invalid_body");
       const ok = connections.seen(actor.id, privateSeen[1], String(value.messageId)); json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
     } else if (req.method === "DELETE" && privateMessage) {
@@ -76,8 +98,8 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
     } else if (req.method === "POST" && privateMessages) {
       const value = await body(req);
-      if (!fields(value, ["clientId", "body"])) throw Error("invalid_body");
-      const message = connections.send(actor.id, privateMessages[1], String(value.clientId), String(value.body));
+      if (!(fields(value, ["clientId", "body"]) || fields(value, ["clientId", "body", "stickerId"]))) throw Error("invalid_body");
+      const message = connections.send(actor.id, privateMessages[1], String(value.clientId), String(value.body), String(value.stickerId || ""));
       json(res, message ? 201 : 404, message ? { message } : { error: "not_found" });
     } else if (req.method === "POST" && path === "/api/plaza/appeals") {
       const value = await body(req);
@@ -107,7 +129,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       json(res, 200, { ok: true });
     } else if (req.method === "POST" && path === "/api/plaza/posts") {
       const value = await body(req);
-      if (!fields(value, ["topic", "title", "body"])) throw Error("invalid_body");
+      if (!(fields(value, ["topic", "title", "body"]) || fields(value, ["topic", "title", "body", "stickerId"]))) throw Error("invalid_body");
       json(res, 201, { post: plaza.createPost(actor.id, value as { topic: string; title: string; body: string }, now()) });
     } else if (req.method === "PATCH" && post) {
       const value = await body(req);
@@ -116,8 +138,9 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
     } else if (req.method === "POST" && replies) {
       const value = await body(req);
-      if (!fields(value, ["body"])) throw Error("invalid_body");
-      json(res, 201, { reply: plaza.createReply(actor.id, replies[1], value.body as string, now()) });
+      if (!(fields(value, ["body"]) || fields(value, ["body", "stickerId"]))) throw Error("invalid_body");
+      const result = plaza.createReply(actor.id, replies[1], value.body as string, now(), String(value.stickerId || ""));
+      json(res, 201, { reply: result });
     } else if (req.method === "PATCH" && reply) {
       const value = await body(req);
       if (!fields(value, ["body"])) throw Error("invalid_body");

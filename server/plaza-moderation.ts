@@ -16,10 +16,10 @@ export class PlazaModeration {
     if (!["post", "reply", "private"].includes(kind) || !/^[a-f0-9-]{36}$/.test(contentId) || !validReason(reason) || note.length > 500) throw Error("invalid_report");
     const db = this.storage.db;
     const content = kind === "post"
-      ? db.prepare("SELECT id,author_id AS authorId,title,body,author_id AS postAuthor FROM plaza_posts WHERE id=? AND hidden=0").get(contentId)
+      ? db.prepare("SELECT id,author_id AS authorId,title,body,sticker_id AS stickerId,author_id AS postAuthor FROM plaza_posts WHERE id=? AND hidden=0").get(contentId)
       : kind === "reply"
-        ? db.prepare("SELECT r.id,r.author_id AS authorId,r.body,p.title,p.author_id AS postAuthor FROM plaza_replies r JOIN plaza_posts p ON p.id=r.post_id WHERE r.id=? AND r.hidden=0 AND p.hidden=0").get(contentId)
-        : db.prepare("SELECT m.id,m.sender_id AS authorId,m.body,'Mensaje privado' AS title,m.sender_id AS postAuthor FROM plaza_private_messages m JOIN plaza_connections c ON c.id=m.connection_id WHERE m.id=? AND m.hidden=0 AND c.status='accepted' AND (c.sender_id=? OR c.recipient_id=?)").get(contentId, reporter, reporter);
+        ? db.prepare("SELECT r.id,r.author_id AS authorId,r.body,r.sticker_id AS stickerId,p.title,p.author_id AS postAuthor FROM plaza_replies r JOIN plaza_posts p ON p.id=r.post_id WHERE r.id=? AND r.hidden=0 AND p.hidden=0").get(contentId)
+        : db.prepare("SELECT m.id,m.sender_id AS authorId,m.body,m.sticker_id AS stickerId,'Mensaje privado' AS title,m.sender_id AS postAuthor FROM plaza_private_messages m JOIN plaza_connections c ON c.id=m.connection_id WHERE m.id=? AND m.hidden=0 AND c.status='accepted' AND (c.sender_id=? OR c.recipient_id=?)").get(contentId, reporter, reporter);
     if (!content || content.authorId === reporter) throw Error("content_unavailable");
     if (db.prepare("SELECT 1 FROM blocks WHERE (user_id=? AND blocked_id IN (?,?)) OR (blocked_id=? AND user_id IN (?,?))").get(reporter, content.authorId, content.postAuthor, reporter, content.authorId, content.postAuthor)) throw Error("content_unavailable");
     const old = db.prepare("SELECT id FROM plaza_reports WHERE reporter_id=? AND kind=? AND content_id=? AND reason=?").get(reporter, kind, contentId, reason);
@@ -27,13 +27,14 @@ export class PlazaModeration {
     if (!this.storage.takeLimit(digest(`plaza-reports:${reporter}`), 5, 60 * 60_000, this.now())) throw Error("rate_limit");
     if (Number(db.prepare("SELECT COUNT(*) AS n FROM plaza_reports").get()!.n) >= 5000) throw Error("queue_full");
     const id = randomUUID();
-    db.prepare("INSERT INTO plaza_reports(id,reporter_id,target_id,kind,content_id,reason,note,evidence_json,created_at) VALUES(?,?,?,?,?,?,?,?,?)")
-      .run(id, reporter, content.authorId, kind, contentId, reason, note.trim(), JSON.stringify({ title: content.title, body: content.body }), this.now());
+    const image = db.prepare(`SELECT body FROM plaza_images WHERE ${kind === "post" ? "post_id" : kind === "reply" ? "reply_id" : "message_id"}=?`).get(contentId);
+    db.prepare("INSERT INTO plaza_reports(id,reporter_id,target_id,kind,content_id,reason,note,evidence_json,created_at,evidence_image) VALUES(?,?,?,?,?,?,?,?,?,?)")
+      .run(id, reporter, content.authorId, kind, contentId, reason, note.trim(), JSON.stringify({ title: content.title, body: content.body, stickerId: content.stickerId }), this.now(), image?.body || null);
     return id;
   }
   reports(userId: string) {
     if (!this.canReview(userId)) throw Error("moderator_required");
-    return this.storage.db.prepare(`SELECT r.id,r.kind,r.content_id AS contentId,r.reason,r.note,r.status,r.evidence_json AS evidence,r.created_at AS createdAt,a.alias AS target
+    return this.storage.db.prepare(`SELECT r.id,r.kind,r.content_id AS contentId,r.reason,r.note,r.status,r.evidence_json AS evidence,(r.evidence_image IS NOT NULL) AS hasImage,r.created_at AS createdAt,a.alias AS target
       FROM plaza_reports r JOIN accounts a ON a.id=r.target_id ORDER BY (r.status='open') DESC,r.created_at DESC LIMIT 50`).all()
       .map((row) => ({ ...row, evidence: JSON.parse(String(row.evidence)) }));
   }

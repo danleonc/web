@@ -11,3 +11,5 @@
 .real-plaza-post h3 { margin: .4rem 0; }
 .real-plaza-post p, .real-plaza-reply p { white-space: pre-wrap; }
 .real-plaza button { min-height: 44px; }
+
+.real-sticker { display: block; width: min(160px, 55%); height: auto; object-fit: contain; margin: 0.75rem 0; }

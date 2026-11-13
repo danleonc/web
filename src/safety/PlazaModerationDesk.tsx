@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { safetyRequest } from "./ModerationDesk";
 import { conductReasons } from "./rules";
+import { getSticker } from "../chat/stickers";
 
-type Report = { id: string; target: string; kind: string; reason: string; note: string; status: string; evidence: { title: string; body: string } };
+type Report = { id: string; target: string; kind: string; reason: string; note: string; status: string; hasImage: number; evidence: { title: string; body: string; stickerId?: string } };
 function Case({ report, onUpdated }: { report: Report; onUpdated: () => Promise<void> }) {
   const [action, setAction] = useState("dismiss");
   const [reason, setReason] = useState("");
@@ -12,6 +13,8 @@ function Case({ report, onUpdated }: { report: Report; onUpdated: () => Promise<
     <h3>{report.evidence.title}</h3>
     <p>Contenido de {report.target} · {conductReasons.find((r) => r.id === report.reason)?.label || report.reason}</p>
     <blockquote>{report.evidence.body}</blockquote>
+    {report.evidence.stickerId && getSticker(report.evidence.stickerId) && <img className="real-sticker" src={getSticker(report.evidence.stickerId)!.src} alt={`Sticker reportado: ${getSticker(report.evidence.stickerId)!.label}`} />}
+    {!!report.hasImage && <img className="real-sticker" src={`/api/plaza/moderation/images/${report.id}`} alt="Imagen incluida en el reporte" />}
     <p>{report.note || "Sin observaciones adicionales."}</p>
     {report.status !== "open" ? <p>Revisado</p> : <form onSubmit={(e) => {
       e.preventDefault(); if (busy) return; setBusy(true); setError("");
