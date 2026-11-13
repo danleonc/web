@@ -12,6 +12,7 @@ import {
 import { interests, boundaryOptions } from "../data";
 import type { Profile } from "../store";
 import { Illustration } from "../Illustration";
+import { ProfilePhoto } from './ProfilePhoto';
 
 export function ProfileForm({
   profile,
@@ -19,10 +20,12 @@ export function ProfileForm({
   onSave,
   onCancel,
   onPrivacy,
+  accountProfile = false,
 }: {
   profile: Profile | null;
   pending: boolean;
-  onSave: (p: Profile) => void;
+  onSave: (p: Profile) => void | Promise<void>;
+  accountProfile?: boolean;
   onCancel: () => void;
   onPrivacy: () => void;
 }) {
@@ -34,17 +37,22 @@ export function ProfileForm({
     profile?.availability || "Sin preferencia",
   );
   const [adult, setAdult] = useState(profile?.adult || false);
-  function submit(e: FormEvent) {
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  async function submit(e: FormEvent) {
     e.preventDefault();
     if (step === 0) setStep(1);
-    else if (adult)
-      onSave({
+    else if (adult && !saving) {
+      setSaving(true); setSaveError('');
+      try { await onSave({
         alias: alias.trim() || "Explorador",
         interests: selected,
         boundaries,
         availability,
         adult,
-      });
+      }); } catch { setSaveError('No pudimos guardar tu perfil. Revisa tu conexión e inténtalo nuevamente.'); }
+      finally { setSaving(false); }
+    }
   }
   const toggle = (values: string[], v: string) =>
     values.includes(v) ? values.filter((x) => x !== v) : [...values, v];
@@ -63,12 +71,14 @@ export function ProfileForm({
         No tienes que definir qué vínculo buscas. Un interés compartido es un
         buen comienzo.
       </p>
+      {accountProfile && <p className="small-text muted">Estas preferencias se guardan en tu cuenta. Las que estaban solo en este navegador no se copian automáticamente.</p>}
       {pending && (
         <p className="inline-notice">
           <CalendarDays size={17} /> Al terminar guardaremos tu reserva de
           ejemplo.
         </p>
       )}
+      {accountProfile && <ProfilePhoto />}
       <div className="profile-layout">
         <form className="profile-form panel" onSubmit={submit}>
           <div className="step-indicator">
@@ -98,7 +108,9 @@ export function ProfileForm({
                 onChange={(e) => setAlias(e.target.value)}
                 placeholder="Un nombre o alias de prueba"
                 autoComplete="off"
+                disabled={accountProfile}
               />
+              {accountProfile && <p className="small-text muted">Este es el alias de tu cuenta.</p>}
               <fieldset className="interest-fieldset">
                 <legend>
                   Mis intereses <span>(opcionales)</span>
@@ -163,8 +175,7 @@ export function ProfileForm({
             <>
               <h2>Tu comodidad va primero.</h2>
               <p className="muted">
-                Estos límites son privados. En una plataforma real deberían
-                respetarse en cada interacción.
+                Estos límites son privados y puedes cambiarlos. Todavía no se aplican automáticamente a las interacciones.
               </p>
               <fieldset className="boundary-fieldset">
                 <legend>
@@ -191,7 +202,7 @@ export function ProfileForm({
                   </p>
                 </div>
               </div>
-              <label className="checkbox-row adult-check">
+              {!accountProfile && <label className="checkbox-row adult-check">
                 <input
                   type="checkbox"
                   required
@@ -202,11 +213,12 @@ export function ProfileForm({
                   Declaro que soy mayor de 18 años y entiendo que es una prueba
                   con personas ficticias.
                 </span>
-              </label>
-              <p className="small-text muted">
+              </label>}
+              {saveError && <p role="alert">{saveError}</p>}
+              {!accountProfile && <p className="small-text muted">
                 Esta declaración no verifica tu edad ni identidad. El piloto
                 real necesitará controles adicionales.
-              </p>
+              </p>}
               <div className="form-actions">
                 <button
                   type="button"
@@ -215,8 +227,8 @@ export function ProfileForm({
                 >
                   <ArrowLeft size={16} /> Atrás
                 </button>
-                <button type="submit" className="button primary">
-                  {pending ? "Guardar perfil y reservar" : "Guardar mi perfil"}
+                <button type="submit" className="button primary" disabled={saving}>
+                  {saving ? "Guardando…" : pending ? "Guardar perfil y reservar" : "Guardar mi perfil"}
                   <Check size={17} />
                 </button>
               </div>

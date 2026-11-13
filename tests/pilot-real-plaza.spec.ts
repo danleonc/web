@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import AxeBuilder from "@axe-core/playwright";
+import sharp from 'sharp';
 
 test("páginas de encuentros permiten avanzar y volver", async ({ browser }, info) => {
   const context = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
@@ -35,6 +36,62 @@ async function register(context: BrowserContext, name: string) {
   const { code } = JSON.parse(await readFile(join(tmpdir(), "afinia-test-pilot-mailbox", createHash("sha256").update(email).digest("hex") + ".json"), "utf8"));
   expect((await context.request.post(`${origin}/api/auth/confirm-email`, { headers, data: { code } })).status()).toBe(200);
 }
+test('el perfil se guarda en la cuenta y no se mezcla al cambiar de persona', async ({ browser }, info) => {
+  const a = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
+  const b = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
+  try {
+    await register(a, `perfil_ui_a_${info.project.name}`); await register(b, `perfil_ui_b_${info.project.name}`);
+    const page = await a.newPage(); await page.goto('/#profile');
+    await page.getByRole('button', { name: 'Lectura', exact: true }).click();
+    await page.getByRole('button', { name: 'Continuar', exact: false }).click();
+    await page.getByLabel('Prefiero evitar temas íntimos').check();
+    await page.getByRole('button', { name: 'Guardar mi perfil' }).click();
+    await expect(page.getByText('Tu perfil quedó guardado en tu cuenta.')).toBeVisible();
+    await page.goto('/#profile'); await expect(page.getByRole('button', { name: 'Lectura', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    const other = await b.newPage(); await other.goto('/#profile');
+    await expect(other.getByRole('button', { name: 'Lectura', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  } finally { await a.close(); await b.close(); }
+});
+test('foto de Conexiones requiere declaración y se puede quitar', async ({ browser }, info) => {
+  const context = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
+  try {
+    await register(context, `foto_ui_${info.project.name}`);
+    const page = await context.newPage(); await page.goto('/#profile');
+    const image = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/aXcAAAAASUVORK5CYII=', 'base64');
+    await page.getByLabel('Elegir foto de galería').setInputFiles({ name:'foto.png', mimeType:'image/png', buffer:image });
+    await expect(page.getByAltText('Vista previa de tu foto')).toBeVisible();
+    await expect(page.getByRole('button', {name:'Guardar mi foto'})).toBeDisabled();
+    await page.getByLabel('Declaro que aparezco en esta foto.').check();
+    await page.getByRole('button', {name:'Guardar mi foto'}).click();
+    await expect(page.getByText('Tu foto quedó guardada de forma privada.')).toBeVisible();
+    page.once('dialog', dialog => void dialog.accept()); await page.getByRole('button', {name:'Quitar mi foto'}).click();
+    await expect(page.getByText('Quitaste tu foto de Conexiones.')).toBeVisible();
+  } finally { await context.close(); }
+});
+test('cada persona controla si revela su foto en una conexión', async ({ browser }, info) => {
+  const a = await browser.newContext({ baseURL:'http://127.0.0.1:4190', ...info.project.use });
+  const b = await browser.newContext({ baseURL:'http://127.0.0.1:4190', ...info.project.use });
+  try {
+    const nameA=`revela_a_${info.project.name}`, nameB=`revela_b_${info.project.name}`;
+    await register(a,nameA); await register(b,nameB);
+    const origin='http://127.0.0.1:4190', image=await sharp({create:{width:40,height:40,channels:3,background:'#285d4c'}}).png().toBuffer();
+    for (const c of [a,b]) expect((await c.request.post('/api/account/profile/photo',{headers:{Origin:origin,'Content-Type':'image/png','X-Photo-Declaration':'yes'},data:image})).status()).toBe(201);
+    const post=await (await a.request.post('/api/plaza/posts',{headers:{Origin:origin},data:{topic:'crear',title:'Tema de prueba',body:'Hola'}})).json();
+    const invite=await (await b.request.post('/api/plaza/invitations',{headers:{Origin:origin},data:{kind:'post',contentId:post.post.id,note:''}})).json();
+    expect((await a.request.post(`/api/plaza/invitations/${invite.invitation.id}/decision`,{headers:{Origin:origin},data:{action:'accept'}})).status()).toBe(200);
+    const pa=await a.newPage(), pb=await b.newPage(); await pa.goto('/#connections'); await pb.goto('/#connections');
+    await pa.getByRole('button',{name:'Abrir conversación'}).click(); await pb.getByRole('button',{name:'Abrir conversación'}).click();
+    await expect(pb.getByText(`${nameA} aún no ha compartido su foto contigo.`)).toBeVisible();
+    pa.once('dialog',dialog=>void dialog.accept()); await pa.getByRole('button',{name:'Compartir mi foto'}).click();
+    await expect(pb.getByAltText(`Foto compartida por ${nameA}`)).toBeVisible({timeout:10000});
+    await pb.getByRole('button',{name:'Reportar foto'}).click();
+    await pb.getByRole('button',{name:'Registrar reporte'}).click();
+    await expect(pb.getByRole('heading',{name:'Reporte registrado.'})).toBeVisible();
+    await pb.getByRole('button',{name:'Entendido'}).click();
+    await pa.getByRole('button',{name:'Dejar de compartir mi foto'}).click();
+    await expect(pb.getByAltText(`Foto compartida por ${nameA}`)).toHaveCount(0,{timeout:10000});
+  } finally { await a.close(); await b.close(); }
+});
 test("borrado limitado de una cuenta sin actividad en la base de pruebas", async ({ browser }, info) => {
   test.skip(process.env.NEXAFIA_TEST_ERASURE !== "1", "Función de borrado limitada a fixture explícito");
   const person = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });

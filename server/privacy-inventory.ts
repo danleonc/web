@@ -5,6 +5,9 @@ export function privacyInventory(storage: Storage, userId: string) {
   const db = storage.db;
   const queries: Record<string, string> = {
     accounts: "SELECT count(*) AS n FROM accounts WHERE id=?",
+    profiles: "SELECT count(*) AS n FROM account_profiles WHERE user_id=?",
+    profilePhotos: "SELECT count(*) AS n FROM account_profile_photos WHERE user_id=?",
+    profilePhotoShares: "SELECT count(*) AS n FROM profile_photo_shares WHERE owner_id=?",
     emails: "SELECT count(*) AS n FROM account_emails WHERE user_id=?",
     googleLinks: "SELECT count(*) AS n FROM account_google WHERE user_id=?",
     googleFlows: "SELECT count(*) AS n FROM google_flows WHERE account_id=?",

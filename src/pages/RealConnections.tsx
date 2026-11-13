@@ -13,15 +13,16 @@ import { ReplyDraft, ReplyQuote } from "../chat/replies";
 import { ImagePlus, Sticker, Send } from "lucide-react";
 import { getSticker } from "../chat/stickers";
 import type { StickerActions } from "../chat/stickers";
+import { ConnectionPhoto } from './ConnectionPhoto';
 
 type Connection = { id: string; senderId: string; recipientId: string; person: string; note: string; status: string };
 type Message = { replyTo?: string | null; imageId?: string | null; imageDescription?: string | null; stickerId?: string | null; id: string; senderId: string; body: string };
 async function api<T>(path: string, data?: object): Promise<T> {
   const response = await fetch(path, { method: data ? "POST" : "GET", credentials: "same-origin", headers: data ? { "Content-Type": "application/json" } : undefined, body: data ? JSON.stringify(data) : undefined });
-  if (!response.ok) throw Error("No pudimos completar la acción. Actualiza e inténtalo de nuevo.");
+  if (!response.ok) { const detail = await response.json().catch(() => ({})); throw Error(detail.error === 'profile_photo_required' ? 'Agrega tu foto de Conexiones para aceptar una solicitud nueva.' : "No pudimos completar la acción. Actualiza e inténtalo de nuevo."); }
   return response.json() as Promise<T>;
 }
-export function RealConnections({ account, loaded, onAccess, onPlaza, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onPlaza: () => void; noticeTarget?: { id: string; serial: number } | null } & StickerActions) {
+export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onPlaza: () => void; onProfile: () => void; noticeTarget?: { id: string; serial: number } | null } & StickerActions) {
   const [connections, setConnections] = useState<Connection[]>([]); const [selected, setSelected] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]); const [draft, setDraft] = useState("");
   const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(false);
@@ -101,7 +102,7 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, noticeTarg
   return <div className="page-content plaza-page real-plaza">
     {!selected && <section className="plaza-welcome plaza-photo-hero"><div className="plaza-welcome-copy"><h1>Conexiones que siguen a tu ritmo.</h1><p>Revisa tus solicitudes y decide con quién continuar conversando.</p></div><HeroPhoto images={connectionsHeroPhoto} alt="Personas conversando desde sus propios espacios" /></section>}
     {!loaded ? <p role="status">Cargando tu sesión…</p> : !ready ? <section className="real-plaza-panel"><h2>Entra a tus conexiones</h2><p>Inicia sesión y confirma tu correo para participar.</p><button className="button primary" onClick={onAccess}>Entrar a mi cuenta</button></section> : <>
-      {error && <p role="alert">{error}</p>}{notice && <p role="status">{notice}</p>}
+      {error && <p role="alert">{error}</p>}{error.startsWith('Agrega tu foto de Conexiones') && <button className="button secondary" onClick={onProfile}>Ir a mi perfil</button>}{notice && <p role="status">{notice}</p>}
       <section className="real-plaza-panel" hidden={!!selected}><h2>Tus solicitudes y conexiones</h2><button className="button secondary" disabled={busy} onClick={() => void refresh().catch(() => setError("No pudimos actualizar tus conexiones."))}>Actualizar conexiones</button>
         {loading ? <p role="status">Cargando conexiones…</p> : connections.length === 0 ? <><p>Aún no tienes conexiones. Puedes conocer conversaciones en La Plaza.</p><button className="button text" onClick={onPlaza}>Ir a La Plaza</button></> : connections.map((c) => <article className="real-plaza-post" key={c.id}><h3>{c.person}</h3><p>{c.note}</p>
           {c.status === "pending" && c.senderId === account?.id && <><p>Esperando respuesta</p><button className="button text" disabled={busy} onClick={() => void decision(c.id, "withdraw")}>Retirar solicitud</button></>}
@@ -110,7 +111,7 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, noticeTarg
           {c.status === "declined" && <p>Solicitud rechazada</p>}{c.status === "closed" && <p>Conexión cerrada</p>}
         </article>)}
       </section>
-      {active && <section className="real-plaza-panel"><button className="button text" disabled={busy} onClick={navigation.back}>← Volver a Conexiones</button><h2 ref={chatHeading} tabIndex={-1}>Conversación con {active.person}</h2><p>Ambas personas aceptaron conversar. Puedes cerrar la conexión cuando quieras.</p><button className="button secondary" disabled={busy} onClick={() => void open(active.id)}>Actualizar conversación</button><button className="button text" disabled={busy} onClick={() => void block(active.id)}>Bloquear persona</button>
+      {active && <section className="real-plaza-panel"><button className="button text" disabled={busy} onClick={navigation.back}>← Volver a Conexiones</button><h2 ref={chatHeading} tabIndex={-1}>Conversación con {active.person}</h2><p>Ambas personas aceptaron conversar. Puedes cerrar la conexión cuando quieras.</p><button className="button secondary" disabled={busy} onClick={() => void open(active.id)}>Actualizar conversación</button><button className="button text" disabled={busy} onClick={() => void block(active.id)}>Bloquear persona</button><ConnectionPhoto key={active.id} id={active.id} person={active.person} onProfile={onProfile} />
         {messages.length === 0 ? <p>Aún no hay mensajes.</p> : <div className="private-messages">{messages.map((m) => <article className="real-plaza-reply" key={m.id} data-message-id={m.id} tabIndex={-1}><strong>{m.senderId === account?.id ? "Tú" : active.person}</strong>{m.replyTo && <ReplyQuote target={messages.find(item => item.id === m.replyTo) ? asTarget(messages.find(item => item.id === m.replyTo)!) : undefined}/>}<p>{m.body}</p>{m.stickerId && getSticker(m.stickerId) && <img className="real-sticker" src={getSticker(m.stickerId)!.src} alt={`Sticker: ${getSticker(m.stickerId)!.label}`} />}{m.imageId && <ImageView plaza image={{id:m.imageId,description:m.imageDescription || ""}} />}
           <button className="button text" disabled={busy} onClick={() => { setQuoteId(m.id); inputRef.current?.focus(); }}>Responder a este mensaje</button>
           {m.senderId === account?.id && !m.imageId && <button className="button text" disabled={busy} onClick={() => setImageTarget(m.id)}><ImagePlus size={16} aria-hidden="true" /> Agregar imagen</button>}

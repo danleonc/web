@@ -1,4 +1,5 @@
 import type { Storage } from "./storage.ts";
+import { readProfile } from "./account-profile.ts";
 
 // This is a bounded copy of the user's own authored content, not a complete rights response.
 export function exportOwnContent(storage: Storage, userId: string, now: number, page: number) {
@@ -8,6 +9,7 @@ export function exportOwnContent(storage: Storage, userId: string, now: number, 
     return { items: rows.slice(0, limit), truncated: rows.length > limit };
   };
   const account = db.prepare("SELECT a.id,a.username,a.alias,a.created_at AS createdAt,e.email,e.verified_at AS emailVerifiedAt,e.adult_declared_at AS adultDeclaredAt FROM accounts a LEFT JOIN account_emails e ON e.user_id=a.id WHERE a.id=?").get(userId);
+  const photoShares = section("SELECT connection_id AS connectionId FROM profile_photo_shares WHERE owner_id=? ORDER BY connection_id LIMIT ? OFFSET ?");
   const posts = section("SELECT id,topic,title,body,created_at AS createdAt,hidden FROM plaza_posts WHERE author_id=? ORDER BY created_at,id LIMIT ? OFFSET ?");
   const replies = section("SELECT id,post_id AS postId,body,created_at AS createdAt,hidden FROM plaza_replies WHERE author_id=? ORDER BY created_at,id LIMIT ? OFFSET ?");
   const privateMessages = section("SELECT id,connection_id AS connectionId,body,created_at AS createdAt,hidden FROM plaza_private_messages WHERE sender_id=? AND body<>'' ORDER BY created_at,id LIMIT ? OFFSET ?");
@@ -21,5 +23,5 @@ export function exportOwnContent(storage: Storage, userId: string, now: number, 
   const roomAppeals = section("SELECT id,action_id AS actionId,note,status,created_at AS createdAt FROM appeals WHERE user_id=? ORDER BY created_at,id LIMIT ? OFFSET ?");
   const privacyRequest = db.prepare("SELECT status,created_at AS createdAt,updated_at AS updatedAt,version FROM privacy_requests WHERE user_id=?").get(userId) || null;
   const privacyRequestEvents = section("SELECT version,action,created_at AS createdAt FROM privacy_request_events WHERE user_id=? ORDER BY version LIMIT ? OFFSET ?");
-  return { format: "nexafia-own-content-v1", page, generatedAt: new Date(now).toISOString(), scope: "Copia parcial del contenido propio conservado en el servidor.", omissions: ["Mensajes y datos de otras personas", "Archivos de imagen", "Decisiones internas y evidencia de moderación", "Datos guardados solo en este navegador", "Credenciales y suscripciones de dispositivos"], account, posts, replies, privateMessages, roomMessages, reservations, blocks, invitations, reports, roomReports, plazaAppeals, roomAppeals, privacyRequest, privacyRequestEvents };
+  return { format: "nexafia-own-content-v1", page, generatedAt: new Date(now).toISOString(), scope: "Copia parcial del contenido propio conservado en el servidor.", omissions: ["Mensajes y datos de otras personas", "Archivos de imagen", "Decisiones internas y evidencia de moderación", "Datos guardados solo en este navegador", "Credenciales y suscripciones de dispositivos"], account, profile: readProfile(storage, userId), photoShares, posts, replies, privateMessages, roomMessages, reservations, blocks, invitations, reports, roomReports, plazaAppeals, roomAppeals, privacyRequest, privacyRequestEvents };
 }

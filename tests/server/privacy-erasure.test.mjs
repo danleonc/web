@@ -7,6 +7,7 @@ import {eraseEmptyAccount} from '../../server/privacy-erasure.ts';
 import {backupDatabase} from '../../scripts/backup-db.mjs';
 import {join} from 'node:path';
 import {mockGoogle} from './mock-google.mjs';
+import sharp from 'sharp';
 
 async function setup(t, extra={}) {
  const f=await fixture(t,{plazaEnabled:true,privacyErasureEnabled:true,...extra}); const person=await f.signup('erase_person'), operator=await f.signup('erase_operator'), other=await f.signup('erase_other');
@@ -18,6 +19,9 @@ async function setup(t, extra={}) {
 }
 test('borrado interno limitado exige operador, solicitud recibida, origen y sesión reciente',async t=>{
  const {f,person,operator,other,version}=await setup(t); const body={userId:person.id,version,confirmation:'BORRAR CUENTA'};
+ assert.equal((await f.request('/api/account/profile','PUT',{interests:['Lectura'],boundaries:['A mi ritmo'],availability:'Sin preferencia'},person.cookie)).status,200);
+ const photo=await sharp({create:{width:40,height:40,channels:3,background:'#285d4c'}}).png().toBuffer();
+ assert.equal((await f.raw('/api/account/profile/photo',{method:'POST',headers:{Origin:'http://localhost:4173',Cookie:person.cookie,'Content-Type':'image/png','X-Photo-Declaration':'yes'},body:photo})).status,201);
  assert.equal((await f.request('/api/privacy/erase-empty','POST',body,other.cookie)).status,403);
  assert.equal((await f.request('/api/privacy/erase-empty','POST',body,operator.cookie,'https://ajeno.example')).status,403);
  assert.equal((await f.request('/api/privacy/erase-empty','POST',{...body,version:version-1},operator.cookie)).status,409);
@@ -26,6 +30,7 @@ test('borrado interno limitado exige operador, solicitud recibida, origen y sesi
  const login=await f.request('/api/auth/login','POST',{username:operator.username,password:'Una frase larga para pruebas 123'}); assert.equal(login.status,200);
  const backupPath=join(f.directory,'before-erasure.sqlite'); await backupDatabase(f.path,backupPath);
  const result=await f.request('/api/privacy/erase-empty','POST',body,login.cookie); assert.equal(result.status,200); assert.ok(result.body.receiptId);
+ const profileDb=new DatabaseSync(f.path,{readOnly:true}); try {assert.equal(profileDb.prepare('SELECT count(*) AS n FROM account_profiles WHERE user_id=?').get(person.id).n,0); assert.equal(profileDb.prepare('SELECT count(*) AS n FROM account_profile_photos WHERE user_id=?').get(person.id).n,0);} finally {profileDb.close();}
  assert.equal((await f.request('/api/session','GET',undefined,person.cookie)).status,401);
  assert.equal((await f.request('/api/session','GET',undefined,other.cookie)).status,200);
  const db=new DatabaseSync(f.path); try {assert.equal(db.prepare('SELECT count(*) AS n FROM accounts WHERE id=?').get(person.id).n,0); assert.equal(db.prepare('SELECT count(*) AS n FROM sessions WHERE user_id=?').get(person.id).n,0); assert.equal(db.prepare('SELECT count(*) AS n FROM account_emails WHERE user_id=?').get(person.id).n,0); assert.equal(db.prepare('SELECT count(*) AS n FROM privacy_requests WHERE user_id=?').get(person.id).n,0); const receipt=db.prepare('SELECT subject_hash,operator_id FROM privacy_erasure_receipts WHERE id=?').get(result.body.receiptId); assert.equal(receipt.subject_hash,digest(`privacy-erasure:${person.id}`)); assert.equal(receipt.operator_id,operator.id); const events=db.prepare('SELECT action,actor_id FROM privacy_erasure_events WHERE receipt_id=? ORDER BY version').all(result.body.receiptId); assert.deepEqual(events.map(e=>e.action),['submit','acknowledge']); assert.equal(events[0].actor_id,null); assert.equal(events[1].actor_id,operator.id);} finally {db.close();}
@@ -62,7 +67,7 @@ test('borrado limitado se mantiene desactivado por defecto',async t=>{
 });
 test('borrado limitado funciona tras migrar una base existente desde v16',async t=>{
  const {f,person,operator,version}=await setup(t); const db=new DatabaseSync(f.path);
- db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; DROP TABLE privacy_erasure_events; DROP TABLE privacy_erasure_receipts; PRAGMA user_version=16'); db.close();
+ db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; DROP TABLE privacy_erasure_events; DROP TABLE privacy_erasure_receipts; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=16'); db.close();
  await f.restart();
  const result=await f.request('/api/privacy/erase-empty','POST',{userId:person.id,version,confirmation:'BORRAR CUENTA'},operator.cookie);
  assert.equal(result.status,200);

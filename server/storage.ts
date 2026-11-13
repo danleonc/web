@@ -59,7 +59,8 @@ export class Storage {
       version !== 19 &&
       version !== 20 &&
       version !== 21 &&
-      version !== 22
+      version !== 22 &&
+      version !== 23
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -202,6 +203,12 @@ export class Storage {
       this.db.exec(`BEGIN IMMEDIATE;
       ALTER TABLE plaza_private_messages ADD COLUMN reply_to TEXT REFERENCES plaza_private_messages(id) ON DELETE SET NULL;
       PRAGMA user_version=22; COMMIT;`);
+    if (version < 23)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE account_profiles(user_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE, interests_json TEXT NOT NULL, boundaries_json TEXT NOT NULL, availability TEXT NOT NULL);
+      CREATE TABLE account_profile_photos(user_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE, id TEXT NOT NULL UNIQUE, body BLOB NOT NULL, declared_at INTEGER NOT NULL, hidden INTEGER NOT NULL DEFAULT 0);
+      CREATE TABLE profile_photo_shares(owner_id TEXT NOT NULL REFERENCES account_profile_photos(user_id) ON DELETE CASCADE, connection_id TEXT NOT NULL REFERENCES plaza_connections(id) ON DELETE CASCADE, PRIMARY KEY(owner_id,connection_id));
+      PRAGMA user_version=23; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

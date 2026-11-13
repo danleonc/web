@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Storage } from "./storage.ts";
 import { digest } from "./storage.ts";
 
-// Pinned to the v22 tables, columns and foreign keys; schema changes require review.
-const supportedSchema = "b1d8712c2e74920af8b166f9c354ac3af91faca5e9f362149705034a4926d81a";
+// Pinned to the v23 tables, columns and foreign keys; schema changes require review.
+const supportedSchema = "cc0e55b2d05e301acf50669a357f1e0ab3286e53fb202648e1ebdaa6dd81a75f";
 function schemaFingerprint(storage: Storage) {
   const db = storage.db;
   const names = db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all();
@@ -23,15 +23,15 @@ export function eraseEmptyAccount(storage: Storage, target: string, actor: strin
     if (!request || request.status !== "seen" || Number(request.version) !== version) return { error: "request_changed" } as const;
     const triggers = db.prepare("SELECT 1 FROM sqlite_schema WHERE type='trigger' UNION ALL SELECT 1 FROM sqlite_temp_schema WHERE type='trigger' LIMIT 1").get();
     const attached = db.prepare("PRAGMA database_list").all().some((row) => row.name !== "main" && row.name !== "temp");
-    if (Number(db.prepare("PRAGMA user_version").get()!.user_version) !== 22 || triggers || attached || schemaFingerprint(storage) !== supportedSchema) return { error: "manual_review_required" } as const;
+    if (Number(db.prepare("PRAGMA user_version").get()!.user_version) !== 23 || triggers || attached || schemaFingerprint(storage) !== supportedSchema) return { error: "manual_review_required" } as const;
     if (target === actor || isLive(target)) return { error: "manual_review_required" } as const;
     const account = db.prepare("SELECT a.username,a.alias,e.email FROM accounts a LEFT JOIN account_emails e ON e.user_id=a.id WHERE a.id=?").get(target);
     if (!account) return { error: "request_changed" } as const;
     if (db.prepare("SELECT 1 FROM account_google WHERE user_id=?").get(target) || db.prepare("SELECT 1 FROM google_flows WHERE expires_at>? LIMIT 1").get(now)) return { error: "manual_review_required" } as const;
 
     // Unknown future relations fail closed rather than being silently cascaded.
-    const safe = new Set(["notifications.recipient_id", "notification_mutes.user_id", "account_emails.user_id", "sessions.user_id", "push_subscriptions.user_id", "privacy_requests.user_id", "privacy_request_events.user_id"]);
-    const known = new Set(["plaza_images", "notifications", "notification_mutes", "accounts", "sessions", "blocks", "offerings", "reservations", "rooms", "memberships", "messages", "receipts", "auth_limits", "moderators", "reports", "moderation_actions", "restrictions", "appeals", "media", "account_emails", "account_google", "google_flows", "push_subscriptions", "plaza_posts", "plaza_replies", "plaza_reports", "plaza_moderation_actions", "plaza_appeals", "plaza_appeal_actions", "plaza_connections", "plaza_private_messages", "scheduled_meetings", "push_queue", "push_private_queue", "privacy_operators", "privacy_requests", "privacy_request_events", "privacy_erasure_receipts", "privacy_erasure_events"]);
+    const safe = new Set(["account_profiles.user_id", "account_profile_photos.user_id", "notifications.recipient_id", "notification_mutes.user_id", "account_emails.user_id", "sessions.user_id", "push_subscriptions.user_id", "privacy_requests.user_id", "privacy_request_events.user_id"]);
+    const known = new Set(["account_profiles", "account_profile_photos", "profile_photo_shares", "plaza_images", "notifications", "notification_mutes", "accounts", "sessions", "blocks", "offerings", "reservations", "rooms", "memberships", "messages", "receipts", "auth_limits", "moderators", "reports", "moderation_actions", "restrictions", "appeals", "media", "account_emails", "account_google", "google_flows", "push_subscriptions", "plaza_posts", "plaza_replies", "plaza_reports", "plaza_moderation_actions", "plaza_appeals", "plaza_appeal_actions", "plaza_connections", "plaza_private_messages", "scheduled_meetings", "push_queue", "push_private_queue", "privacy_operators", "privacy_requests", "privacy_request_events", "privacy_erasure_receipts", "privacy_erasure_events"]);
     const tables = db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
     for (const row of tables) {
       const table = String(row.name); if (!known.has(table) || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table)) return { error: "manual_review_required" } as const;
@@ -62,7 +62,7 @@ export function eraseEmptyAccount(storage: Storage, target: string, actor: strin
     db.prepare("DELETE FROM sessions WHERE user_id=?").run(target);
     db.prepare("DELETE FROM account_google WHERE user_id=?").run(target);
     db.prepare("DELETE FROM account_emails WHERE user_id=?").run(target);
-    const limits = [digest(`user:${String(account.username)}`), digest(`mail-user:${target}`), digest(`plaza-invitations:${target}`), digest(`plaza-private:${target}`), digest(`plaza-images:${target}`), digest(`plaza-reports:${target}`), digest(`images:${target}`), digest(`reports:${target}`), `push-sub:${target}`, `push-test:${target}`];
+    const limits = [digest(`user:${String(account.username)}`), digest(`mail-user:${target}`), digest(`profile-photos:${target}`), digest(`plaza-invitations:${target}`), digest(`plaza-private:${target}`), digest(`plaza-images:${target}`), digest(`plaza-reports:${target}`), digest(`images:${target}`), digest(`reports:${target}`), `push-sub:${target}`, `push-test:${target}`];
     const removeLimit = db.prepare("DELETE FROM auth_limits WHERE key=?"); for (const key of limits) removeLimit.run(key);
     db.prepare("DELETE FROM privacy_request_events WHERE user_id=?").run(target);
     db.prepare("DELETE FROM privacy_requests WHERE user_id=?").run(target);

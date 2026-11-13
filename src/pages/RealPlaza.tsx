@@ -23,10 +23,10 @@ type Reply = { replyTo?: string | null; imageId?: string | null; imageDescriptio
 type BlockedPerson = { id: string; alias: string };
 async function request<T>(path: string, method = "GET", body?: object): Promise<T> {
   const response = await fetch(path, { method, credentials: "same-origin", headers: body ? { "Content-Type": "application/json" } : undefined, body: body ? JSON.stringify(body) : undefined });
-  if (!response.ok) throw Error(response.status === 401 || response.status === 403 ? "Revisa tu sesión y confirma tu correo para participar." : "No pudimos completar la acción. Inténtalo de nuevo.");
+  if (!response.ok) { const detail = await response.json().catch(() => ({})); throw Error(detail.error === 'profile_photo_required' ? 'Agrega tu foto de Conexiones para enviar una solicitud nueva.' : response.status === 401 || response.status === 403 ? "Revisa tu sesión y confirma tu correo para participar." : "No pudimos completar la acción. Inténtalo de nuevo."); }
   return response.json() as Promise<T>;
 }
-export function RealPlaza({ account, loaded, onAccess, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; noticeTarget?: { id: string; serial: number } | null } & StickerActions) {
+export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onProfile: () => void; noticeTarget?: { id: string; serial: number } | null } & StickerActions) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [replies, setReplies] = useState<Reply[]>([]);
   const [active, setActive] = useState<string | null>(null);
@@ -207,7 +207,7 @@ export function RealPlaza({ account, loaded, onAccess, noticeTarget, ...stickers
       }} />}
       {picker && <StickerPicker preferences={stickers.stickerPreferences} onToggleFavorite={stickers.onToggleFavorite} onToggleFavoritePack={stickers.onToggleFavoritePack} onClose={() => setPicker(null)} onSend={(id) => { if (picker === "post") { setPostSticker(id); setPicker(null); } else if (active && !busy) { setBusy(true); void request(`/api/plaza/posts/${active}/replies`, "POST", { body: "", stickerId: id, ...(quoteId ? {replyTo: quoteId} : {}) }).then(async () => { setQuoteId(null); stickers.onStickerUsed(id); setPicker(null); setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies); }).catch(() => setError("No pudimos enviar el sticker. Inténtalo de nuevo.")).finally(() => setBusy(false)); } }} />}
       {report && <ReportDialog subject={`Contenido de ${report.author}`} onClose={() => setReport(null)} onSubmit={async (reason, note) => { await request("/api/plaza/reports", "POST", { kind: report.kind, contentId: report.id, reason, note }); }} />}
-      {invitation && <Modal title={`Seguir conversando con ${invitation.author}`} onClose={() => setInvitation(null)}><div className="modal-content"><p>La otra persona decide si acepta. El chat se abre solo después de su aceptación.</p><form className="real-plaza-form" onSubmit={(e) => void sendInvitation(e)}><label>Mensaje de invitación<textarea value={invitationNote} maxLength={500} onChange={(e) => setInvitationNote(e.target.value)} /></label>{error && <p role="alert">{error}</p>}<button className="button primary" disabled={busy}>Enviar solicitud</button></form></div></Modal>}
+      {invitation && <Modal title={`Seguir conversando con ${invitation.author}`} onClose={() => setInvitation(null)}><div className="modal-content"><p>La otra persona decide si acepta. El chat se abre solo después de su aceptación.</p><form className="real-plaza-form" onSubmit={(e) => void sendInvitation(e)}><label>Mensaje de invitación<textarea value={invitationNote} maxLength={500} onChange={(e) => setInvitationNote(e.target.value)} /></label>{error && <p role="alert">{error}</p>}{error.startsWith('Agrega tu foto de Conexiones') && <button type="button" className="button secondary" onClick={onProfile}>Ir a mi perfil</button>}<button className="button primary" disabled={busy}>Enviar solicitud</button></form></div></Modal>}
     </>}
   </div>;
 }

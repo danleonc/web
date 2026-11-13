@@ -26,6 +26,7 @@ const root = resolve("dist-pilot");
 const featureMode = pilotMode(process.env, JSON.parse(readFileSync(resolve(root, "entre-build.json"), "utf8")));
 const app = createRoomServer({
   ...featureMode,
+  requireConnectionPhoto: featureMode.plazaEnabled,
   ...(process.env.ENTRE_STAGING_PASSWORD !== undefined ? { stagingPassword: process.env.ENTRE_STAGING_PASSWORD } : {}),
   sendVerificationEmail: smtpMailer(),
   google: googleFromEnv(process.env,origin.origin),

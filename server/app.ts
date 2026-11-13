@@ -34,6 +34,8 @@ import { meetingActivity, listMeetings } from "./meetings.ts";
 import { handleMeetingCreation } from "./meetings-http.ts";
 import { PushDelivery, handlePush } from "./push.ts";
 import { exportOwnContent } from "./account-export.ts";
+import { handleAccountProfile } from "./account-profile.ts";
+import { handleAccountPhoto } from "./account-photo.ts";
 import { handlePrivacy } from "./privacy-requests.ts";
 import type { PushConfig } from "./push.ts";
 
@@ -65,6 +67,7 @@ type Connection = {
   expires: number;
 };
 type Options = {
+  requireConnectionPhoto?: boolean;
   stagingPassword?: string;
   plazaEnabled?: boolean;
   privacyErasureEnabled?: boolean;
@@ -346,6 +349,8 @@ export function createRoomServer(options: Options = {}) {
       json(res, 403, { error: "account_restricted" });
       return;
     }
+    if (storage && path === "/api/account/profile") { await handleAccountProfile(storage, req, res, identity?.id || null, validOrigin(req)); return; }
+    if (storage && path === "/api/account/profile/photo") { await handleAccountPhoto(storage, req, res, identity?.id || null, validOrigin(req), now()); return; }
     if (storage && path === "/api/account/media" && req.method === "GET") {
       if (!identity) { json(res, 401, { error: "session_required" }); return; }
       if (moderation?.restriction(identity.id)) { json(res, 403, { error: "account_restricted" }); return; }
@@ -398,7 +403,7 @@ export function createRoomServer(options: Options = {}) {
         const removed = storage.unblock(identity.id, target);
         if (removed) identity.blocks.delete(target);
         return removed;
-      })) return;
+      }, !!options.requireConnectionPhoto)) return;
     if (storage && req.method === "GET" && path === "/api/activities") {
       if (!identity) {
         json(res, 401, { error: "session_required" });

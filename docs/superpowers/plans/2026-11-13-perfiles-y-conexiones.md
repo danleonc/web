@@ -1,0 +1,14 @@
+# Plan de implementación: perfil de cuenta y conexiones
+
+Fecha: 13 de noviembre de 2026. Alcance autorizado: trabajar los seis puntos de la auditoría. El titular decidió requerir una fotografía propia para crear o aceptar conexiones nuevas, manteniendo accesibles las conversaciones existentes. Solicitar una fotografía no verifica que represente realmente al usuario ni acredita su identidad o edad.
+
+1. Inventariar y verificar paridad entre Plaza, Conexiones y Encuentros; mantener la auditoría como registro de capacidades pendientes, no como promesa de terminación.
+2. Perfil por cuenta: persistir intereses, límites y disponibilidad en almacenamiento de servidor independiente por cuenta; acceso propio, validación estricta, control de sesión/origen, exportación y tratamiento en inventario de privacidad. No trasladar automáticamente datos del navegador, porque pueden pertenecer a otra cuenta. Conectar interfaz con estados de carga y error; no anunciar preferencias como compartidas ni como criterios ya aplicados.
+3. Foto de Conexiones: implementar por separado carga desde galería o cámara frontal con vista previa y declaración de fotografía propia; procesamiento de archivo, autorización privada por defecto, límites, posibilidad de reemplazar/retirar, moderación y pruebas con cuentas distintas. Exigir foto al crear o aceptar una nueva conexión y conservar el acceso a conversaciones existentes.
+4. Revelación: diseñar e implementar permisos por conexión y revocación, evitando entregar originales prematuramente; sin afirmar que una captura externa puede revocarse. Las etapas y reglas concretas se mantendrán distinguibles de lo aprobado.
+5. Completar continuidad y avisos faltantes; verificar con pruebas de varios usuarios y pruebas de extremo a extremo.
+6. Evaluar vinculación con redes por APIs oficiales y consentimiento separado; no suponer autorización de proveedores ni requerirla para acceder.
+
+Revisión preliminar del punto 6 (13-11-2026): [TikTok Login Kit](https://developers.tiktok.com/docs/en/login-kit-overview) documenta la posibilidad de solicitar avatar y nombre con `user.info.basic`, sujeto al registro de la aplicación y a la autorización de cada persona; [la gestión de tokens](https://developers.tiktok.com/docs/en/login-kit-manage-user-access-tokens) exige protegerlos en el servidor. No hay integración ni aprobación configuradas. Una foto tomada desde una red no demuestra que represente a la persona. Instagram y Facebook requieren revisión separada de sus condiciones y permisos vigentes antes de proponer implementación.
+
+Los seis puntos incluyen la revisión y operación necesarias: respaldo externo y restauración, moderación, privacidad y asesoría legal pendiente. Nunca describir como listo para público una capacidad solo probada en entorno protegido. Cada entrega se someterá a pruebas de autorización, reinicio, borrado y regresión, y a una copia consistente y ensayo de migración antes del despliegue.

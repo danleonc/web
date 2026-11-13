@@ -44,6 +44,7 @@ setup.close();
 const app = createRoomServer({
   ...(process.env.NEXAFIA_TEST_GATE === "1" ? { stagingPassword: "0123456789abcdef0123456789abcdef0123456789abcdef" } : {}),
   plazaEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
+  requireConnectionPhoto: process.env.NEXAFIA_TEST_PROFILE_PHOTOS === "1",
   privacyErasureEnabled: process.env.NEXAFIA_TEST_ERASURE === "1",
   meetingsEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
   push: { ...webpush.generateVAPIDKeys(), subject: "mailto:fixture@example.test", send: async () => {} },

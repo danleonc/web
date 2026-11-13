@@ -85,6 +85,18 @@ function App() {
     return false;
   }
   const [state, setState] = useState<LocalState>(loadState);
+  const [savedAccountProfile, setSavedAccountProfile] = useState<{ owner: string; profile: Pick<Profile, 'interests' | 'boundaries' | 'availability'> | null; failed: boolean } | null>(null);
+  const profileOwner = accountsEnabled && account.account?.canParticipate ? account.account.id : null;
+  useEffect(() => {
+    if (!profileOwner) { setSavedAccountProfile(null); return; }
+    const controller = new AbortController();
+    setSavedAccountProfile(null);
+    fetch('/api/account/profile', { credentials: 'same-origin', signal: controller.signal, cache: 'no-store' })
+      .then(async response => { if (!response.ok) throw Error('profile_unavailable'); return response.json(); })
+      .then(data => setSavedAccountProfile({ owner: profileOwner, profile: data.profile, failed: false }))
+      .catch(() => { if (!controller.signal.aborted) setSavedAccountProfile({ owner: profileOwner, profile: null, failed: true }); });
+    return () => controller.abort();
+  }, [profileOwner]);
   const [noticesOpen, setNoticesOpen] = useState(false);
   const noticeOwner = accountsEnabled ? (account.account ? `account:${account.account.id}` : null) : "prototype";
   const notices = useNotices(state, setState, noticeOwner);
@@ -108,9 +120,9 @@ function App() {
     ? account.account?.canParticipate
       ? {
           alias: account.account.alias,
-          interests: state.profile?.interests || [],
-          boundaries: state.profile?.boundaries || [],
-          availability: state.profile?.availability || "Sin preferencia",
+          interests: savedAccountProfile?.owner === profileOwner ? savedAccountProfile.profile?.interests || [] : [],
+          boundaries: savedAccountProfile?.owner === profileOwner ? savedAccountProfile.profile?.boundaries || [] : [],
+          availability: savedAccountProfile?.owner === profileOwner ? savedAccountProfile.profile?.availability || "Sin preferencia" : "Sin preferencia",
           adult: true,
         }
       : null
@@ -296,11 +308,19 @@ function App() {
     navigate("agenda");
     setToast("Reserva de ejemplo guardada. No se ha contactado a nadie.");
   }
-  function saveProfile(profile: Profile) {
+  async function saveProfile(profile: Profile) {
     if (!requireParticipation()) return;
+    if (accountsEnabled) {
+      const owner = profileOwner;
+      if (!owner) throw Error('session_required');
+      const saved = { interests: profile.interests, boundaries: profile.boundaries, availability: profile.availability };
+      const response = await fetch('/api/account/profile', { method: 'PUT', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(saved) });
+      if (!response.ok) throw Error('profile_unavailable');
+      setSavedAccountProfile({ owner, profile: saved, failed: false });
+    }
     setState((s) => ({
       ...s,
-      profile,
+      profile: accountsEnabled ? s.profile : profile,
       reservations: pendingBooking
         ? [...new Set([...s.reservations, pendingBooking.id])]
         : s.reservations,
@@ -319,7 +339,7 @@ function App() {
     } else {
       navigate(profileReturn);
       setToast(
-        "Tu perfil de prueba está listo. Puedes editarlo cuando quieras.",
+        accountsEnabled ? "Tu perfil quedó guardado en tu cuenta." : "Tu perfil de prueba está listo. Puedes editarlo cuando quieras.",
       );
     }
   }
@@ -647,7 +667,7 @@ function App() {
         )}
         <main id="main-content" ref={mainRef} tabIndex={-1}>
           {page === "plaza" && realPlazaEnabled && (
-            <RealPlaza key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} noticeTarget={noticeTarget?.kind === "reply" ? noticeTarget : null} {...stickerActions} />
+            <RealPlaza key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onProfile={() => prepareProfile('plaza')} noticeTarget={noticeTarget?.kind === "reply" ? noticeTarget : null} {...stickerActions} />
           )}
           {page === "plaza" && !realPlazaEnabled && (
             <Plaza
@@ -723,10 +743,15 @@ function App() {
                 compact
                 onLogout={() => {}}
               />
+            ) : accountsEnabled && (!savedAccountProfile || savedAccountProfile.owner !== profileOwner) ? (
+              <p role="status">Cargando tu perfil…</p>
+            ) : accountsEnabled && savedAccountProfile?.failed ? (
+              <p role="alert">No pudimos cargar tu perfil. Recarga la página para intentarlo de nuevo.</p>
             ) : (
               <ProfileForm
-                key={state.profile ? "edit" : "new"}
+                key={profileOwner || (state.profile ? "edit" : "new")}
                 profile={participationProfile}
+                accountProfile={accountsEnabled}
                 pending={!!pendingBooking}
                 onSave={saveProfile}
                 onCancel={() => {
@@ -752,7 +777,7 @@ function App() {
               }}
             />
           )}
-          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onPlaza={() => navigate("plaza")} noticeTarget={noticeTarget?.kind === "message" ? noticeTarget : null} {...stickerActions} />}
+          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onProfile={() => prepareProfile('connections')} onPlaza={() => navigate("plaza")} noticeTarget={noticeTarget?.kind === "message" ? noticeTarget : null} {...stickerActions} />}
           {page === "connections" && !realPlazaEnabled && (
             <Connections
               {...stickerActions}

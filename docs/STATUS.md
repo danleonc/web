@@ -452,3 +452,9 @@ La Plaza incorpora referencias a un comentario de la misma conversación, valida
 ### Citas en Conexiones (13 de noviembre, trabajo local)
 
 El chat compartido de Conexiones admite responder a mensajes con texto, sticker o imagen, conservando referencias a mensajes visibles de la misma conexión. Se mantiene la validación de pertenencia y la cita deja de mostrar el original si se retira. Encuentros y La Plaza ya disponen de respuestas citadas. Pruebas locales de servidor y navegador; pendiente despliegue.
+
+### Perfil por cuenta y foto de Conexiones (13 de noviembre, trabajo local)
+
+En desarrollo local: preferencias privadas por cuenta, foto de perfil separada de la identidad, declaración de foto propia, cámara o galería, permiso explícito y revocable para compartirla con una conexión aceptada, reporte con evidencia y revisión de moderación. Crear o aceptar conexiones nuevas requiere foto; las conversaciones existentes no se bloquean. Cambiar o quitar la foto retira permisos de visualización anteriores. La declaración no verifica identidad, edad ni autenticidad. Las preferencias antiguas del navegador no se migran sin atribución segura. El archivo propio se consulta en la aplicación; la exportación JSON sigue indicando que omite archivos de imagen.
+
+Esto no equivale a un lanzamiento público ni está verificado en Render. Faltan el respaldo externo restaurable, validación jurídica y operativa, revisar notificaciones y demás paridad, integración con redes y evolución del develado. El historial completo y las decisiones se registran en `docs/AUDITORIA_PARIDAD_Y_FOTO_GRADUAL_2026-11-13.md` y `docs/superpowers/plans/2026-11-13-perfiles-y-conexiones.md`.

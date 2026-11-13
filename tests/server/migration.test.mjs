@@ -9,13 +9,24 @@ import { ModerationStore } from "../../server/moderation.ts";
 import { createSession } from "../../src/room/engine.ts";
 import { PlazaStore } from "../../server/plaza.ts";
 function removeV20(storage) { storage.db.exec("ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image"); }
+test('migración v22 conserva cuentas y conexiones existentes', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'nexafia-v22-')); const path = join(dir, 'old.sqlite');
+  try {
+    const old = new Storage(path);
+    for (const id of ['a','b']) old.createAccount({id,username:id,alias:id,passwordHash:'x',recoveryHash:'x'},1);
+    old.db.prepare('INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)').run('c','a','b','a','b','','post','origin','accepted',1,1);
+    old.db.exec('DROP TABLE profile_photo_shares; DROP TABLE account_profile_photos; DROP TABLE account_profiles; PRAGMA user_version=22'); old.close();
+    const next = new Storage(path);
+    try { assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,23); assert.equal(next.db.prepare('SELECT status FROM plaza_connections WHERE id=?').get('c').status,'accepted'); assert.equal(next.db.prepare('SELECT count(*) AS n FROM account_profile_photos').get().n,0); } finally { next.close(); }
+  } finally { await rm(dir, {recursive:true,force:true}); }
+});
 test("actualizar v5 conserva cuentas y permite guardar contenido de Plaza", async () => {
   const dir = await mkdtemp(join(tmpdir(), "nexafia-v5-"));
   const path = join(dir, "old.sqlite");
   try {
     const previous = new Storage(path); removeV20(previous);
     previous.createAccount({ id: "legacy", username: "legacy", alias: "Persona", passwordHash: "test", recoveryHash: "test" }, 1);
-    previous.db.exec("DROP TABLE scheduled_meetings; DROP TABLE plaza_private_messages; DROP TABLE plaza_connections; DROP TABLE plaza_appeal_actions; DROP TABLE plaza_appeals; DROP TABLE plaza_moderation_actions; DROP TABLE plaza_reports; DROP TABLE plaza_replies; DROP TABLE plaza_posts; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=5;");
+    previous.db.exec("DROP TABLE scheduled_meetings; DROP TABLE plaza_private_messages; DROP TABLE plaza_connections; DROP TABLE plaza_appeal_actions; DROP TABLE plaza_appeals; DROP TABLE plaza_moderation_actions; DROP TABLE plaza_reports; DROP TABLE plaza_replies; DROP TABLE plaza_posts; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=5;");
     previous.close();
     const upgraded = new Storage(path);
     try {
@@ -36,7 +47,7 @@ test("actualizar v6 preserva publicaciones y respuestas y habilita reportes", as
     const post = plaza.createPost("legacy", { topic: "crear", title: "Idea", body: "Anterior" }, 2);
     plaza.createReply("legacy", post.id, "Respuesta anterior", 3);
     removeV20(original);
-    original.db.exec("DROP TABLE scheduled_meetings; DROP TABLE plaza_private_messages; DROP TABLE plaza_connections; DROP TABLE plaza_appeal_actions; DROP TABLE plaza_appeals; DROP TABLE plaza_moderation_actions; DROP TABLE plaza_reports; ALTER TABLE plaza_posts DROP COLUMN hidden; ALTER TABLE plaza_replies DROP COLUMN hidden; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=6;");
+    original.db.exec("DROP TABLE scheduled_meetings; DROP TABLE plaza_private_messages; DROP TABLE plaza_connections; DROP TABLE plaza_appeal_actions; DROP TABLE plaza_appeals; DROP TABLE plaza_moderation_actions; DROP TABLE plaza_reports; ALTER TABLE plaza_posts DROP COLUMN hidden; ALTER TABLE plaza_replies DROP COLUMN hidden; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=6;");
     original.close();
     const upgraded = new Storage(path);
     try {
@@ -53,7 +64,7 @@ test("actualizar v7 conserva reportes y habilita apelaciones", async () => {
     original.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1);
     original.createAccount({ id: "b", username: "b", alias: "B", passwordHash: "test", recoveryHash: "test" }, 1);
     original.db.prepare("INSERT INTO plaza_reports(id,reporter_id,target_id,kind,content_id,reason,note,evidence_json,created_at) VALUES(?,?,?,?,?,?,?,?,?)").run("report", "a", "b", "post", "old", "spam", "", '{"title":"Anterior","body":"Contenido"}', 1);
-    original.db.exec("DROP TABLE scheduled_meetings; DROP TABLE plaza_private_messages; DROP TABLE plaza_connections; DROP TABLE plaza_appeal_actions; DROP TABLE plaza_appeals; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=7;"); original.close();
+    original.db.exec("DROP TABLE scheduled_meetings; DROP TABLE plaza_private_messages; DROP TABLE plaza_connections; DROP TABLE plaza_appeal_actions; DROP TABLE plaza_appeals; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=7;"); original.close();
     const updated = new Storage(path);
     try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM plaza_reports").get().n, 1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM plaza_appeals").get().n, 0); }
     finally { updated.close(); }
@@ -66,7 +77,7 @@ test("actualizar v9 conserva conexiones y mensajes privados", async () => {
     for (const id of ["a", "b"]) original.createAccount({ id, username: id, alias: id, passwordHash: "test", recoveryHash: "test" }, 1);
     original.db.prepare("INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)").run("c", "a", "b", "a", "b", "", "post", "origin", "accepted", 1, 1);
     original.db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at) VALUES(?,?,?,?,?,?)").run("m", "c", "a", "client-test", "Mensaje previo", 2);
-    original.db.exec("DROP TABLE scheduled_meetings; ALTER TABLE plaza_private_messages DROP COLUMN hidden; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=9;"); original.close();
+    original.db.exec("DROP TABLE scheduled_meetings; ALTER TABLE plaza_private_messages DROP COLUMN hidden; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=9;"); original.close();
     const upgraded = new Storage(path);
     try { const message = upgraded.db.prepare("SELECT body,hidden FROM plaza_private_messages WHERE id='m'").get(); assert.equal(message.body, "Mensaje previo"); assert.equal(message.hidden, 0); }
     finally { upgraded.close(); }
@@ -79,7 +90,7 @@ test("actualizar v11 conserva convocatorias y agrega estado de cancelación", as
     old.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1);
     old.db.prepare("INSERT INTO offerings VALUES(?,?)").run("meeting", 100000);
     old.db.prepare("INSERT INTO scheduled_meetings(id,theme_id,capacity,duration,created_at,created_by) VALUES(?,?,?,?,?,?)").run("meeting", "cafe", 4, 40, 1, "a");
-    old.db.exec("ALTER TABLE scheduled_meetings DROP COLUMN cancellation_reason; ALTER TABLE scheduled_meetings DROP COLUMN cancelled_at; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=11;"); old.close();
+    old.db.exec("ALTER TABLE scheduled_meetings DROP COLUMN cancellation_reason; ALTER TABLE scheduled_meetings DROP COLUMN cancelled_at; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=11;"); old.close();
     const updated = new Storage(path);
     try { const row = updated.db.prepare("SELECT theme_id,cancelled_at,cancellation_reason FROM scheduled_meetings WHERE id='meeting'").get(); assert.equal(row.theme_id, "cafe"); assert.equal(row.cancelled_at, null); assert.equal(row.cancellation_reason, null); }
     finally { updated.close(); }
@@ -91,7 +102,7 @@ test("actualizar v12 preserva convocatorias y crea cola de avisos", async () => 
     const old = new Storage(path); removeV20(old); old.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1);
     old.db.prepare("INSERT INTO offerings VALUES(?,?)").run("meeting", 100000);
     old.db.prepare("INSERT INTO scheduled_meetings(id,theme_id,capacity,duration,created_at,created_by) VALUES(?,?,?,?,?,?)").run("meeting", "cafe", 4, 40, 1, "a");
-    old.db.exec("DROP TABLE push_queue; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=12;"); old.close();
+    old.db.exec("DROP TABLE push_queue; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=12;"); old.close();
     const updated = new Storage(path);
     try { assert.equal(updated.db.prepare("SELECT theme_id FROM scheduled_meetings WHERE id='meeting'").get().theme_id, "cafe"); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_queue").get().n, 0); }
     finally { updated.close(); }
@@ -99,29 +110,29 @@ test("actualizar v12 preserva convocatorias y crea cola de avisos", async () => 
 });
 test("actualizar v13 conserva la cola de cancelaciones y agrega cola privada", async () => {
   const dir = await mkdtemp(join(tmpdir(), "nexafia-v13-")); const path = join(dir, "old.sqlite");
-  try { const old = new Storage(path); removeV20(old); old.db.prepare("INSERT INTO push_queue(meeting_id,endpoint_hash,user_id,created_at,next_at) VALUES(?,?,?,?,?)").run("meeting","device","person",1,1); old.db.exec("DROP TABLE push_private_queue; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=13;"); old.close();
+  try { const old = new Storage(path); removeV20(old); old.db.prepare("INSERT INTO push_queue(meeting_id,endpoint_hash,user_id,created_at,next_at) VALUES(?,?,?,?,?)").run("meeting","device","person",1,1); old.db.exec("DROP TABLE push_private_queue; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=13;"); old.close();
     const updated = new Storage(path); try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_queue").get().n,1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_private_queue").get().n,0); } finally {updated.close();}
   } finally {await rm(dir, {recursive:true,force:true});}
 });
 test("actualizar v14 conserva avisos y crea permisos de privacidad vacíos", async () => {
   const dir = await mkdtemp(join(tmpdir(), "nexafia-v14-")); const path = join(dir, "old.sqlite");
-  try { const old = new Storage(path); removeV20(old); old.db.prepare("INSERT INTO push_queue(meeting_id,endpoint_hash,user_id,created_at,next_at) VALUES(?,?,?,?,?)").run("meeting","device","person",1,1); old.db.exec("DROP TABLE privacy_requests; DROP TABLE privacy_operators; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=14;"); old.close();
+  try { const old = new Storage(path); removeV20(old); old.db.prepare("INSERT INTO push_queue(meeting_id,endpoint_hash,user_id,created_at,next_at) VALUES(?,?,?,?,?)").run("meeting","device","person",1,1); old.db.exec("DROP TABLE privacy_requests; DROP TABLE privacy_operators; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=14;"); old.close();
     const updated = new Storage(path); try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM push_queue").get().n,1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_requests").get().n,0); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_operators").get().n,0); } finally {updated.close();}
   } finally {await rm(dir, {recursive:true,force:true});}
 });
 test("actualizar v15 conserva solicitud y marca el estado previo sin inventar su historia", async () => {
   const dir = await mkdtemp(join(tmpdir(), "nexafia-v15-")); const path = join(dir, "old.sqlite");
-  try { const old = new Storage(path); removeV20(old); old.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1); old.db.prepare("INSERT INTO privacy_requests(user_id,status,created_at,updated_at,version) VALUES(?,'pending',?,?,?)").run("a",1,2,3); old.db.exec("DROP TABLE privacy_request_events; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=15;"); old.close();
+  try { const old = new Storage(path); removeV20(old); old.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1); old.db.prepare("INSERT INTO privacy_requests(user_id,status,created_at,updated_at,version) VALUES(?,'pending',?,?,?)").run("a",1,2,3); old.db.exec("DROP TABLE privacy_request_events; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=15;"); old.close();
     const updated = new Storage(path); try { const event=updated.db.prepare("SELECT version,action,actor_id,created_at FROM privacy_request_events WHERE user_id='a'").get(); assert.equal(event.version,3); assert.equal(event.action,'legacy_snapshot'); assert.equal(event.actor_id,null); assert.equal(event.created_at,2); } finally {updated.close();}
   } finally {await rm(dir, {recursive:true,force:true});}
 });
 test("actualizar v16 conserva eventos y crea comprobantes vacíos", async () => {
   const dir = await mkdtemp(join(tmpdir(), "nexafia-v16-")); const path = join(dir, "old.sqlite");
-  try { const old = new Storage(path); removeV20(old); old.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1); old.db.prepare("INSERT INTO privacy_requests(user_id,status,created_at,updated_at,version) VALUES(?,'pending',?,?,?)").run("a",1,2,1); old.db.prepare("INSERT INTO privacy_request_events VALUES(?,?,?,?,?)").run("a",1,"submit","a",1); old.db.exec("DROP TABLE privacy_erasure_events; DROP TABLE privacy_erasure_receipts; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; PRAGMA user_version=16;"); old.close();
+  try { const old = new Storage(path); removeV20(old); old.createAccount({ id: "a", username: "a", alias: "A", passwordHash: "test", recoveryHash: "test" }, 1); old.db.prepare("INSERT INTO privacy_requests(user_id,status,created_at,updated_at,version) VALUES(?,'pending',?,?,?)").run("a",1,2,1); old.db.prepare("INSERT INTO privacy_request_events VALUES(?,?,?,?,?)").run("a",1,"submit","a",1); old.db.exec("DROP TABLE privacy_erasure_events; DROP TABLE privacy_erasure_receipts; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=16;"); old.close();
     const updated = new Storage(path); try { assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_request_events WHERE user_id='a'").get().n,1); assert.equal(updated.db.prepare("SELECT count(*) AS n FROM privacy_erasure_receipts").get().n,0); } finally {updated.close();}
   } finally {await rm(dir, {recursive:true,force:true});}
 });
-test("migración v1 a v22 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
+test("migración v1 a v23 conserva cuenta, reserva, sesión e historial con seguridad inicial vacía", async () => {
   const dir = await mkdtemp(join(tmpdir(), "afinia-upgrade-")),
     path = join(dir, "old.sqlite");
   try {
@@ -184,7 +195,7 @@ test("migración v1 a v22 conserva cuenta, reserva, sesión e historial con segu
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        22,
+        23,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);
@@ -202,18 +213,18 @@ test("migración de v17 a v20 conserva datos y habilita avisos y multimedia", as
     const old = new Storage(path);
     old.createAccount({id:"legacy17",username:"legacy17",alias:"Persona",passwordHash:"x",recoveryHash:"x"},1);
     const post=new PlazaStore(old).createPost("legacy17",{topic:"cultura",title:"Conservar",body:"Contenido previo"},2);
-    old.db.exec("ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; PRAGMA user_version=17"); old.close();
+    old.db.exec("ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=17"); old.close();
     const updated=new Storage(path);
-    try { assert.equal(updated.db.prepare('PRAGMA user_version').get().user_version,22); assert.equal(new PlazaStore(updated).listPosts('legacy17')[0].id,post.id); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM plaza_images').get().n,0); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM notifications').get().n,0); }
+    try { assert.equal(updated.db.prepare('PRAGMA user_version').get().user_version,23); assert.equal(new PlazaStore(updated).listPosts('legacy17')[0].id,post.id); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM plaza_images').get().n,0); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM notifications').get().n,0); }
     finally {updated.close();}
   } finally { await rm(dir,{recursive:true,force:true}); }
 });
 
 test('actualizar v20 preserva respuestas y permite referencias entre ellas', async () => {
  const dir=await mkdtemp(join(tmpdir(),'nexafia-v20-'));const path=join(dir,'old.sqlite');
- try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);const p=new PlazaStore(old).createPost('a',{topic:'cultura',title:'Tema',body:'Texto'},1);const original=new PlazaStore(old).createReply('a',p.id,'Anterior',2);old.db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; PRAGMA user_version=20');old.close();
- const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,22);const reply=new PlazaStore(next).createReply('a',p.id,'Nueva',3,'',original.id);assert.equal(new PlazaStore(next).listReplies('a',p.id).find(x=>x.id===reply.id).replyTo,original.id);} finally {next.close();}
+ try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);const p=new PlazaStore(old).createPost('a',{topic:'cultura',title:'Tema',body:'Texto'},1);const original=new PlazaStore(old).createReply('a',p.id,'Anterior',2);old.db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=20');old.close();
+ const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,23);const reply=new PlazaStore(next).createReply('a',p.id,'Nueva',3,'',original.id);assert.equal(new PlazaStore(next).listReplies('a',p.id).find(x=>x.id===reply.id).replyTo,original.id);} finally {next.close();}
  } finally {await rm(dir,{recursive:true,force:true});}
 });
 
-test('actualizar v21 conserva los mensajes privados',async()=>{const dir=await mkdtemp(join(tmpdir(),'nexafia-v21-'));const path=join(dir,'old.sqlite');try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);old.createAccount({id:'b',username:'b',alias:'B',passwordHash:'x',recoveryHash:'x'},1);old.db.prepare("INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)").run('c','a','b','a','b','','post','origin','accepted',1,1);old.db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at) VALUES(?,?,?,?,?,?)").run('m','c','a','client-001','Anterior',1);old.db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; PRAGMA user_version=21');old.close();const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,22);assert.equal(next.db.prepare('SELECT body FROM plaza_private_messages WHERE id=?').get('m').body,'Anterior');} finally {next.close();}} finally {await rm(dir,{recursive:true,force:true});}});
+test('actualizar v21 conserva los mensajes privados',async()=>{const dir=await mkdtemp(join(tmpdir(),'nexafia-v21-'));const path=join(dir,'old.sqlite');try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);old.createAccount({id:'b',username:'b',alias:'B',passwordHash:'x',recoveryHash:'x'},1);old.db.prepare("INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)").run('c','a','b','a','b','','post','origin','accepted',1,1);old.db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at) VALUES(?,?,?,?,?,?)").run('m','c','a','client-001','Anterior',1);old.db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=21');old.close();const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,23);assert.equal(next.db.prepare('SELECT body FROM plaza_private_messages WHERE id=?').get('m').body,'Anterior');} finally {next.close();}} finally {await rm(dir,{recursive:true,force:true});}});

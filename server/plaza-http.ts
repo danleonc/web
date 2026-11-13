@@ -27,7 +27,7 @@ async function body(req: IncomingMessage): Promise<Record<string, unknown>> {
 function fields(value: Record<string, unknown>, keys: string[]) {
   return Object.keys(value).length === keys.length && keys.every((key) => typeof value[key] === "string");
 }
-export async function handlePlaza(storage: Storage, now: () => number, validOrigin: (req: IncomingMessage) => boolean, req: IncomingMessage, res: ServerResponse, path: string, actor: { id: string } | null, onBlock: (id: string) => void, onUnblock: (id: string) => boolean) {
+export async function handlePlaza(storage: Storage, now: () => number, validOrigin: (req: IncomingMessage) => boolean, req: IncomingMessage, res: ServerResponse, path: string, actor: { id: string } | null, onBlock: (id: string) => void, onUnblock: (id: string) => boolean, requireConnectionPhoto = false) {
   if (!path.startsWith("/api/plaza/")) return false;
   if (!actor) { req.resume(); json(res, 401, { error: "session_required" }); return true; }
   const plaza = new PlazaStore(storage);
@@ -48,8 +48,12 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   const privateMessage = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages\/([a-f0-9-]{36})$/);
   const privateSeen = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/seen$/);
   const privateBlock = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/block$/);
+  const photoShare = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/profile-photo$/);
+  const sharedPhoto = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/profile-photo\/image$/);
   if (req.method === "GET") {
-    if (reportImage) { const found = storage.db.prepare("SELECT evidence_image AS body FROM plaza_reports WHERE id=? AND evidence_image IS NOT NULL").get(reportImage[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
+    if (sharedPhoto) { const peer = connections.peer(actor.id, sharedPhoto[1]); const found = peer && storage.db.prepare('SELECT p.body FROM account_profile_photos p JOIN profile_photo_shares s ON s.owner_id=p.user_id WHERE s.connection_id=? AND s.owner_id=? AND p.hidden=0').get(sharedPhoto[1], peer); if (!found) json(res,404,{error:'not_found'}); else { res.writeHead(200,{'Content-Type':'image/webp','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}); res.end(found.body as Uint8Array); } }
+    else if (photoShare) { const peer=connections.peer(actor.id,photoShare[1]); if (!peer) json(res,404,{error:'not_found'}); else { const shared=storage.db.prepare('SELECT s.owner_id,p.id FROM profile_photo_shares s JOIN account_profile_photos p ON p.user_id=s.owner_id WHERE s.connection_id=? AND s.owner_id IN (?,?) AND p.hidden=0').all(photoShare[1],actor.id,peer); const theirs=shared.find(r=>r.owner_id===peer); json(res,200,{mine:shared.some(r=>r.owner_id===actor.id),theirs:!!theirs,theirsId:theirs?.id || null}); } }
+    else if (reportImage) { const found = storage.db.prepare("SELECT evidence_image AS body FROM plaza_reports WHERE id=? AND evidence_image IS NOT NULL").get(reportImage[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
     else if (image) { const found = images.get(actor.id, image[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
     else if (path === "/api/plaza/notifications") json(res, 200, notifications.list(actor.id));
     else if (path === "/api/plaza/posts") json(res, 200, { posts: plaza.listPosts(actor.id) });
@@ -65,7 +69,13 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   }
   if (!validOrigin(req)) { req.resume(); json(res, 403, { error: "origin_rejected" }); return true; }
   try {
-    if (req.method === "POST" && imageUpload) {
+    if (req.method === 'POST' && photoShare) {
+      const value=await body(req); if (!fields(value,['action']) || !['share','revoke'].includes(String(value.action))) throw Error('invalid_body');
+      const peer=connections.peer(actor.id,photoShare[1]);
+      if (!peer) json(res,404,{error:'not_found'});
+      else if (value.action==='share' && !storage.db.prepare('SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0').get(actor.id)) json(res,403,{error:'profile_photo_required'});
+      else { if (value.action==='share') storage.db.prepare('INSERT OR IGNORE INTO profile_photo_shares(owner_id,connection_id) VALUES(?,?)').run(actor.id,photoShare[1]); else storage.db.prepare('DELETE FROM profile_photo_shares WHERE owner_id=? AND connection_id=?').run(actor.id,photoShare[1]); json(res,200,{ok:true}); }
+    } else if (req.method === "POST" && imageUpload) {
       const normalized = await normalizeUpload(req);
       const description = new URL(req.url || "", "http://localhost").searchParams.get("description") || "";
       const id = images.put(actor.id, imageUpload[1], imageUpload[2], normalized, description);
@@ -90,10 +100,12 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
     } else if (req.method === "POST" && path === "/api/plaza/invitations") {
       const value = await body(req);
       if (!fields(value, ["kind", "contentId", "note"])) throw Error("invalid_body");
+      if (requireConnectionPhoto && !storage.db.prepare('SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0').get(actor.id)) { json(res, 403, { error: 'profile_photo_required' }); return true; }
       json(res, 201, { invitation: connections.invite(actor.id, String(value.kind), String(value.contentId), String(value.note)) });
     } else if (req.method === "POST" && invitation) {
       const value = await body(req);
       if (!fields(value, ["action"])) throw Error("invalid_body");
+      if (value.action === 'accept' && requireConnectionPhoto && !storage.db.prepare('SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0').get(actor.id)) { json(res, 403, { error: 'profile_photo_required' }); return true; }
       const ok = connections.decide(actor.id, invitation[1], String(value.action));
       json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
     } else if (req.method === "POST" && privateMessages) {
