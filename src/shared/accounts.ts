@@ -122,7 +122,7 @@ function useAccountState() {
         credentials: "same-origin",
       });
       if (current !== generation.current) return;
-      if (response.status === 401) {
+      if (response.status === 401 || response.status === 403) {
         setActivityPageLoading(false);
         activityAccountRef.current = null; activityOffsetRef.current = 0; setActivityOffset(0); setNextActivityOffset(null);
         setAccount(null);

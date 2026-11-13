@@ -17,7 +17,9 @@ test('la puerta de pruebas protege HTTP y WebSocket pero permite el chequeo de s
   assert.equal(denied.status, 401); assert.match(denied.headers.get('www-authenticate'), /^Basic /);
   assert.equal((await fetch(base + '/api/session', { headers: { Authorization: 'Basic ' + Buffer.from('nexafia:incorrecta').toString('base64') } })).status, 401);
   assert.equal((await fetch(base + '/', { headers: { Authorization: 'Basic ' + Buffer.from('nexafia:' + password).toString('base64') } })).status, 404);
-  assert.equal((await fetch(base + '/api/session', { headers: { Authorization: 'Basic ' + Buffer.from('nexafia:' + password).toString('base64') } })).status, 401); // cuenta propia aún requerida
+  const noAccount = await fetch(base + '/api/session', { headers: { Authorization: 'Basic ' + Buffer.from('nexafia:' + password).toString('base64') } });
+  assert.equal(noAccount.status, 403); // No repetir el desafío Basic del navegador.
+  assert.deepEqual(await noAccount.json(), { error: 'session_required' });
   const websocketStatus = (authorization) => new Promise(resolve => {
     const ws = new WebSocket(base.replace('http:', 'ws:') + '/api/rooms/cafe', { headers: { Origin:'http://localhost:4173', ...(authorization ? { Authorization:authorization } : {}) } });
     ws.on('error', () => {}); ws.on('unexpected-response', (_req, res) => { res.resume(); resolve({status:res.statusCode, challenge:res.headers['www-authenticate']}); });

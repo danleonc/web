@@ -205,7 +205,9 @@ export function createRoomServer(options: Options = {}) {
     return identity && identity.expires > now() ? identity : null;
   };
   function json(res: ServerResponse, status: number, value: unknown) {
-    res.writeHead(status, {
+    // A second 401 inside a Basic-auth protection space causes browsers to
+    // challenge again, even without another WWW-Authenticate header.
+    res.writeHead(gateHash && status === 401 ? 403 : status, {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
       "X-Content-Type-Options": "nosniff",
