@@ -118,6 +118,11 @@ test("dos cuentas comparten publicaciones y respuestas tras recargar", async ({ 
     await bea.goto("/#plaza");
     await expect(bea.getByText(title, { exact: true })).toBeVisible();
     await bea.getByRole("article").filter({ hasText: title }).getByRole("button", { name: "Ver conversación", exact: true }).click();
+    await expect(bea.getByLabel("Título de la conversación")).not.toBeVisible();
+    await expect(bea.getByRole("button", { name: "Volver a La Plaza" })).toBeVisible();
+    await bea.goBack();
+    await expect(bea.getByLabel("Título de la conversación")).toBeVisible();
+    await bea.getByRole("article").filter({ hasText: title }).getByRole("button", { name: "Ver conversación", exact: true }).click();
     await bea.getByLabel("Tu respuesta").fill("Una caminata tranquila");
     await bea.getByRole("button", { name: "Responder", exact: true }).click();
     await ana.reload();
@@ -129,6 +134,7 @@ test("dos cuentas comparten publicaciones y respuestas tras recargar", async ({ 
     await bea.getByLabel("Tu respuesta").fill("Una caminata junto al mar");
     await bea.getByRole("button", { name: "Guardar respuesta", exact: true }).click();
     await expect(bea.getByText("Una caminata junto al mar", { exact: true })).toBeVisible();
+    await ana.getByRole("button", { name: "Volver a La Plaza" }).click();
     await ana.getByRole("article").filter({ hasText: title }).getByRole("button", { name: "Editar publicación", exact: true }).click();
     await ana.getByLabel("Tu publicación").fill("Una pregunta actualizada para compartir");
     await ana.getByRole("button", { name: "Guardar cambios", exact: true }).click();
@@ -152,6 +158,7 @@ test("al cambiar de conversación una respuesta tardía no mezcla los hilos", as
     await page.route(`**/api/plaza/posts/${first.post.id}/replies`, async (route) => { await delayed; await route.continue(); });
     await page.goto("/#plaza");
     await page.getByRole("article").filter({ hasText: `Primera ${info.project.name}` }).getByRole("button", { name: "Ver conversación" }).click();
+    await page.getByRole("button", { name: "Volver a La Plaza" }).click();
     await page.getByRole("article").filter({ hasText: `Segunda ${info.project.name}` }).getByRole("button", { name: "Ver conversación" }).click();
     await expect(page.getByText("Respuesta de segunda", { exact: true })).toBeVisible();
     const firstResponse = page.waitForResponse((r) => r.url().includes(`/posts/${first.post.id}/replies`));
@@ -297,6 +304,10 @@ test("dos personas aceptan una solicitud antes de conversar en privado", async (
     await expect(first.getByRole("button", { name: "Abrir conversación" })).toHaveCount(0);
     const second = await bea.newPage(); await second.goto("/#connections");
     await second.getByRole("button", { name: "Aceptar solicitud" }).click();
+    await second.getByRole("button", { name: "Abrir conversación" }).click();
+    await expect(second.getByRole("heading", { name: "Tus solicitudes y conexiones" })).not.toBeVisible();
+    await second.getByRole("button", { name: "Volver a Conexiones" }).click();
+    await expect(second.getByRole("heading", { name: "Tus solicitudes y conexiones" })).toBeVisible();
     await second.getByRole("button", { name: "Abrir conversación" }).click();
     await second.getByLabel("Mensaje privado").fill("Hola, conversemos");
     await second.getByRole("button", { name: "Enviar mensaje" }).click();

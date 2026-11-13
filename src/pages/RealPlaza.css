@@ -1,4 +1,6 @@
 .real-plaza { display: grid; gap: 1.5rem; }
+.real-plaza-list { display: grid; gap: 1.5rem; }
+.real-plaza-list[hidden] { display: none; }
 .real-plaza-panel { background: #fff; border: 1px solid var(--line); border-radius: 1.25rem; padding: clamp(1rem, 3vw, 2rem); }
 .real-plaza-panel h2 { margin-top: 0; }
 .real-plaza-form { display: grid; gap: 1rem; }
