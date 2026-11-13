@@ -42,6 +42,7 @@ test('el perfil se guarda en la cuenta y no se mezcla al cambiar de persona', as
   try {
     await register(a, `perfil_ui_a_${info.project.name}`); await register(b, `perfil_ui_b_${info.project.name}`);
     const page = await a.newPage(); await page.goto('/#profile');
+    await expect(page.getByText('Tu perfil y tu foto de Conexiones se guardan en tu cuenta de pruebas.')).toBeVisible();
     await page.getByRole('button', { name: 'Lectura', exact: true }).click();
     await page.getByRole('button', { name: 'Continuar', exact: false }).click();
     await page.getByLabel('Prefiero evitar temas íntimos').check();

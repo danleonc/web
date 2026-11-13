@@ -640,6 +640,8 @@ function App() {
           <span>
             {realPlazaEnabled && (page === "plaza" || page === "connections" || page === "discover")
               ? "Conversaciones compartidas entre cuentas en el entorno de pruebas."
+              : realPlazaEnabled && page === "profile"
+              ? "Tu perfil y tu foto de Conexiones se guardan en tu cuenta de pruebas."
               : page === "shared"
               ? accountsEnabled
                 ? "Piloto: tus reservas y mensajes se guardan en el servidor."
