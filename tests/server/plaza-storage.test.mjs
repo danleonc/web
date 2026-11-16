@@ -6,6 +6,18 @@ import { tmpdir } from "node:os";
 import { Storage } from "../../server/storage.ts";
 import { PlazaStore } from "../../server/plaza.ts";
 
+test('Plaza acepta temas de interés y conserva las categorías anteriores', () => {
+  const storage = new Storage(':memory:');
+  try {
+    storage.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);
+    const plaza = new PlazaStore(storage);
+    for (const topic of ['cultura','crear','cotidiano','cocina','musica','anime','deporte','cine','lectura','juegos','naturaleza','viajes','mascotas','tecnologia','bienestar']) {
+      const post=plaza.createPost('a',{topic,title:'Un tema',body:'Compartamos ideas'},1);
+      assert.ok(plaza.listPosts('a').some(p=>p.id===post.id && p.topic===topic));
+    }
+  } finally {storage.close();}
+});
+
 test("Plaza persists posts and replies, enforces ownership and respects blocks", async (t) => {
   const directory = await mkdtemp(join(tmpdir(), "nexafia-plaza-"));
   const path = join(directory, "data.sqlite");

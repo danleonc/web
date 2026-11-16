@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import type { Storage } from "./storage.ts";
 import { Notifications } from "./notifications.ts";
 import { validSticker } from "./stickers.ts";
+import { plazaTopics } from "../src/plaza/data.ts";
 
 type PostInput = { topic: string; title: string; body: string; stickerId?: string };
-const topics = new Set(["cultura", "crear", "cotidiano"]);
+const topics = new Set<string>(plazaTopics.map(topic => topic.id));
 function clean(value: string, max: number) {
   if (typeof value !== "string" || !value.trim() || value.length > max)
     throw new Error("Contenido no válido");

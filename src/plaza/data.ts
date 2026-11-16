@@ -24,6 +24,18 @@ export const plazaTopics = [
     color: "sage",
     interests: ["Bienestar", "Vida cotidiana", "Cocina", "Conversar"],
   },
+  { id: "cocina", label: "Cocina y sabores", short: "Cocina", activityId: "cafe", color: "apricot", interests: ["Cocina", "Conversar"] },
+  { id: "musica", label: "Música y conciertos", short: "Música", activityId: "cafe", color: "lilac", interests: ["Música", "Conversar"] },
+  { id: "anime", label: "Anime, manga y cómics", short: "Anime y cómics", activityId: "cafe", color: "lilac", interests: ["Lectura", "Descubrir"] },
+  { id: "deporte", label: "Deporte y movimiento", short: "Deporte", activityId: "pausa", color: "sage", interests: ["Bienestar", "Conversar"] },
+  { id: "cine", label: "Cine, series y documentales", short: "Cine y series", activityId: "cafe", color: "apricot", interests: ["Conversar", "Descubrir"] },
+  { id: "lectura", label: "Libros, lecturas e historias", short: "Lectura", activityId: "cafe", color: "lilac", interests: ["Lectura", "Conversar"] },
+  { id: "juegos", label: "Videojuegos y juegos de mesa", short: "Juegos", activityId: "crear", color: "lilac", interests: ["Creatividad", "Descubrir"] },
+  { id: "naturaleza", label: "Naturaleza y aire libre", short: "Naturaleza", activityId: "pausa", color: "sage", interests: ["Bienestar", "Descubrir"] },
+  { id: "viajes", label: "Viajes y lugares por descubrir", short: "Viajes", activityId: "cafe", color: "apricot", interests: ["Descubrir", "Conversar"] },
+  { id: "mascotas", label: "Mascotas y animales", short: "Mascotas", activityId: "pausa", color: "sage", interests: ["Vida cotidiana", "Conversar"] },
+  { id: "tecnologia", label: "Tecnología y curiosidades", short: "Tecnología", activityId: "crear", color: "lilac", interests: ["Descubrir", "Creatividad"] },
+  { id: "bienestar", label: "Bienestar y hábitos", short: "Bienestar", activityId: "pausa", color: "sage", interests: ["Bienestar", "Vida cotidiana"] },
 ] as const;
 export type TopicId = (typeof plazaTopics)[number]["id"];
 export type PlazaPost = {

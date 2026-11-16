@@ -1,5 +1,6 @@
 import type { blankDraft } from "../pages/Plaza";
 import { validImageRef } from "../media/types";
+import { plazaTopics } from "../plaza/data";
 const key = "afinia.google.return-draft.v1";
 type Draft = typeof blankDraft;
 export function saveGoogleDraft(draft: Draft, owner: string) {
@@ -32,7 +33,7 @@ export function restoreGoogleDraft(owner: string): Draft | null {
       d.title.length > 200 ||
       typeof d.body !== "string" ||
       d.body.length > 5000 ||
-      !["cultura", "crear", "cotidiano"].includes(d.topic)
+      !plazaTopics.some(topic => topic.id === d.topic)
     )
       return null;
     return {

@@ -28,6 +28,7 @@ async function request<T>(path: string, method = "GET", body?: object): Promise<
 }
 export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onProfile: () => void; noticeTarget?: { id: string; serial: number } | null } & StickerActions) {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [topicFilter, setTopicFilter] = useState('todos');
   const [replies, setReplies] = useState<Reply[]>([]);
   const [active, setActive] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -159,6 +160,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
     finally { setBusy(false); }
   }
   const selected = posts.find((post) => post.id === active);
+  const filteredPosts = topicFilter === 'todos' ? posts : posts.filter(post => post.topic === topicFilter);
   const quote = replies.find(item => item.id === quoteId);
   const asTarget = (item: Reply) => ({ id: item.id, name: item.author, summary: item.body.slice(0, 160) || (item.imageId ? "Imagen" : "Sticker") });
   return <div className="page-content plaza-page real-plaza">
@@ -190,7 +192,8 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
       {account?.moderator && <PlazaModerationDesk />}
       {account?.moderator && <PlazaAppealDesk />}
       <section className="real-plaza-panel" aria-labelledby="conversations-title"><h2 id="conversations-title">Conversaciones</h2>
-        {loading ? <p role="status">Cargando conversaciones…</p> : posts.length === 0 ? <p>Todavía no hay conversaciones. Puedes iniciar la primera.</p> : posts.map((post) => <article key={post.id} className="real-plaza-post">
+        <label className="field-label" htmlFor="real-plaza-topic-filter">Filtrar conversaciones por tema</label><select id="real-plaza-topic-filter" className="text-input" value={topicFilter} onChange={e => setTopicFilter(e.target.value)}><option value="todos">Todos los temas</option>{plazaTopics.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
+        {loading ? <p role="status">Cargando conversaciones…</p> : filteredPosts.length === 0 ? <p>{posts.length === 0 ? 'Todavía no hay conversaciones. Puedes iniciar la primera.' : 'No hay conversaciones de este tema entre las más recientes. Prueba otro o inicia una.'}</p> : filteredPosts.map((post) => <article key={post.id} className="real-plaza-post">
           <p>{post.author} · {plazaTopics.find((t) => t.id === post.topic)?.short}</p><h3>{post.title}</h3><p>{post.body}</p>{post.stickerId && <StickerImage id={post.stickerId}/>}
           {post.imageId && <ImageView plaza image={{id:post.imageId,description:post.imageDescription || ""}} />}
           {post.authorId === account?.id && !post.imageId && <button className="button text" disabled={busy} onClick={() => setImageTarget({kind:"post",id:post.id})}><ImagePlus size={16} aria-hidden="true" /> Agregar imagen</button>}

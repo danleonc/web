@@ -7,6 +7,19 @@ import { tmpdir } from "node:os";
 import AxeBuilder from "@axe-core/playwright";
 import sharp from 'sharp';
 
+test('los nuevos temas se pueden publicar y reconocen entre cuentas', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use}); const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`temas_a_${info.project.name}`); await register(b,`temas_b_${info.project.name}`);
+  const page=await a.newPage(); await page.goto('/#plaza');
+  for (const text of ['Cocina y sabores','Música y conciertos','Anime, manga y cómics','Deporte y movimiento']) await expect(page.getByRole('region',{name:'Comparte una conversación'}).locator('select').getByRole('option',{name:text})).toHaveCount(1);
+  await page.getByRole('region',{name:'Comparte una conversación'}).locator('select').selectOption('anime'); await page.getByLabel('Título de la conversación').fill(`Anime ${info.project.name}`); await page.getByLabel('Tu publicación').fill('¿Qué serie recomendarías?'); await page.getByRole('button',{name:'Publicar',exact:true}).click();
+  const other=await b.newPage(); await other.goto('/#plaza'); const post=other.getByRole('article').filter({hasText:`Anime ${info.project.name}`}); await expect(post).toContainText('Anime y cómics');
+  await other.getByLabel('Filtrar conversaciones por tema').selectOption('cocina'); await expect(post).toHaveCount(0);
+  await other.getByLabel('Filtrar conversaciones por tema').selectOption('anime'); await expect(post).toBeVisible();
+ } finally {await a.close(); await b.close();}
+});
+
 test('crear publicación permite preparar imagen y reintentar su subida sin duplicar', async ({browser},info) => {
  const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
  const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
@@ -21,7 +34,7 @@ test('crear publicación permite preparar imagen y reintentar su subida sin dupl
   const box=await stickerButton.boundingBox(); expect(box!.width).toBeLessThan(100);
   await imageButton.click(); const image=await sharp({create:{width:100,height:100,channels:3,background:'#285d4c'}}).png().toBuffer();
   await page.locator('input[type=file]').setInputFiles({name:'imagen.png',mimeType:'image/png',buffer:image});
-  await page.getByRole('button',{name:'Adjuntar imagen',exact:true}).last().click();
+  await page.getByRole('dialog').getByRole('button',{name:'Adjuntar imagen',exact:true}).click();
   await expect(page.getByText('Imagen lista para publicar')).toBeVisible();
   await compose.screenshot({path:info.outputPath('publicacion-con-imagen.png')});
   let fail=true; await page.route('**/api/plaza/images/post/**',async route=>{if(fail){fail=false;await route.fulfill({status:503,body:'{}'});}else await route.continue();});
