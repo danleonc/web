@@ -30,9 +30,17 @@ export class Notifications {
       (SELECT 1 FROM notification_mutes WHERE user_id=? AND kind='connection' AND target_id=?)`)
       .run(randomUUID(), peer, actor, connection, message, this.now(), peer, connection);
   }
+  connectionEvent(connection: string, actor: string, kind: "invitation" | "acceptance") {
+    const db = this.storage.db;
+    const row = db.prepare(`SELECT sender_id,recipient_id,status FROM plaza_connections WHERE id=?`).get(connection);
+    if (!row || (kind === "invitation" && (row.status !== "pending" || row.sender_id !== actor)) || (kind === "acceptance" && (row.status !== "accepted" || row.recipient_id !== actor))) return;
+    const recipient = String(kind === "invitation" ? row.recipient_id : row.sender_id);
+    db.prepare(`INSERT OR IGNORE INTO notifications(id,recipient_id,actor_id,kind,target_id,event_id,created_at) VALUES(?,?,?,?,?,?,?)`)
+      .run(randomUUID(),recipient,actor,kind,connection,connection,this.now());
+  }
   list(actor: string) {
     const db = this.storage.db;
-    const visible = `n.recipient_id=? AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=n.recipient_id AND b.blocked_id=n.actor_id) OR (b.blocked_id=n.recipient_id AND b.user_id=n.actor_id)) AND ((n.kind='reply' AND EXISTS (SELECT 1 FROM plaza_posts p JOIN plaza_replies r ON r.id=n.event_id AND r.post_id=p.id WHERE p.id=n.target_id AND p.hidden=0 AND r.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=n.recipient_id AND b.blocked_id=p.author_id) OR (b.blocked_id=n.recipient_id AND b.user_id=p.author_id)))) OR (n.kind='message' AND EXISTS (SELECT 1 FROM plaza_connections c JOIN plaza_private_messages m ON m.id=n.event_id AND m.connection_id=c.id WHERE c.id=n.target_id AND c.status='accepted' AND (c.sender_id=n.recipient_id OR c.recipient_id=n.recipient_id) AND m.hidden=0)))`;
+    const visible = `n.recipient_id=? AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=n.recipient_id AND b.blocked_id=n.actor_id) OR (b.blocked_id=n.recipient_id AND b.user_id=n.actor_id)) AND ((n.kind='reply' AND EXISTS (SELECT 1 FROM plaza_posts p JOIN plaza_replies r ON r.id=n.event_id AND r.post_id=p.id WHERE p.id=n.target_id AND p.hidden=0 AND r.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=n.recipient_id AND b.blocked_id=p.author_id) OR (b.blocked_id=n.recipient_id AND b.user_id=p.author_id)))) OR (n.kind='message' AND EXISTS (SELECT 1 FROM plaza_connections c JOIN plaza_private_messages m ON m.id=n.event_id AND m.connection_id=c.id WHERE c.id=n.target_id AND c.status='accepted' AND (c.sender_id=n.recipient_id OR c.recipient_id=n.recipient_id) AND m.hidden=0)) OR (n.kind='invitation' AND EXISTS (SELECT 1 FROM plaza_connections c WHERE c.id=n.target_id AND c.status='pending' AND c.recipient_id=n.recipient_id AND c.sender_id=n.actor_id)) OR (n.kind='acceptance' AND EXISTS (SELECT 1 FROM plaza_connections c WHERE c.id=n.target_id AND c.status='accepted' AND c.sender_id=n.recipient_id AND c.recipient_id=n.actor_id)))`;
     const items = db.prepare(`SELECT n.id,n.kind,n.target_id AS targetId,n.created_at AS createdAt,n.read_at AS readAt,a.alias AS actor,COALESCE(p.title,'Conversación privada') AS title FROM notifications n JOIN accounts a ON a.id=n.actor_id LEFT JOIN plaza_posts p ON n.kind='reply' AND p.id=n.target_id WHERE ${visible} ORDER BY n.created_at DESC,n.rowid DESC LIMIT 100`).all(actor);
     const unread = Number(db.prepare(`SELECT count(*) AS n FROM notifications n WHERE ${visible} AND n.read_at IS NULL`).get(actor)!.n);
     const mutes = db.prepare('SELECT kind,target_id AS targetId FROM notification_mutes WHERE user_id=?').all(actor);

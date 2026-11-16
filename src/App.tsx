@@ -101,7 +101,7 @@ function App() {
   const noticeOwner = accountsEnabled ? (account.account ? `account:${account.account.id}` : null) : "prototype";
   const notices = useNotices(state, setState, noticeOwner);
   const realNotices = useRealNotices(realPlazaEnabled && account.account?.canParticipate ? account.account.id : null);
-  const [noticeTarget, setNoticeTarget] = useState<{ kind: "reply" | "message"; id: string; serial: number } | null>(null);
+  const [noticeTarget, setNoticeTarget] = useState<{ kind: "reply" | "message" | "invitation" | "acceptance"; id: string; serial: number } | null>(null);
   const unread = realPlazaEnabled ? realNotices.unread : notices.unread;
   useEffect(() => {
     void prepareServiceWorker().catch(() => {});
@@ -779,7 +779,7 @@ function App() {
               }}
             />
           )}
-          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onProfile={() => prepareProfile('connections')} onPlaza={() => navigate("plaza")} noticeTarget={noticeTarget?.kind === "message" ? noticeTarget : null} {...stickerActions} />}
+          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onProfile={() => prepareProfile('connections')} onPlaza={() => navigate("plaza")} noticeTarget={noticeTarget && noticeTarget.kind !== "reply" ? noticeTarget : null} {...stickerActions} />}
           {page === "connections" && !realPlazaEnabled && (
             <Connections
               {...stickerActions}

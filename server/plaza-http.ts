@@ -44,6 +44,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   const reply = path.match(/^\/api\/plaza\/replies\/([a-f0-9-]{36})$/);
   const block = path.match(/^\/api\/plaza\/blocks\/([a-f0-9-]{36})$/);
   const invitation = path.match(/^\/api\/plaza\/invitations\/([a-f0-9-]{36})\/decision$/);
+  const connection = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})$/);
   const privateMessages = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages$/);
   const privateMessage = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages\/([a-f0-9-]{36})$/);
   const privateSeen = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/seen$/);
@@ -67,6 +68,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
     else if (path === "/api/plaza/blocks") json(res, 200, { blocks: storage.blockedAccounts(actor.id) });
     else if (path === "/api/plaza/my-moderation") json(res, 200, { actions: moderation.myActions(actor.id) });
     else if (path === "/api/plaza/connections") json(res, 200, { connections: connections.list(actor.id) });
+    else if (connection) { const found=connections.get(actor.id,connection[1]); json(res,found?200:404,found?{connection:found}:{error:"not_found"}); }
     else if (privateMessages) { const messages = connections.messages(actor.id, privateMessages[1]); json(res, messages ? 200 : 404, messages ? { messages } : { error: "not_found" }); }
     else if (path === "/api/plaza/moderation/appeals") json(res, 200, { appeals: moderation.appeals(actor.id) });
     else if (path === "/api/plaza/moderation/reports") json(res, 200, { reports: moderation.reports(actor.id) });

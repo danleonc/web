@@ -528,6 +528,32 @@ test("una cancelación muestra el motivo a la persona con reserva", async ({ bro
   } finally { await mod.close(); await user.close(); }
 });
 
+test("la campana abre solicitudes y aceptaciones de conexión", async ({browser},info) => {
+ const a=await browser.newContext({baseURL:"http://127.0.0.1:4190",...info.project.use});
+ const b=await browser.newContext({baseURL:"http://127.0.0.1:4190",...info.project.use});
+ try {
+  await register(a,`conn_notice_a_${info.project.name}`); await register(b,`conn_notice_b_${info.project.name}`);
+  const headers={Origin:"http://127.0.0.1:4190"};
+  const created=await a.request.post('/api/plaza/posts',{headers,data:{topic:'cultura',title:`Aviso conexión ${info.project.name}`,body:'Hola'}});
+  const {post}=await created.json();
+  const invite=await b.request.post('/api/plaza/invitations',{headers,data:{kind:'post',contentId:post.id,note:'Conversemos'}}); expect(invite.status()).toBe(201);
+  const pa=await a.newPage(); await pa.goto('/#plaza');
+  await pa.getByRole('button',{name:/Notificaciones, 1 aviso sin leer/}).click();
+  await pa.getByRole('button',{name:/Nueva solicitud/}).click();
+  await expect(pa.getByText('Solicitud recibida')).toBeVisible();
+  await pa.getByRole('button',{name:'Aceptar solicitud'}).click();
+  const pb=await b.newPage();
+  await pb.route('**/api/plaza/connections', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({connections:[]})}));
+  await pb.goto('/#plaza');
+  await pb.getByRole('button',{name:/Notificaciones, 1 aviso sin leer/}).click();
+  await pb.getByRole('button',{name:/Solicitud aceptada/}).click();
+  await expect(pb.getByRole('heading',{name:/Conversación con conn_notice_a_/})).toBeVisible();
+  await expect(pb.getByRole('heading',{name:/Conversación con conn_notice_a_/})).toBeVisible({timeout:6000});
+  await pb.waitForTimeout(4500);
+  await expect(pb.getByRole('heading',{name:/Conversación con conn_notice_a_/})).toBeVisible();
+ } finally {await a.close();await b.close();}
+});
+
 test("la campana muestra respuestas reales y permite silenciar", async ({ browser }, info) => {
   const a = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   const b = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });

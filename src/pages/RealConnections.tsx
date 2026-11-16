@@ -22,7 +22,7 @@ async function api<T>(path: string, data?: object): Promise<T> {
   if (!response.ok) { const detail = await response.json().catch(() => ({})); throw Error(detail.error === 'profile_photo_required' ? 'Agrega tu foto de Conexiones para aceptar una solicitud nueva.' : "No pudimos completar la acción. Actualiza e inténtalo de nuevo."); }
   return response.json() as Promise<T>;
 }
-export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onPlaza: () => void; onProfile: () => void; noticeTarget?: { id: string; serial: number } | null } & StickerActions) {
+export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onPlaza: () => void; onProfile: () => void; noticeTarget?: { kind: "reply" | "message" | "invitation" | "acceptance"; id: string; serial: number } | null } & StickerActions) {
   const [connections, setConnections] = useState<Connection[]>([]); const [selected, setSelected] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]); const [draft, setDraft] = useState("");
   const [error, setError] = useState(""); const [notice, setNotice] = useState(""); const [busy, setBusy] = useState(false); const [loading, setLoading] = useState(false);
@@ -34,6 +34,7 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile,
   const pendingImage = useRef<{connection: string; clientId: string; messageId?: string; replyTo?: string} | null>(null);
   const pending = useRef<{ id: string; body: string; connection: string; replyTo: string } | null>(null); const requestVersion = useRef(0); const seenKey = useRef("");
   const chatHeading = useRef<HTMLHeadingElement>(null);
+  const connectionRefs = useRef(new Map<string, HTMLElement>());
   const navigation = useConversationNavigation("connections", () => { requestVersion.current++; setSelected(null); setMessages([]); });
   useEffect(() => { if (selected) { window.scrollTo(0, 0); chatHeading.current?.focus(); } }, [selected]);
   const ready = !!account?.canParticipate;
@@ -57,6 +58,13 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile,
       try {
         const result = await api<{ connections: Connection[] }>("/api/plaza/connections");
         if (cancelled || version !== requestVersion.current) return;
+        if (selected && !result.connections.some((item) => item.id === selected && item.status === "accepted")) {
+          const response = await fetch(`/api/plaza/connections/${selected}`, { credentials: "same-origin" });
+          if (!response.ok && response.status !== 404) throw Error("connection_unavailable");
+          const target = response.ok ? await response.json() as { connection: Connection } : null;
+          if (cancelled || version !== requestVersion.current) return;
+          if (target?.connection.status === "accepted") result.connections.push(target.connection);
+        }
         setConnections(result.connections);
         if (selected && !result.connections.some((item) => item.id === selected && item.status === "accepted")) {
           requestVersion.current++; setSelected(null); setMessages([]); setReport(null); setNotice("Esta conexión ya no está disponible.");
@@ -73,7 +81,25 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile,
   async function decision(id: string, action: string) { if (busy) return; setBusy(true); setError(""); try { await api(`/api/plaza/invitations/${id}/decision`, { action }); if (selected === id) { requestVersion.current++; setSelected(null); setMessages([]); } await refresh(); } catch (e) { setError(e instanceof Error ? e.message : "No se pudo actualizar."); } finally { setBusy(false); } }
   async function open(id: string) { navigation.enter(); const version = ++requestVersion.current; setSelected(id); setMessages([]); setDraft(""); setQuoteId(null); setError(""); try { const result = await api<{ messages: Message[] }>(`/api/plaza/connections/${id}/messages`); if (version === requestVersion.current) { setMessages(result.messages); void markSeen(id, result.messages); } } catch { if (version === requestVersion.current) setError("No pudimos cargar la conversación."); } }
   const openedNotice = useRef<number | null>(null);
-  useEffect(() => { if (ready && noticeTarget && openedNotice.current !== noticeTarget.serial && connections.some(c => c.id === noticeTarget.id && c.status === "accepted")) { openedNotice.current = noticeTarget.serial; void open(noticeTarget.id); } }, [ready, noticeTarget?.serial, connections.length]);
+  const fetchingNotice = useRef<number | null>(null);
+  useEffect(() => {
+    if (!ready || !noticeTarget || openedNotice.current === noticeTarget.serial) return;
+    const target = connections.find(c => c.id === noticeTarget.id);
+    if (!target) {
+      if (fetchingNotice.current === noticeTarget.serial) return;
+      const serial = noticeTarget.serial; fetchingNotice.current = serial;
+      void api<{connection: Connection}>(`/api/plaza/connections/${noticeTarget.id}`).then(({connection}) => {
+        if (fetchingNotice.current !== serial) return;
+        setConnections(previous => previous.some(c => c.id === connection.id) ? previous : [connection,...previous]);
+      }).catch(() => { if (fetchingNotice.current === serial) { openedNotice.current = serial; setNotice("Esta conexión ya no está disponible."); } });
+      return;
+    }
+    if (noticeTarget.kind === "invitation" && target.status === "pending") {
+      openedNotice.current = noticeTarget.serial;
+      const element = connectionRefs.current.get(target.id);
+      element?.scrollIntoView({ block: "center" }); element?.focus({ preventScroll: true });
+    } else if (target.status === "accepted") { openedNotice.current = noticeTarget.serial; void open(target.id); }
+  }, [ready, noticeTarget?.serial, connections]);
   async function send(e: FormEvent) { e.preventDefault(); if (!selected || busy || !draft.trim()) return; requestVersion.current++; setBusy(true); setError(""); setNotice(""); const text = draft.trim();
     if (!pending.current || pending.current.body !== text || pending.current.connection !== selected || pending.current.replyTo !== (quoteId || "")) pending.current = { id: crypto.randomUUID(), body: text, connection: selected, replyTo: quoteId || "" };
     try { await api(`/api/plaza/connections/${selected}/messages`, { clientId: pending.current.id, body: text, ...(quoteId ? {replyTo: quoteId} : {}) }); pending.current = null; setDraft(""); setQuoteId(null); try { setMessages((await api<{ messages: Message[] }>(`/api/plaza/connections/${selected}/messages`)).messages); } catch { setNotice("El mensaje se envió, pero no pudimos actualizar la conversación. Vuelve a abrirla."); } }
@@ -104,7 +130,7 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile,
     {!loaded ? <p role="status">Cargando tu sesión…</p> : !ready ? <section className="real-plaza-panel"><h2>Entra a tus conexiones</h2><p>Inicia sesión y confirma tu correo para participar.</p><button className="button primary" onClick={onAccess}>Entrar a mi cuenta</button></section> : <>
       {error && <p role="alert">{error}</p>}{error.startsWith('Agrega tu foto de Conexiones') && <button className="button secondary" onClick={onProfile}>Ir a mi perfil</button>}{notice && <p role="status">{notice}</p>}
       <section className="real-plaza-panel" hidden={!!selected}><h2>Tus solicitudes y conexiones</h2><button className="button secondary" disabled={busy} onClick={() => void refresh().catch(() => setError("No pudimos actualizar tus conexiones."))}>Actualizar conexiones</button>
-        {loading ? <p role="status">Cargando conexiones…</p> : connections.length === 0 ? <><p>Aún no tienes conexiones. Puedes conocer conversaciones en La Plaza.</p><button className="button text" onClick={onPlaza}>Ir a La Plaza</button></> : connections.map((c) => <article className="real-plaza-post" key={c.id}><h3>{c.person}</h3><p>{c.note}</p>
+        {loading ? <p role="status">Cargando conexiones…</p> : connections.length === 0 ? <><p>Aún no tienes conexiones. Puedes conocer conversaciones en La Plaza.</p><button className="button text" onClick={onPlaza}>Ir a La Plaza</button></> : connections.map((c) => <article className="real-plaza-post" key={c.id} tabIndex={-1} ref={element => { if (element) connectionRefs.current.set(c.id, element); else connectionRefs.current.delete(c.id); }}><h3>{c.person}</h3><p>{c.note}</p>
           {c.status === "pending" && c.senderId === account?.id && <><p>Esperando respuesta</p><button className="button text" disabled={busy} onClick={() => void decision(c.id, "withdraw")}>Retirar solicitud</button></>}
           {c.status === "pending" && c.recipientId === account?.id && <><p>Solicitud recibida</p><button className="button primary" disabled={busy} onClick={() => void decision(c.id, "accept")}>Aceptar solicitud</button><button className="button text" disabled={busy} onClick={() => void decision(c.id, "decline")}>Rechazar solicitud</button></>}
           {c.status === "accepted" && <><p>Conexión aceptada</p><button className="button secondary" disabled={busy} onClick={() => void open(c.id)}>Abrir conversación</button><button className="button text" disabled={busy} onClick={() => { if (window.confirm("¿Cerrar esta conexión? La conversación dejará de estar disponible.")) void decision(c.id, "withdraw"); }}>Cerrar conexión</button></>}

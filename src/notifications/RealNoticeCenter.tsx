@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Bell, BellOff } from "lucide-react";
 import { Modal } from "../components";
 
-type Notice = { id: string; kind: "reply" | "message"; targetId: string; title: string; actor: string; readAt: number | null };
+type Notice = { id: string; kind: "reply" | "message" | "invitation" | "acceptance"; targetId: string; title: string; actor: string; readAt: number | null };
 type Mute = { kind: "post" | "connection"; targetId: string };
 export function useRealNotices(accountId: string | null) {
   const currentAccount = useRef(accountId); currentAccount.current = accountId;
@@ -28,11 +28,11 @@ export function RealNoticeCenter({ notices, signedIn, onClose, onAccess, onOpen,
   const [error, setError] = useState("");
   return <Modal title="Notificaciones" wide onClose={onClose}><div className="notice-center">
     {!signedIn ? <div className="notice-empty"><p>Entra a tu cuenta para ver tus avisos.</p><button className="button primary" onClick={onAccess}>Entrar</button></div> : <>
-      <p className="notice-scope">Aquí aparecen respuestas a tus conversaciones y mensajes privados.</p>
+      <p className="notice-scope">Aquí aparecen respuestas, mensajes y novedades de tus conexiones.</p>
       {(error || notices.error) && <p role="alert">{error || notices.error}</p>}
       {notices.items.length ? <ul className="notice-list">{notices.items.map(item => { const kind = item.kind === "reply" ? "post" : "connection"; const muted = notices.mutes.some(m => m.kind === kind && m.targetId === item.targetId); return <li key={item.id} className={item.readAt ? "" : "notice-unread"}>
-        <button className="notice-open" onClick={() => { void notices.read(item.id).then(() => onOpen(item.kind, item.targetId)).catch(() => setError("No pudimos abrir el aviso. Inténtalo de nuevo.")); }}><span className="notice-kind">{item.kind === "reply" ? "Nueva respuesta" : "Nuevo mensaje"}{!item.readAt && <span className="notice-dot" aria-label="Sin leer" />}</span><strong>{item.title}</strong><span>{item.actor} {item.kind === "reply" ? "respondió una conversación" : "te envió un mensaje"}.</span><span className="notice-link">Ver conversación →</span></button>
-        <button className="button text" onClick={() => void notices.mute(kind, item.targetId, !muted).catch(() => setError("No pudimos guardar tu preferencia."))}>{muted ? <Bell size={15} /> : <BellOff size={15} />}{muted ? "Reactivar" : "Silenciar"}</button>
+        <button className="notice-open" onClick={() => { void notices.read(item.id).then(() => onOpen(item.kind, item.targetId)).catch(() => setError("No pudimos abrir el aviso. Inténtalo de nuevo.")); }}><span className="notice-kind">{item.kind === "reply" ? "Nueva respuesta" : item.kind === "message" ? "Nuevo mensaje" : item.kind === "invitation" ? "Nueva solicitud" : "Solicitud aceptada"}{!item.readAt && <span className="notice-dot" aria-label="Sin leer" />}</span><strong>{item.kind === "invitation" || item.kind === "acceptance" ? "Conexiones" : item.title}</strong><span>{item.actor} {item.kind === "reply" ? "respondió una conversación" : item.kind === "message" ? "te envió un mensaje" : item.kind === "invitation" ? "quiere seguir conversando contigo" : "aceptó tu solicitud"}.</span><span className="notice-link">{item.kind === "invitation" ? "Ver solicitud →" : "Ver conversación →"}</span></button>
+        {(item.kind === "reply" || item.kind === "message") && <button className="button text" onClick={() => void notices.mute(kind, item.targetId, !muted).catch(() => setError("No pudimos guardar tu preferencia."))}>{muted ? <Bell size={15} /> : <BellOff size={15} />}{muted ? "Reactivar" : "Silenciar"}</button>}
       </li>; })}</ul> : <div className="notice-empty"><Bell size={25}/><p>Aún no tienes avisos.</p></div>}
     </>}
     {children}

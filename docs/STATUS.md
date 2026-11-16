@@ -466,3 +466,7 @@ El filtro por tema consulta el servidor y carga páginas de 50 conversaciones me
 ### Actualización · 16 de noviembre · Búsqueda compartida
 
 El commit `8a14e42` se desplegó en Render y el chequeo de salud respondió HTTP 200. La Plaza compartida incorpora búsqueda de títulos y textos, compatible con filtro por tema y paginación, sin distinguir mayúsculas ni tildes y respetando bloqueos. El alcance no incluye respuestas ni mensajes privados; la consulta recorre texto sin índice especializado, por lo que deberá evaluarse su rendimiento con mayor volumen. La búsqueda se verificó localmente; su despliegue aún está pendiente.
+
+### Actualización · 16 de noviembre · Avisos de solicitudes de Conexiones
+
+La búsqueda compartida de La Plaza se desplegó en Render desde `24af1c9` y el servicio respondió HTTP 200. Se añadieron en código avisos de solicitud y aceptación a la campana, con navegación a Conexiones, lectura y restricciones por bloqueo y estado. Se registran solo para eventos nuevos; no se generan retroactivamente. No se añadieron push ni correo para estos eventos. Las pruebas locales cubren dos cuentas, retirada, rechazo, bloqueo y navegación en escritorio/móvil. Para abrir un aviso fuera de las 100 conexiones más recientes, se consulta directamente su destino respetando permisos y bloqueos. Pendiente de despliegue y comprobación en Render.

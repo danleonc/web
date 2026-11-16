@@ -29,7 +29,10 @@ export class ConnectionsStore {
     }
     if (!this.storage.takeLimit(digest(`plaza-invitations:${actor}`), 10, 60 * 60_000, this.now())) throw Error("rate_limited");
     const id = randomUUID(), time = this.now();
-    db.prepare("INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)").run(id, actor, recipient, low, high, note.trim(), kind, contentId, "pending", time, time);
+    this.storage.transaction(() => {
+      db.prepare("INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)").run(id, actor, recipient, low, high, note.trim(), kind, contentId, "pending", time, time);
+      new Notifications(this.storage, this.now).connectionEvent(id, actor, "invitation");
+    });
     return { id, status: "pending" };
   }
   list(actor: string) {
@@ -38,6 +41,11 @@ export class ConnectionsStore {
       WHERE (c.sender_id=? OR c.recipient_id=?) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=c.sender_id AND b.blocked_id=c.recipient_id) OR (b.user_id=c.recipient_id AND b.blocked_id=c.sender_id))
       ORDER BY c.updated_at DESC,c.id DESC LIMIT 100`).all(actor, actor, actor);
   }
+  get(actor: string, id: string) {
+    return this.storage.db.prepare(`SELECT c.id,c.sender_id AS senderId,c.recipient_id AS recipientId,c.note,c.origin_kind AS originKind,c.origin_id AS originId,c.status,c.created_at AS createdAt,a.id AS personId,a.alias AS person
+      FROM plaza_connections c JOIN accounts a ON a.id=CASE WHEN c.sender_id=? THEN c.recipient_id ELSE c.sender_id END
+      WHERE c.id=? AND (c.sender_id=? OR c.recipient_id=?) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=c.sender_id AND b.blocked_id=c.recipient_id) OR (b.user_id=c.recipient_id AND b.blocked_id=c.sender_id))`).get(actor,id,actor,actor);
+  }
   decide(actor: string, id: string, action: string) {
     const row = this.visible(id, actor);
     if (!row) return false;
@@ -45,7 +53,11 @@ export class ConnectionsStore {
       : action === "decline" && row.status === "pending" && row.recipient_id === actor ? "declined"
       : action === "withdraw" && ((row.status === "pending" && row.sender_id === actor) || row.status === "accepted") ? "closed" : null;
     if (!next) return false;
-    return this.storage.db.prepare("UPDATE plaza_connections SET status=?,updated_at=? WHERE id=? AND status=?").run(next, this.now(), id, row.status).changes === 1;
+    return this.storage.transaction(() => {
+      const changed = this.storage.db.prepare("UPDATE plaza_connections SET status=?,updated_at=? WHERE id=? AND status=?").run(next, this.now(), id, row.status).changes === 1;
+      if (changed && next === "accepted") new Notifications(this.storage, this.now).connectionEvent(id, actor, "acceptance");
+      return changed;
+    });
   }
   peer(actor: string, id: string) {
     const row = this.visible(id, actor);
