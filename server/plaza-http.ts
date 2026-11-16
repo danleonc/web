@@ -56,7 +56,14 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
     else if (reportImage) { const found = storage.db.prepare("SELECT evidence_image AS body FROM plaza_reports WHERE id=? AND evidence_image IS NOT NULL").get(reportImage[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
     else if (image) { const found = images.get(actor.id, image[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
     else if (path === "/api/plaza/notifications") json(res, 200, notifications.list(actor.id));
-    else if (path === "/api/plaza/posts") json(res, 200, { posts: plaza.listPosts(actor.id) });
+    else if (path === "/api/plaza/posts") {
+      const params = new URL(req.url || '', 'http://localhost').searchParams;
+      if (params.has('topic') || params.has('cursor') || params.has('page')) {
+        if ([...params.keys()].some(key => !['topic','cursor','page'].includes(key)) || ['topic','cursor','page'].some(key => params.getAll(key).length > 1) || (params.has('page') && params.get('page') !== '1')) json(res,422,{error:'invalid_page'});
+        else { try { json(res,200,plaza.pagePosts(actor.id,params.get('topic') || 'todos',params.get('cursor') || '')); } catch { json(res,422,{error:'invalid_page'}); } }
+      } else json(res, 200, { posts: plaza.listPosts(actor.id) });
+    }
+    else if (post) { const found=plaza.getPost(actor.id,post[1]); json(res,found?200:404,found?{post:found}:{error:'not_found'}); }
     else if (path === "/api/plaza/blocks") json(res, 200, { blocks: storage.blockedAccounts(actor.id) });
     else if (path === "/api/plaza/my-moderation") json(res, 200, { actions: moderation.myActions(actor.id) });
     else if (path === "/api/plaza/connections") json(res, 200, { connections: connections.list(actor.id) });

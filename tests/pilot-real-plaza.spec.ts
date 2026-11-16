@@ -7,6 +7,18 @@ import { tmpdir } from "node:os";
 import AxeBuilder from "@axe-core/playwright";
 import sharp from 'sharp';
 
+test('filtro de Plaza encuentra conversaciones antiguas y permite cargar más', async ({browser},info) => {
+ const context=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(context,`pages_posts_${info.project.name}`); const headers={Origin:'http://127.0.0.1:4190'};
+  for(let n=0;n<55;n++) expect((await context.request.post('/api/plaza/posts',{headers,data:{topic:'anime',title:`Anime antiguo ${n}`,body:'Texto'}})).status()).toBe(201);
+  const page=await context.newPage(); await page.goto('/#plaza'); await page.getByLabel('Filtrar conversaciones por tema').selectOption('anime');
+  await expect(page.getByRole('article').filter({hasText:'Anime antiguo'})).toHaveCount(50);
+  await page.getByRole('button',{name:'Cargar más conversaciones'}).click();
+  await expect.poll(() => page.getByRole('article').filter({hasText:'Anime antiguo'}).count()).toBeGreaterThan(50);
+ } finally {await context.close();}
+});
+
 test('los nuevos temas se pueden publicar y reconocen entre cuentas', async ({browser},info) => {
  const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use}); const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
  try {
@@ -274,7 +286,7 @@ test("si se guarda una publicación pero falla la actualización, no invita a du
     await page.goto("/#plaza");
     await page.getByLabel("Título de la conversación").fill(`Una vez ${info.project.name}`);
     await page.getByLabel("Tu publicación").fill("No quiero duplicar esta publicación");
-    await page.route("**/api/plaza/posts", async (route) => {
+    await page.route("**/api/plaza/posts{,?*}", async (route) => {
       if (route.request().method() === "GET") await route.fulfill({ status: 503, contentType: "application/json", body: "{}" });
       else await route.continue();
     });
@@ -520,6 +532,8 @@ test("la campana muestra respuestas reales y permite silenciar", async ({ browse
     const { post } = await created.json();
     expect((await b.request.post(`/api/plaza/posts/${post.id}/replies`, { headers, data: { body: "Una respuesta" } })).status()).toBe(201);
     const page = await a.newPage(); await page.goto('/#plaza');
+    await page.getByLabel('Filtrar conversaciones por tema').selectOption('anime');
+    await expect(page.getByRole('article').filter({hasText:`Aviso ${info.project.name}`})).toHaveCount(0);
     const bell = page.getByRole('button', { name: /Notificaciones, 1 aviso sin leer/ }); await expect(bell).toBeVisible(); await bell.click();
     await expect(page.getByText('Nueva respuesta', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: /Silenciar/ }).click();

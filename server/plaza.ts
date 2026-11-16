@@ -71,6 +71,26 @@ export class PlazaStore {
       WHERE p.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=p.author_id) OR (b.user_id=p.author_id AND b.blocked_id=?))
       ORDER BY p.created_at DESC,p.id DESC LIMIT 100`).all(userId, userId);
   }
+  pagePosts(userId: string, topic: string, cursor: string) {
+    if (topic !== 'todos' && !topics.has(topic)) throw Error('invalid_topic');
+    let beforeTime = Number.MAX_SAFE_INTEGER, beforeId = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+    if (cursor) {
+      if (!/^[A-Za-z0-9_-]{1,120}$/.test(cursor)) throw Error('invalid_cursor');
+      let value: unknown;
+      try { value = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')); } catch { throw Error('invalid_cursor'); }
+      if (!Array.isArray(value) || value.length !== 2 || !Number.isSafeInteger(value[0]) || value[0] < 0 || typeof value[1] !== 'string' || !/^[a-f0-9-]{36}$/.test(value[1])) throw Error('invalid_cursor');
+      [beforeTime, beforeId] = value;
+    }
+    const rows = this.storage.db.prepare(`SELECT p.id,p.topic,p.title,p.body,p.sticker_id AS stickerId,(SELECT id FROM plaza_images i WHERE i.post_id=p.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.post_id=p.id) AS imageDescription,p.author_id AS authorId,a.alias AS author,p.created_at AS createdAt
+      FROM plaza_posts p JOIN accounts a ON a.id=p.author_id
+      WHERE p.hidden=0 AND (?='todos' OR p.topic=?) AND (p.created_at<? OR (p.created_at=? AND p.id<?)) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=p.author_id) OR (b.user_id=p.author_id AND b.blocked_id=?))
+      ORDER BY p.created_at DESC,p.id DESC LIMIT 51`).all(topic,topic,beforeTime,beforeTime,beforeId,userId,userId);
+    const posts=rows.slice(0,50), last=posts.at(-1);
+    return {posts,nextCursor: rows.length>50 && last ? Buffer.from(JSON.stringify([last.createdAt,last.id])).toString('base64url') : null};
+  }
+  getPost(userId: string, id: string) {
+    return this.storage.db.prepare(`SELECT p.id,p.topic,p.title,p.body,p.sticker_id AS stickerId,(SELECT id FROM plaza_images i WHERE i.post_id=p.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.post_id=p.id) AS imageDescription,p.author_id AS authorId,a.alias AS author,p.created_at AS createdAt FROM plaza_posts p JOIN accounts a ON a.id=p.author_id WHERE p.id=? AND p.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=p.author_id) OR (b.user_id=p.author_id AND b.blocked_id=?))`).get(id,userId,userId);
+  }
   listReplies(userId: string, postId: string) {
     return this.storage.db.prepare(`SELECT r.id,r.post_id AS postId,r.body,r.sticker_id AS stickerId,CASE WHEN EXISTS (SELECT 1 FROM plaza_replies q WHERE q.id=r.reply_to AND q.post_id=r.post_id AND q.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=q.author_id) OR (b.blocked_id=? AND b.user_id=q.author_id))) THEN r.reply_to ELSE NULL END AS replyTo,(SELECT id FROM plaza_images i WHERE i.reply_id=r.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.reply_id=r.id) AS imageDescription,r.author_id AS authorId,a.alias AS author,r.created_at AS createdAt
       FROM plaza_replies r JOIN plaza_posts p ON p.id=r.post_id JOIN accounts a ON a.id=r.author_id
