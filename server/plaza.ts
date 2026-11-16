@@ -71,7 +71,11 @@ export class PlazaStore {
       WHERE p.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=p.author_id) OR (b.user_id=p.author_id AND b.blocked_id=?))
       ORDER BY p.created_at DESC,p.id DESC LIMIT 100`).all(userId, userId);
   }
-  pagePosts(userId: string, topic: string, cursor: string) {
+  pagePosts(userId: string, topic: string, cursor: string, query = "") {
+    if (query.length > 100) throw Error("invalid_query");
+    const normalize = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const search = normalize(query.trim());
+    this.storage.db.function("plaza_matches", { deterministic: true }, (value, needle) => normalize(String(value)).includes(String(needle)) ? 1 : 0);
     if (topic !== 'todos' && !topics.has(topic)) throw Error('invalid_topic');
     let beforeTime = Number.MAX_SAFE_INTEGER, beforeId = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
     if (cursor) {
@@ -83,8 +87,8 @@ export class PlazaStore {
     }
     const rows = this.storage.db.prepare(`SELECT p.id,p.topic,p.title,p.body,p.sticker_id AS stickerId,(SELECT id FROM plaza_images i WHERE i.post_id=p.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.post_id=p.id) AS imageDescription,p.author_id AS authorId,a.alias AS author,p.created_at AS createdAt
       FROM plaza_posts p JOIN accounts a ON a.id=p.author_id
-      WHERE p.hidden=0 AND (?='todos' OR p.topic=?) AND (p.created_at<? OR (p.created_at=? AND p.id<?)) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=p.author_id) OR (b.user_id=p.author_id AND b.blocked_id=?))
-      ORDER BY p.created_at DESC,p.id DESC LIMIT 51`).all(topic,topic,beforeTime,beforeTime,beforeId,userId,userId);
+      WHERE p.hidden=0 AND (?='todos' OR p.topic=?) AND (?='' OR plaza_matches(p.title,?) OR plaza_matches(p.body,?)) AND (p.created_at<? OR (p.created_at=? AND p.id<?)) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=p.author_id) OR (b.user_id=p.author_id AND b.blocked_id=?))
+      ORDER BY p.created_at DESC,p.id DESC LIMIT 51`).all(topic,topic,search,search,search,beforeTime,beforeTime,beforeId,userId,userId);
     const posts=rows.slice(0,50), last=posts.at(-1);
     return {posts,nextCursor: rows.length>50 && last ? Buffer.from(JSON.stringify([last.createdAt,last.id])).toString('base64url') : null};
   }

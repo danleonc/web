@@ -16,3 +16,15 @@ test('filtrado y páginas encuentran publicaciones antiguas sin mostrar bloqueos
  const old=await f.request('/api/plaza/posts/00000000-0000-4000-8000-000000000000','GET',undefined,reader.cookie); assert.equal(old.status,200); assert.equal(old.body.post.title,'Tema 0');
  assert.equal((await f.request('/api/plaza/posts/00000000-0000-4000-8000-999999999999','GET',undefined,reader.cookie)).status,404);
 });
+
+test('búsqueda por título y texto respeta temas, acentos y bloqueos', async t => {
+ const f=await fixture(t,{plazaEnabled:true}); const reader=await f.signup('search_reader'), author=await f.signup('search_author'), blocked=await f.signup('search_blocked');
+ const db=new DatabaseSync(f.path); const add=db.prepare('INSERT INTO plaza_posts(id,author_id,topic,title,body,created_at) VALUES(?,?,?,?,?,?)');
+ add.run('10000000-0000-4000-8000-000000000001',author.id,'cocina','Recetas de MÉXICO','Pan casero',1);
+ add.run('10000000-0000-4000-8000-000000000002',author.id,'anime','Una historia','Viajando por México',2);
+ add.run('10000000-0000-4000-8000-000000000003',blocked.id,'anime','México privado','Texto',3);
+ db.prepare('INSERT INTO blocks(user_id,blocked_id) VALUES(?,?)').run(reader.id,blocked.id); db.close();
+ const all=await f.request('/api/plaza/posts?topic=todos&q=mexico','GET',undefined,reader.cookie); assert.equal(all.status,200); assert.equal(all.body.posts.length,2);
+ const one=await f.request('/api/plaza/posts?topic=cocina&q=mexico','GET',undefined,reader.cookie); assert.equal(one.body.posts.length,1); assert.equal(one.body.posts[0].title,'Recetas de MÉXICO');
+ assert.equal((await f.request('/api/plaza/posts?q='+ 'x'.repeat(101),'GET',undefined,reader.cookie)).status,422);
+});

@@ -462,3 +462,7 @@ Render confirmó el despliegue de `69aadad` y la respuesta de salud. Antes se cr
 ### Exploración de conversaciones de Plaza (trabajo local)
 
 El filtro por tema consulta el servidor y carga páginas de 50 conversaciones mediante un cursor estable. Al abrir un aviso, el servidor comprueba por separado que la publicación esté visible para la cuenta, incluso si no está en la página cargada. Se probaron resultados antiguos, bloqueos, duplicados y navegación en escritorio y móvil. El cambio no modifica el esquema de base de datos. Pendiente de despliegue y validación en el entorno protegido.
+
+### Actualización · 16 de noviembre · Búsqueda compartida
+
+El commit `8a14e42` se desplegó en Render y el chequeo de salud respondió HTTP 200. La Plaza compartida incorpora búsqueda de títulos y textos, compatible con filtro por tema y paginación, sin distinguir mayúsculas ni tildes y respetando bloqueos. El alcance no incluye respuestas ni mensajes privados; la consulta recorre texto sin índice especializado, por lo que deberá evaluarse su rendimiento con mayor volumen. La búsqueda se verificó localmente; su despliegue aún está pendiente.

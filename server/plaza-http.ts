@@ -58,9 +58,9 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
     else if (path === "/api/plaza/notifications") json(res, 200, notifications.list(actor.id));
     else if (path === "/api/plaza/posts") {
       const params = new URL(req.url || '', 'http://localhost').searchParams;
-      if (params.has('topic') || params.has('cursor') || params.has('page')) {
-        if ([...params.keys()].some(key => !['topic','cursor','page'].includes(key)) || ['topic','cursor','page'].some(key => params.getAll(key).length > 1) || (params.has('page') && params.get('page') !== '1')) json(res,422,{error:'invalid_page'});
-        else { try { json(res,200,plaza.pagePosts(actor.id,params.get('topic') || 'todos',params.get('cursor') || '')); } catch { json(res,422,{error:'invalid_page'}); } }
+      if (params.has('topic') || params.has('cursor') || params.has('page') || params.has('q')) {
+        if ([...params.keys()].some(key => !['topic','cursor','page','q'].includes(key)) || ['topic','cursor','page','q'].some(key => params.getAll(key).length > 1) || (params.has('page') && params.get('page') !== '1')) json(res,422,{error:'invalid_page'});
+        else { try { json(res,200,plaza.pagePosts(actor.id,params.get('topic') || 'todos',params.get('cursor') || '',params.get('q') || '')); } catch { json(res,422,{error:'invalid_page'}); } }
       } else json(res, 200, { posts: plaza.listPosts(actor.id) });
     }
     else if (post) { const found=plaza.getPost(actor.id,post[1]); json(res,found?200:404,found?{post:found}:{error:'not_found'}); }

@@ -16,6 +16,12 @@ test('filtro de Plaza encuentra conversaciones antiguas y permite cargar más', 
   await expect(page.getByRole('article').filter({hasText:'Anime antiguo'})).toHaveCount(50);
   await page.getByRole('button',{name:'Cargar más conversaciones'}).click();
   await expect.poll(() => page.getByRole('article').filter({hasText:'Anime antiguo'}).count()).toBeGreaterThan(50);
+  await page.getByLabel('Buscar conversaciones').fill('ANIME ANTIGUO 0');
+  await page.getByRole('button',{name:'Buscar',exact:true}).click();
+  await expect.poll(() => page.getByRole('article').filter({hasText:'Anime antiguo 0'}).count()).toBeGreaterThan(0);
+  await expect(page.getByRole('article').filter({hasText:'Anime antiguo 1'})).toHaveCount(0);
+  await page.getByRole('button',{name:'Limpiar búsqueda'}).click();
+  await expect(page.getByRole('article').filter({hasText:'Anime antiguo'})).toHaveCount(50);
  } finally {await context.close();}
 });
 
