@@ -7,6 +7,33 @@ import { tmpdir } from "node:os";
 import AxeBuilder from "@axe-core/playwright";
 import sharp from 'sharp';
 
+test('crear publicación permite preparar imagen y reintentar su subida sin duplicar', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`draft_a_${info.project.name}`); await register(b,`draft_b_${info.project.name}`);
+  const page=await a.newPage(); await page.goto('/#plaza');
+  await page.getByLabel('Título de la conversación').fill(`Imagen inicial ${info.project.name}`);
+  await page.getByLabel('Tu publicación').fill('Una imagen con mi publicación');
+  const compose=page.getByRole('region',{name:'Comparte una conversación'});
+  const imageButton=compose.getByRole('button',{name:'Adjuntar imagen'}), stickerButton=compose.getByRole('button',{name:'Elegir sticker'});
+  await expect(imageButton).toBeVisible(); await expect(stickerButton).toBeVisible();
+  const box=await stickerButton.boundingBox(); expect(box!.width).toBeLessThan(100);
+  await imageButton.click(); const image=await sharp({create:{width:100,height:100,channels:3,background:'#285d4c'}}).png().toBuffer();
+  await page.locator('input[type=file]').setInputFiles({name:'imagen.png',mimeType:'image/png',buffer:image});
+  await page.getByRole('button',{name:'Adjuntar imagen',exact:true}).last().click();
+  await expect(page.getByText('Imagen lista para publicar')).toBeVisible();
+  await compose.screenshot({path:info.outputPath('publicacion-con-imagen.png')});
+  let fail=true; await page.route('**/api/plaza/images/post/**',async route=>{if(fail){fail=false;await route.fulfill({status:503,body:'{}'});}else await route.continue();});
+  await compose.getByRole('button',{name:'Publicar',exact:true}).click();
+  await expect(page.getByRole('alert')).toContainText('publicación se guardó');
+  await page.getByRole('button',{name:'Reintentar imagen'}).click();
+  const other=await b.newPage(); await other.goto('/#plaza');
+  const cards=other.getByRole('article').filter({hasText:`Imagen inicial ${info.project.name}`});
+  await expect(cards).toHaveCount(1); await expect(cards.getByRole('button',{name:'Ampliar imagen compartida'})).toBeVisible();
+ } finally {await a.close();await b.close();}
+});
+
 test("páginas de encuentros permiten avanzar y volver", async ({ browser }, info) => {
   const context = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   try {
