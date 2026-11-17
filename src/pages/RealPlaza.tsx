@@ -62,6 +62,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
   const [report, setReport] = useState<{ kind: "post" | "reply"; id: string; author: string } | null>(null);
   const [invitation, setInvitation] = useState<{ kind: "post" | "reply"; id: string; author: string } | null>(null);
   const [invitationNote, setInvitationNote] = useState("");
+  const [invitationAgreement, setInvitationAgreement] = useState(false);
   const [notice, setNotice] = useState("");
   const threadRequest = useRef(0);
   const threadHeading = useRef<HTMLHeadingElement>(null);
@@ -175,9 +176,9 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
   async function sendInvitation(e: FormEvent) {
     e.preventDefault(); if (!invitation || busy) return; setBusy(true); setError("");
     try {
-      const result = await request<{ invitation: { status: string } }>("/api/plaza/invitations", "POST", { kind: invitation.kind, contentId: invitation.id, note: invitationNote });
+      const result = await request<{ invitation: { status: string } }>("/api/plaza/invitations", "POST", { kind: invitation.kind, contentId: invitation.id, note: invitationNote, photoChallengeAccepted: true });
       setNotice(result.invitation.status === "accepted" ? "Ya tienes una conexión aceptada con esta persona." : "Solicitud enviada. La otra persona decide si acepta.");
-      setInvitation(null); setInvitationNote("");
+      setInvitation(null); setInvitationNote(""); setInvitationAgreement(false);
     } catch (e) { setError(e instanceof Error ? e.message : "No pudimos enviar la solicitud."); }
     finally { setBusy(false); }
   }
@@ -256,7 +257,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
       }} />}
       {picker && <StickerPicker preferences={stickers.stickerPreferences} onToggleFavorite={stickers.onToggleFavorite} onToggleFavoritePack={stickers.onToggleFavoritePack} onClose={() => setPicker(null)} onSend={(id) => { if (picker === "post") { setPostSticker(id); setPicker(null); } else if (active && !busy) { setBusy(true); void request(`/api/plaza/posts/${active}/replies`, "POST", { body: "", stickerId: id, ...(quoteId ? {replyTo: quoteId} : {}) }).then(async () => { setQuoteId(null); stickers.onStickerUsed(id); setPicker(null); setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies); }).catch(() => setError("No pudimos enviar el sticker. Inténtalo de nuevo.")).finally(() => setBusy(false)); } }} />}
       {report && <ReportDialog subject={`Contenido de ${report.author}`} onClose={() => setReport(null)} onSubmit={async (reason, note) => { await request("/api/plaza/reports", "POST", { kind: report.kind, contentId: report.id, reason, note }); }} />}
-      {invitation && <Modal title={`Seguir conversando con ${invitation.author}`} onClose={() => setInvitation(null)}><div className="modal-content"><p>La otra persona decide si acepta. El chat se abre solo después de su aceptación.</p><form className="real-plaza-form" onSubmit={(e) => void sendInvitation(e)}><label>Mensaje de invitación<textarea value={invitationNote} maxLength={500} onChange={(e) => setInvitationNote(e.target.value)} /></label>{error && <p role="alert">{error}</p>}{error.startsWith('Agrega tu foto de Conexiones') && <button type="button" className="button secondary" onClick={onProfile}>Ir a mi perfil</button>}<button className="button primary" disabled={busy}>Enviar solicitud</button></form></div></Modal>}
+      {invitation && <Modal title={`Seguir conversando con ${invitation.author}`} onClose={() => setInvitation(null)}><div className="modal-content"><p>La otra persona decide si acepta. El chat se abre solo después de su aceptación.</p><form className="real-plaza-form" onSubmit={(e) => void sendInvitation(e)}><label>Mensaje de invitación<textarea value={invitationNote} maxLength={500} onChange={(e) => setInvitationNote(e.target.value)} /></label>{error && <p role="alert">{error}</p>}{error.startsWith('Agrega tu foto de Conexiones') && <button type="button" className="button secondary" onClick={onProfile}>Ir a mi perfil</button>}<label className="checkbox-row"><input type="checkbox" checked={invitationAgreement} onChange={e => setInvitationAgreement(e.target.checked)} /> Acepto que nuestras fotos se compartan automáticamente después de 10 vueltas de conversación.</label><button className="button primary" disabled={busy || !invitationAgreement}>Enviar solicitud</button></form></div></Modal>}
     </>}
   </div>;
 }

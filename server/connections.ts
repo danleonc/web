@@ -4,6 +4,7 @@ import { digest } from "./storage.ts";
 import { PlazaStore } from "./plaza.ts";
 import { Notifications } from "./notifications.ts";
 import { validSticker } from "./stickers.ts";
+import { advancePhotoChallenge } from "./photo-challenge.ts";
 
 export class ConnectionsStore {
   readonly storage: Storage;
@@ -17,7 +18,7 @@ export class ConnectionsStore {
     if (!row || this.blocked(String(row.sender_id), String(row.recipient_id))) return null;
     return row;
   }
-  invite(actor: string, kind: string, contentId: string, note: string) {
+  invite(actor: string, kind: string, contentId: string, note: string, challengeAccepted = false) {
     if (typeof note !== "string" || note.length > 500) throw Error("invalid_note");
     const recipient = new PlazaStore(this.storage).blockTarget(actor, kind, contentId);
     const [low, high] = [actor, recipient].sort();
@@ -25,12 +26,20 @@ export class ConnectionsStore {
     const existing = db.prepare("SELECT id,sender_id,status FROM plaza_connections WHERE low_id=? AND high_id=? AND status IN ('pending','accepted')").get(low, high);
     if (existing) {
       if (existing.status === "pending" && existing.sender_id !== actor) throw Error("incoming_request_exists");
+      if (existing.status === "pending" && existing.sender_id === actor && challengeAccepted) {
+        const photo = db.prepare("SELECT id FROM account_profile_photos WHERE user_id=? AND hidden=0").get(actor);
+        if (photo) db.prepare("INSERT INTO connection_photo_challenges(connection_id,sender_photo) VALUES(?,?) ON CONFLICT(connection_id) DO UPDATE SET sender_photo=excluded.sender_photo").run(existing.id,photo.id);
+      }
       return { id: String(existing.id), status: String(existing.status) };
     }
     if (!this.storage.takeLimit(digest(`plaza-invitations:${actor}`), 10, 60 * 60_000, this.now())) throw Error("rate_limited");
     const id = randomUUID(), time = this.now();
     this.storage.transaction(() => {
       db.prepare("INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)").run(id, actor, recipient, low, high, note.trim(), kind, contentId, "pending", time, time);
+      if (challengeAccepted) {
+        const photo=db.prepare("SELECT id FROM account_profile_photos WHERE user_id=? AND hidden=0").get(actor);
+        if (photo) db.prepare("INSERT INTO connection_photo_challenges(connection_id,sender_photo) VALUES(?,?)").run(id,photo.id);
+      }
       new Notifications(this.storage, this.now).connectionEvent(id, actor, "invitation");
     });
     return { id, status: "pending" };
@@ -46,7 +55,7 @@ export class ConnectionsStore {
       FROM plaza_connections c JOIN accounts a ON a.id=CASE WHEN c.sender_id=? THEN c.recipient_id ELSE c.sender_id END
       WHERE c.id=? AND (c.sender_id=? OR c.recipient_id=?) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=c.sender_id AND b.blocked_id=c.recipient_id) OR (b.user_id=c.recipient_id AND b.blocked_id=c.sender_id))`).get(actor,id,actor,actor);
   }
-  decide(actor: string, id: string, action: string) {
+  decide(actor: string, id: string, action: string, challengeAccepted = false) {
     const row = this.visible(id, actor);
     if (!row) return false;
     const next = action === "accept" && row.status === "pending" && row.recipient_id === actor ? "accepted"
@@ -55,7 +64,10 @@ export class ConnectionsStore {
     if (!next) return false;
     return this.storage.transaction(() => {
       const changed = this.storage.db.prepare("UPDATE plaza_connections SET status=?,updated_at=? WHERE id=? AND status=?").run(next, this.now(), id, row.status).changes === 1;
-      if (changed && next === "accepted") new Notifications(this.storage, this.now).connectionEvent(id, actor, "acceptance");
+      if (changed && next === "accepted") {
+        if (challengeAccepted && this.storage.db.prepare("SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0").get(actor)) this.joinChallenge(actor,id);
+        new Notifications(this.storage, this.now).connectionEvent(id, actor, "acceptance");
+      }
       return changed;
     });
   }
@@ -90,6 +102,36 @@ export class ConnectionsStore {
     db.prepare("UPDATE notifications SET read_at=COALESCE(read_at,?) WHERE recipient_id=? AND kind='message' AND target_id=? AND event_id IN (SELECT id FROM plaza_private_messages WHERE connection_id=? AND rowid <= (SELECT rowid FROM plaza_private_messages WHERE id=?))").run(this.now(), actor, connectionId, connectionId, messageId);
     return true;
   }
+  challenge(actor: string, id: string) {
+    const connection = this.visible(id, actor);
+    if (!connection || connection.status !== "accepted") return null;
+    const row = this.storage.db.prepare("SELECT * FROM connection_photo_challenges WHERE connection_id=?").get(id);
+    const mine = connection.sender_id === actor ? row?.sender_photo : row?.recipient_photo;
+    const theirs = connection.sender_id === actor ? row?.recipient_photo : row?.sender_photo;
+    return { mine: !!mine, theirs: !!theirs, ready: !!mine && !!theirs, rounds: Number(row?.rounds || 0), unlocked: row?.unlocked === 1 };
+  }
+  joinChallenge(actor: string, id: string) {
+    const connection = this.visible(id, actor);
+    if (!connection || connection.status !== "accepted") return false;
+    const photo = this.storage.db.prepare("SELECT id FROM account_profile_photos WHERE user_id=? AND hidden=0").get(actor);
+    if (!photo) throw Error("profile_photo_required");
+    const field = connection.sender_id === actor ? "sender_photo" : "recipient_photo";
+    this.storage.db.prepare("INSERT OR IGNORE INTO connection_photo_challenges(connection_id) VALUES(?)").run(id);
+    this.storage.db.prepare(`UPDATE connection_photo_challenges SET ${field}=? WHERE connection_id=?`).run(photo.id,id);
+    return true;
+  }
+  advanceChallenge(id: string, actor: string) {
+    const db = this.storage.db;
+    const row = db.prepare(`SELECT q.*,c.sender_id,c.recipient_id FROM connection_photo_challenges q JOIN plaza_connections c ON c.id=q.connection_id WHERE q.connection_id=? AND c.status='accepted'`).get(id);
+    if (!row || !row.sender_photo || !row.recipient_photo || row.unlocked) return;
+    if (!db.prepare("SELECT 1 FROM account_profile_photos WHERE user_id=? AND id=? AND hidden=0").get(row.sender_id,row.sender_photo) || !db.prepare("SELECT 1 FROM account_profile_photos WHERE user_id=? AND id=? AND hidden=0").get(row.recipient_id,row.recipient_photo)) return;
+    const progress = advancePhotoChallenge({rounds:Number(row.rounds),first:row.first_sender ? String(row.first_sender) : null,unlocked:false},actor,String(row.sender_id),String(row.recipient_id));
+    db.prepare("UPDATE connection_photo_challenges SET rounds=?,first_sender=?,unlocked=? WHERE connection_id=?").run(progress.rounds,progress.first,progress.unlocked ? 1 : 0,id);
+    if (progress.unlocked) {
+      const share=db.prepare("INSERT OR IGNORE INTO profile_photo_shares(owner_id,connection_id) VALUES(?,?)");
+      share.run(row.sender_id,id); share.run(row.recipient_id,id);
+    }
+  }
   send(actor: string, id: string, clientId: string, value: string, stickerId = "", replyTo = "") {
     const connection = this.visible(id, actor);
     if (!connection || connection.status !== "accepted") return null;
@@ -103,6 +145,7 @@ export class ConnectionsStore {
     const recipient = String(connection.sender_id === actor ? connection.recipient_id : connection.sender_id);
     this.storage.transaction(() => {
       db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at,sticker_id,reply_to) VALUES(?,?,?,?,?,?,?,?)").run(messageId, id, actor, clientId, body, time, stickerId || null, replyTo || null);
+      this.advanceChallenge(id, actor);
       new Notifications(this.storage, this.now).privateMessage(id, messageId, actor);
       db.prepare("INSERT INTO push_private_queue(connection_id,endpoint_hash,user_id,message_id,created_at,next_at) SELECT ?,endpoint_hash,user_id,?,?,? FROM push_subscriptions WHERE user_id=? AND NOT EXISTS (SELECT 1 FROM notification_mutes WHERE user_id=? AND kind='connection' AND target_id=?) ON CONFLICT(connection_id,endpoint_hash) DO UPDATE SET message_id=excluded.message_id,created_at=excluded.created_at,next_at=excluded.next_at,attempts=0").run(id, messageId, time, time, recipient, recipient, id);
     });

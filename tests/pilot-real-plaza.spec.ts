@@ -144,14 +144,20 @@ test('cada persona controla si revela su foto en una conexión', async ({ browse
     expect((await a.request.post(`/api/plaza/invitations/${invite.invitation.id}/decision`,{headers:{Origin:origin},data:{action:'accept'}})).status()).toBe(200);
     const pa=await a.newPage(), pb=await b.newPage(); await pa.goto('/#connections'); await pb.goto('/#connections');
     await pa.getByRole('button',{name:'Abrir conversación'}).click(); await pb.getByRole('button',{name:'Abrir conversación'}).click();
-    await expect(pb.getByText(`${nameA} aún no ha compartido su foto contigo.`)).toBeVisible();
-    pa.once('dialog',dialog=>void dialog.accept()); await pa.getByRole('button',{name:'Compartir mi foto'}).click();
+    await expect(pb.getByLabel('Foto por descubrir')).toBeVisible();
+    await expect(pb.locator('.connection-chat')).toBeVisible();
+    await expect(pb.getByRole('button',{name:'Activar desafío'})).toBeVisible();
+    await pb.screenshot({path:info.outputPath('desafio-conexion.png'),fullPage:true});
+    await pa.getByRole('button',{name:'Activar desafío'}).click();
+    await pb.getByRole('button',{name:'Activar desafío'}).click();
+    await expect(pa.getByText('0 de 10 vueltas')).toBeVisible({timeout:10000});
+    for(let n=0;n<10;n++) for(const [context,side] of [[a,'a'],[b,'b']] as const) expect((await context.request.post(`/api/plaza/connections/${invite.invitation.id}/messages`,{headers:{Origin:origin},data:{clientId:`photo-ui-${side}-${n}-unique`,body:'Hola'}})).status()).toBe(201);
     await expect(pb.getByAltText(`Foto compartida por ${nameA}`)).toBeVisible({timeout:10000});
     await pb.getByRole('button',{name:'Reportar foto'}).click();
     await pb.getByRole('button',{name:'Registrar reporte'}).click();
     await expect(pb.getByRole('heading',{name:'Reporte registrado.'})).toBeVisible();
     await pb.getByRole('button',{name:'Entendido'}).click();
-    await pa.getByRole('button',{name:'Dejar de compartir mi foto'}).click();
+    expect((await a.request.delete('/api/account/profile/photo',{headers:{Origin:origin}})).status()).toBe(200);
     await expect(pb.getByAltText(`Foto compartida por ${nameA}`)).toHaveCount(0,{timeout:10000});
   } finally { await a.close(); await b.close(); }
 });
@@ -417,12 +423,14 @@ test("dos personas aceptan una solicitud antes de conversar en privado", async (
     const first = await ana.newPage(); await first.goto("/#plaza");
     await first.getByRole("article").filter({ hasText: title }).getByRole("button", { name: "Seguir conversando" }).click();
     await first.getByLabel("Mensaje de invitación").fill("Me gustaría conversar sobre tu idea");
+    await first.getByLabel(/Acepto que nuestras fotos se compartan automáticamente/).check();
     await first.getByRole("button", { name: "Enviar solicitud" }).click();
     await expect(first.getByText(/Solicitud enviada/)).toBeVisible();
     await first.goto("/#connections");
     await expect(first.getByText("Esperando respuesta", { exact: true })).toBeVisible();
     await expect(first.getByRole("button", { name: "Abrir conversación" })).toHaveCount(0);
     const second = await bea.newPage(); await second.goto("/#connections");
+    await second.getByLabel(/Acepto que nuestras fotos se compartan automáticamente/).check();
     await second.getByRole("button", { name: "Aceptar solicitud" }).click();
     await second.getByRole("button", { name: "Abrir conversación" }).click();
     await expect(second.getByRole("heading", { name: "Tus solicitudes y conexiones" })).not.toBeVisible();
@@ -545,6 +553,7 @@ test("la campana abre solicitudes y aceptaciones de conexión", async ({browser}
   await pa.getByRole('button',{name:/Notificaciones, 1 aviso sin leer/}).click();
   await pa.getByRole('button',{name:/Nueva solicitud/}).click();
   await expect(pa.getByText('Solicitud recibida')).toBeVisible();
+  await pa.getByLabel(/Acepto que nuestras fotos se compartan automáticamente/).check();
   await pa.getByRole('button',{name:'Aceptar solicitud'}).click();
   const pb=await b.newPage();
   await pb.route('**/api/plaza/connections', route => route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({connections:[]})}));

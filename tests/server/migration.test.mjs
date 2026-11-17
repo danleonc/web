@@ -17,7 +17,7 @@ test('migración v22 conserva cuentas y conexiones existentes', async () => {
     old.db.prepare('INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)').run('c','a','b','a','b','','post','origin','accepted',1,1);
     old.db.exec('DROP TABLE profile_photo_shares; DROP TABLE account_profile_photos; DROP TABLE account_profiles; PRAGMA user_version=22'); old.close();
     const next = new Storage(path);
-    try { assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,23); assert.equal(next.db.prepare('SELECT status FROM plaza_connections WHERE id=?').get('c').status,'accepted'); assert.equal(next.db.prepare('SELECT count(*) AS n FROM account_profile_photos').get().n,0); } finally { next.close(); }
+    try { assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,24); assert.equal(next.db.prepare('SELECT status FROM plaza_connections WHERE id=?').get('c').status,'accepted'); assert.equal(next.db.prepare('SELECT count(*) AS n FROM account_profile_photos').get().n,0); } finally { next.close(); }
   } finally { await rm(dir, {recursive:true,force:true}); }
 });
 test("actualizar v5 conserva cuentas y permite guardar contenido de Plaza", async () => {
@@ -195,7 +195,7 @@ test("migración v1 a v23 conserva cuenta, reserva, sesión e historial con segu
       assert.deepEqual(after.loadRooms()[0].safety.expelled, []);
       assert.equal(
         after.db.prepare("PRAGMA user_version").get().user_version,
-        23,
+        24,
       );
       assert.equal(new ModerationStore(after, Date.now).restriction(id), null);
       assert.equal(new ModerationStore(after, Date.now).hasModerators(), false);
@@ -215,7 +215,7 @@ test("migración de v17 a v20 conserva datos y habilita avisos y multimedia", as
     const post=new PlazaStore(old).createPost("legacy17",{topic:"cultura",title:"Conservar",body:"Contenido previo"},2);
     old.db.exec("ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE plaza_images; ALTER TABLE plaza_reports DROP COLUMN evidence_image; ALTER TABLE plaza_posts DROP COLUMN sticker_id; ALTER TABLE plaza_replies DROP COLUMN sticker_id; ALTER TABLE plaza_private_messages DROP COLUMN sticker_id; DROP TABLE notifications; DROP TABLE notification_mutes; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=17"); old.close();
     const updated=new Storage(path);
-    try { assert.equal(updated.db.prepare('PRAGMA user_version').get().user_version,23); assert.equal(new PlazaStore(updated).listPosts('legacy17')[0].id,post.id); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM plaza_images').get().n,0); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM notifications').get().n,0); }
+    try { assert.equal(updated.db.prepare('PRAGMA user_version').get().user_version,24); assert.equal(new PlazaStore(updated).listPosts('legacy17')[0].id,post.id); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM plaza_images').get().n,0); assert.equal(updated.db.prepare('SELECT count(*) AS n FROM notifications').get().n,0); }
     finally {updated.close();}
   } finally { await rm(dir,{recursive:true,force:true}); }
 });
@@ -223,8 +223,18 @@ test("migración de v17 a v20 conserva datos y habilita avisos y multimedia", as
 test('actualizar v20 preserva respuestas y permite referencias entre ellas', async () => {
  const dir=await mkdtemp(join(tmpdir(),'nexafia-v20-'));const path=join(dir,'old.sqlite');
  try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);const p=new PlazaStore(old).createPost('a',{topic:'cultura',title:'Tema',body:'Texto'},1);const original=new PlazaStore(old).createReply('a',p.id,'Anterior',2);old.db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; ALTER TABLE plaza_replies DROP COLUMN reply_to; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=20');old.close();
- const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,23);const reply=new PlazaStore(next).createReply('a',p.id,'Nueva',3,'',original.id);assert.equal(new PlazaStore(next).listReplies('a',p.id).find(x=>x.id===reply.id).replyTo,original.id);} finally {next.close();}
+ const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,24);const reply=new PlazaStore(next).createReply('a',p.id,'Nueva',3,'',original.id);assert.equal(new PlazaStore(next).listReplies('a',p.id).find(x=>x.id===reply.id).replyTo,original.id);} finally {next.close();}
  } finally {await rm(dir,{recursive:true,force:true});}
 });
 
-test('actualizar v21 conserva los mensajes privados',async()=>{const dir=await mkdtemp(join(tmpdir(),'nexafia-v21-'));const path=join(dir,'old.sqlite');try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);old.createAccount({id:'b',username:'b',alias:'B',passwordHash:'x',recoveryHash:'x'},1);old.db.prepare("INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)").run('c','a','b','a','b','','post','origin','accepted',1,1);old.db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at) VALUES(?,?,?,?,?,?)").run('m','c','a','client-001','Anterior',1);old.db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=21');old.close();const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,23);assert.equal(next.db.prepare('SELECT body FROM plaza_private_messages WHERE id=?').get('m').body,'Anterior');} finally {next.close();}} finally {await rm(dir,{recursive:true,force:true});}});
+test('actualizar v21 conserva los mensajes privados',async()=>{const dir=await mkdtemp(join(tmpdir(),'nexafia-v21-'));const path=join(dir,'old.sqlite');try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);old.createAccount({id:'b',username:'b',alias:'B',passwordHash:'x',recoveryHash:'x'},1);old.db.prepare("INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)").run('c','a','b','a','b','','post','origin','accepted',1,1);old.db.prepare("INSERT INTO plaza_private_messages(id,connection_id,sender_id,client_id,body,created_at) VALUES(?,?,?,?,?,?)").run('m','c','a','client-001','Anterior',1);old.db.exec('ALTER TABLE plaza_private_messages DROP COLUMN reply_to; DROP TABLE IF EXISTS profile_photo_shares; DROP TABLE IF EXISTS account_profile_photos; DROP TABLE IF EXISTS account_profiles; PRAGMA user_version=21');old.close();const next=new Storage(path);try {assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,24);assert.equal(next.db.prepare('SELECT body FROM plaza_private_messages WHERE id=?').get('m').body,'Anterior');} finally {next.close();}} finally {await rm(dir,{recursive:true,force:true});}});
+test('migración v23 conserva fotos compartidas y conversaciones sin activar desafío', async () => {
+ const dir=await mkdtemp(join(tmpdir(),'nexafia-v23-')); const path=join(dir,'old.sqlite');
+ try { const old=new Storage(path); for(const id of ['a','b']) old.createAccount({id,username:id,alias:id,passwordHash:'x',recoveryHash:'x'},1);
+  old.db.prepare('INSERT INTO plaza_connections VALUES(?,?,?,?,?,?,?,?,?,?,?)').run('c','a','b','a','b','','post','origin','accepted',1,1);
+  old.db.prepare('INSERT INTO account_profile_photos(user_id,id,body,declared_at) VALUES(?,?,?,?)').run('a','photo',Buffer.from('photo'),1);
+  old.db.prepare('INSERT INTO profile_photo_shares(owner_id,connection_id) VALUES(?,?)').run('a','c');
+  old.db.exec('DROP TABLE connection_photo_challenges; PRAGMA user_version=23'); old.close();
+  const next=new Storage(path); try { assert.equal(next.db.prepare('PRAGMA user_version').get().user_version,24); assert.equal(next.db.prepare('SELECT count(*) AS n FROM profile_photo_shares').get().n,1); assert.equal(next.db.prepare('SELECT count(*) AS n FROM connection_photo_challenges').get().n,0); assert.equal(next.db.prepare('PRAGMA integrity_check').get().integrity_check,'ok'); assert.equal(next.db.prepare('PRAGMA foreign_key_check').all().length,0); } finally { next.close(); }
+ } finally { await rm(dir,{recursive:true,force:true}); }
+});

@@ -17,3 +17,29 @@
 .real-compose-actions { display: flex; align-items: center; gap: .55rem; flex-wrap: wrap; }
 .real-compose-actions .send-button { margin-left: auto; }
 .real-plaza-reply .reply-quote { margin: .5rem 0; }
+
+/* Conversación privada: descubrimiento y mensajes. */
+.connection-chat { max-width: 900px; width: 100%; margin: 0 auto; }
+.connection-chat-subtitle { color: #64786c; margin-top: -.35rem; }
+.connection-discovery { display: grid; grid-template-columns: 122px 1fr; gap: 1.25rem; align-items: center; margin: 1.2rem 0 1.5rem; padding: 1rem; background: linear-gradient(120deg,#edf4e8,#f7f2e7); border: 1px solid #dae5d7; border-radius: 1.2rem; }
+.connection-discovery-photo { width: 122px; aspect-ratio: 1; border-radius: 1rem; overflow: hidden; background: #cad8cb; }
+.connection-discovery-photo img { width: 100%; height: 100%; object-fit: cover; }
+.connection-photo-locked { display: grid; place-items: center; width: 100%; height: 100%; color: white; background: radial-gradient(circle at 25% 24%,#efddad 0 12%,transparent 29%), radial-gradient(circle at 75% 75%,#a8c6a2 0 15%,transparent 36%), radial-gradient(circle at 68% 28%,#dcc5b2 0 13%,transparent 35%), #739782; }
+.connection-photo-locked svg { box-sizing: content-box; padding: .7rem; background: rgba(26,65,50,.62); border-radius: 50%; }
+.connection-discovery-eyebrow { display: inline-flex; align-items: center; gap: .35rem; color: #4c765e; font-size: .8rem; font-weight: 700; }
+.connection-discovery-copy h3 { margin: .25rem 0; font-size: 1.1rem; }
+.connection-discovery-copy p { margin: .3rem 0; }
+.connection-discovery-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.connection-discovery-note { color: #5f7267; font-size: .8rem; }
+.connection-chat-empty { text-align: center; padding: 2rem 1rem; color: #50685a; }
+.connection-chat-empty p { margin: .35rem 0 0; }
+.connection-chat .private-messages { display: flex; flex-direction: column; align-items: flex-start; gap: .8rem; padding: 1rem 0; }
+.connection-chat .connection-bubble { max-width: min(80%, 38rem); padding: .85rem 1rem; border: 0; border-radius: 1rem 1rem 1rem .25rem; background: #f0f3ed; }
+.connection-chat .connection-bubble-own { align-self: flex-end; border-radius: 1rem 1rem .25rem 1rem; background: #e2eee3; }
+.connection-bubble p { margin: .3rem 0; }
+.connection-composer { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #e0e9df; }
+@media (max-width: 520px) { .connection-discovery { grid-template-columns: 84px 1fr; gap: .85rem; padding: .8rem; } .connection-discovery-photo { width: 84px; } .connection-chat .connection-bubble { max-width: 92%; } }
+
+.connection-discovery progress { width: 100%; height: .55rem; accent-color: #45785c; }
+.real-plaza-form label.checkbox-row { display: flex; align-items: flex-start; font-weight: 400; }
+.real-plaza-form .checkbox-row input[type="checkbox"] { width: 17px; min-height: 17px; flex: none; }

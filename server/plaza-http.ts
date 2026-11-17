@@ -49,10 +49,12 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   const privateMessage = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages\/([a-f0-9-]{36})$/);
   const privateSeen = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/seen$/);
   const privateBlock = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/block$/);
+  const photoChallenge = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/photo-challenge$/);
   const photoShare = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/profile-photo$/);
   const sharedPhoto = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/profile-photo\/image$/);
   if (req.method === "GET") {
-    if (sharedPhoto) { const peer = connections.peer(actor.id, sharedPhoto[1]); const found = peer && storage.db.prepare('SELECT p.body FROM account_profile_photos p JOIN profile_photo_shares s ON s.owner_id=p.user_id WHERE s.connection_id=? AND s.owner_id=? AND p.hidden=0').get(sharedPhoto[1], peer); if (!found) json(res,404,{error:'not_found'}); else { res.writeHead(200,{'Content-Type':'image/webp','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}); res.end(found.body as Uint8Array); } }
+    if (photoChallenge) { const result=connections.challenge(actor.id,photoChallenge[1]); json(res,result?200:404,result || {error:"not_found"}); }
+    else if (sharedPhoto) { const peer = connections.peer(actor.id, sharedPhoto[1]); const found = peer && storage.db.prepare('SELECT p.body FROM account_profile_photos p JOIN profile_photo_shares s ON s.owner_id=p.user_id WHERE s.connection_id=? AND s.owner_id=? AND p.hidden=0').get(sharedPhoto[1], peer); if (!found) json(res,404,{error:'not_found'}); else { res.writeHead(200,{'Content-Type':'image/webp','Cache-Control':'private, no-store','X-Content-Type-Options':'nosniff'}); res.end(found.body as Uint8Array); } }
     else if (photoShare) { const peer=connections.peer(actor.id,photoShare[1]); if (!peer) json(res,404,{error:'not_found'}); else { const shared=storage.db.prepare('SELECT s.owner_id,p.id FROM profile_photo_shares s JOIN account_profile_photos p ON p.user_id=s.owner_id WHERE s.connection_id=? AND s.owner_id IN (?,?) AND p.hidden=0').all(photoShare[1],actor.id,peer); const theirs=shared.find(r=>r.owner_id===peer); json(res,200,{mine:shared.some(r=>r.owner_id===actor.id),theirs:!!theirs,theirsId:theirs?.id || null}); } }
     else if (reportImage) { const found = storage.db.prepare("SELECT evidence_image AS body FROM plaza_reports WHERE id=? AND evidence_image IS NOT NULL").get(reportImage[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
     else if (image) { const found = images.get(actor.id, image[1]); if (!found) json(res, 404, { error: "not_found" }); else { res.writeHead(200, { "Content-Type": "image/webp", "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" }); res.end(found.body as Uint8Array); } }
@@ -78,10 +80,12 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   }
   if (!validOrigin(req)) { req.resume(); json(res, 403, { error: "origin_rejected" }); return true; }
   try {
-    if (req.method === 'POST' && photoShare) {
+    if (req.method === 'POST' && photoChallenge) { const value=await body(req); if (!fields(value,['action']) || value.action !== 'join') throw Error('invalid_body'); const ok=connections.joinChallenge(actor.id,photoChallenge[1]); json(res,ok?200:404,ok?{ok:true}:{error:'not_found'}); }
+    else if (req.method === 'POST' && photoShare) {
       const value=await body(req); if (!fields(value,['action']) || !['share','revoke'].includes(String(value.action))) throw Error('invalid_body');
       const peer=connections.peer(actor.id,photoShare[1]);
       if (!peer) json(res,404,{error:'not_found'});
+      else if (value.action==='share' && storage.db.prepare('SELECT 1 FROM connection_photo_challenges WHERE connection_id=? AND unlocked=0').get(photoShare[1])) json(res,403,{error:'challenge_pending'});
       else if (value.action==='share' && !storage.db.prepare('SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0').get(actor.id)) json(res,403,{error:'profile_photo_required'});
       else { if (value.action==='share') storage.db.prepare('INSERT OR IGNORE INTO profile_photo_shares(owner_id,connection_id) VALUES(?,?)').run(actor.id,photoShare[1]); else storage.db.prepare('DELETE FROM profile_photo_shares WHERE owner_id=? AND connection_id=?').run(actor.id,photoShare[1]); json(res,200,{ok:true}); }
     } else if (req.method === "POST" && imageUpload) {
@@ -108,14 +112,16 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       else { onBlock(peer); json(res, 200, { ok: true }); }
     } else if (req.method === "POST" && path === "/api/plaza/invitations") {
       const value = await body(req);
-      if (!fields(value, ["kind", "contentId", "note"])) throw Error("invalid_body");
+      if (typeof value.kind !== "string" || typeof value.contentId !== "string" || typeof value.note !== "string" || Object.keys(value).some(k => !["kind","contentId","note","photoChallengeAccepted"].includes(k)) || (value.photoChallengeAccepted !== undefined && typeof value.photoChallengeAccepted !== "boolean")) throw Error("invalid_body");
       if (requireConnectionPhoto && !storage.db.prepare('SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0').get(actor.id)) { json(res, 403, { error: 'profile_photo_required' }); return true; }
-      json(res, 201, { invitation: connections.invite(actor.id, String(value.kind), String(value.contentId), String(value.note)) });
+      if (requireConnectionPhoto && value.photoChallengeAccepted !== true) throw Error("challenge_agreement_required");
+      json(res, 201, { invitation: connections.invite(actor.id, String(value.kind), String(value.contentId), String(value.note), value.photoChallengeAccepted === true) });
     } else if (req.method === "POST" && invitation) {
       const value = await body(req);
-      if (!fields(value, ["action"])) throw Error("invalid_body");
+      if (typeof value.action !== "string" || Object.keys(value).some(k => !["action","photoChallengeAccepted"].includes(k)) || (value.photoChallengeAccepted !== undefined && typeof value.photoChallengeAccepted !== "boolean")) throw Error("invalid_body");
       if (value.action === 'accept' && requireConnectionPhoto && !storage.db.prepare('SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0').get(actor.id)) { json(res, 403, { error: 'profile_photo_required' }); return true; }
-      const ok = connections.decide(actor.id, invitation[1], String(value.action));
+      if (value.action === "accept" && requireConnectionPhoto && value.photoChallengeAccepted !== true) throw Error("challenge_agreement_required");
+      const ok = connections.decide(actor.id, invitation[1], String(value.action), value.photoChallengeAccepted === true);
       json(res, ok ? 200 : 404, ok ? { ok: true } : { error: "not_found" });
     } else if (req.method === "POST" && privateMessages) {
       const value = await body(req);

@@ -60,7 +60,8 @@ export class Storage {
       version !== 20 &&
       version !== 21 &&
       version !== 22 &&
-      version !== 23
+      version !== 23 &&
+      version !== 24
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -209,6 +210,10 @@ export class Storage {
       CREATE TABLE account_profile_photos(user_id TEXT PRIMARY KEY REFERENCES accounts(id) ON DELETE CASCADE, id TEXT NOT NULL UNIQUE, body BLOB NOT NULL, declared_at INTEGER NOT NULL, hidden INTEGER NOT NULL DEFAULT 0);
       CREATE TABLE profile_photo_shares(owner_id TEXT NOT NULL REFERENCES account_profile_photos(user_id) ON DELETE CASCADE, connection_id TEXT NOT NULL REFERENCES plaza_connections(id) ON DELETE CASCADE, PRIMARY KEY(owner_id,connection_id));
       PRAGMA user_version=23; COMMIT;`);
+    if (version < 24)
+      this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS connection_photo_challenges(connection_id TEXT PRIMARY KEY REFERENCES plaza_connections(id) ON DELETE CASCADE, sender_photo TEXT, recipient_photo TEXT, rounds INTEGER NOT NULL DEFAULT 0, first_sender TEXT, unlocked INTEGER NOT NULL DEFAULT 0);
+      PRAGMA user_version=24; COMMIT;`);
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

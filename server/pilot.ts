@@ -5,6 +5,7 @@ import { googleFromEnv } from "./google.ts";
 import { smtpMailer } from "./email.ts";
 import { createRoomServer } from "./app.ts";
 import { pilotMode } from "./pilot-mode.ts";
+import { preflightPhotoMigration } from "./preflight-photo-migration.ts";
 const publicOrigin = process.env.ENTRE_PUBLIC_ORIGIN;
 if (!publicOrigin)
   throw new Error(
@@ -24,6 +25,9 @@ if (!["127.0.0.1", "0.0.0.0"].includes(host))
   throw new Error("Unsupported ENTRE_BIND");
 const root = resolve("dist-pilot");
 const featureMode = pilotMode(process.env, JSON.parse(readFileSync(resolve(root, "entre-build.json"), "utf8")));
+const databasePath = process.env.ENTRE_DATABASE_PATH || resolve(".data/entre.sqlite");
+const migrationBackup = await preflightPhotoMigration(databasePath);
+if (migrationBackup) console.log("La copia privada previa a la migración fue creada y ensayada.");
 const app = createRoomServer({
   ...featureMode,
   requireConnectionPhoto: featureMode.plazaEnabled,
@@ -31,8 +35,7 @@ const app = createRoomServer({
   sendVerificationEmail: smtpMailer(),
   google: googleFromEnv(process.env,origin.origin),
   push: pushFromEnv(process.env),
-  databasePath:
-    process.env.ENTRE_DATABASE_PATH || resolve(".data/entre.sqlite"),
+  databasePath,
   staticRoot: root,
   allowedOrigins: [origin.origin],
   secureCookies: origin.protocol === "https:",

@@ -470,3 +470,9 @@ El commit `8a14e42` se desplegó en Render y el chequeo de salud respondió HTTP
 ### Actualización · 16 de noviembre · Avisos de solicitudes de Conexiones
 
 La búsqueda compartida de La Plaza se desplegó en Render desde `24af1c9` y el servicio respondió HTTP 200. Se añadieron en código avisos de solicitud y aceptación a la campana, con navegación a Conexiones, lectura y restricciones por bloqueo y estado. Se registran solo para eventos nuevos; no se generan retroactivamente. No se añadieron push ni correo para estos eventos. Las pruebas locales cubren dos cuentas, retirada, rechazo, bloqueo y navegación en escritorio/móvil. Para abrir un aviso fuera de las 100 conexiones más recientes, se consulta directamente su destino respetando permisos y bloqueos. Pendiente de despliegue y comprobación en Render.
+
+### Trabajo local · 16 de noviembre · Desafío de fotos
+
+Desafío de diez vueltas y chat visual implementados localmente; detalles, consentimiento, alcance y pruebas en [plan del desafío](superpowers/plans/2026-11-16-desafio-foto.md). La versión usa migración de base v24. No desplegada ni validada en Render: antes se debe crear y verificar una copia consistente actual de la base y ensayar la migración sobre una copia aislada.
+
+La preparación del despliegue incorpora en el arranque una copia consistente y ensayo de migración v23→v24 antes de abrir la base activa; comprobado localmente con una base sintética. Aún no se ha ejecutado ni verificado sobre Render, y la copia automática queda en el mismo disco, no fuera del proveedor.
