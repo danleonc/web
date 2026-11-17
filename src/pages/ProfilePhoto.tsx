@@ -24,12 +24,12 @@ export function ProfilePhoto() {
     if (!draft || !declared || busy) return; setBusy(true); setMessage('');
     try {
       const response = await fetch('/api/account/profile/photo', { method:'POST', credentials:'same-origin', headers:{ 'Content-Type':draft.type, 'X-Photo-Declaration':'yes' }, body:draft });
-      if (!response.ok) throw Error(); setHasPhoto(true); setVersion(v => v + 1); setDraft(null); setDeclared(false); setMessage('Tu foto quedó guardada de forma privada.');
+      if (!response.ok) throw Error(); setHasPhoto(true); window.dispatchEvent(new Event('nexafia-own-photo-changed')); setVersion(v => v + 1); setDraft(null); setDeclared(false); setMessage('Tu foto quedó guardada de forma privada.');
     } catch { setMessage('No pudimos guardar la foto. Inténtalo de nuevo.'); } finally { setBusy(false); }
   }
   async function remove() {
     if (busy || !window.confirm('¿Quieres quitar tu foto de Conexiones?')) return; setBusy(true); setMessage('');
-    try { const response = await fetch('/api/account/profile/photo', { method:'DELETE', credentials:'same-origin' }); if (!response.ok) throw Error(); setHasPhoto(false); setDraft(null); setMessage('Quitaste tu foto de Conexiones.'); }
+    try { const response = await fetch('/api/account/profile/photo', { method:'DELETE', credentials:'same-origin' }); if (!response.ok) throw Error(); setHasPhoto(false); window.dispatchEvent(new Event('nexafia-own-photo-changed')); setDraft(null); setMessage('Quitaste tu foto de Conexiones.'); }
     catch { setMessage('No pudimos quitar la foto. Inténtalo de nuevo.'); } finally { setBusy(false); }
   }
   return <section className="panel" aria-labelledby="profile-photo-title">

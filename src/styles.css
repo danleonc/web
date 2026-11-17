@@ -401,6 +401,13 @@ main:focus {
 .top-avatar {
   padding: 0;
 }
+.top-avatar .own-profile-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
 .top-avatar .avatar {
   width: 32px;
   height: 32px;
@@ -2305,6 +2312,7 @@ legend {
   .topbar-right {
     gap: 8px;
   }
+  .top-avatar .own-profile-avatar,
   .top-avatar .avatar {
     width: 28px;
     height: 28px;

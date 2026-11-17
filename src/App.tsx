@@ -97,6 +97,23 @@ function App() {
       .catch(() => { if (!controller.signal.aborted) setSavedAccountProfile({ owner: profileOwner, profile: null, failed: true }); });
     return () => controller.abort();
   }, [profileOwner]);
+  const [photoVersion, setPhotoVersion] = useState(0);
+  const [ownPhoto, setOwnPhoto] = useState<{ owner: string; url: string } | null>(null);
+  useEffect(() => {
+    const changed = () => setPhotoVersion(version => version + 1);
+    window.addEventListener('nexafia-own-photo-changed', changed);
+    return () => window.removeEventListener('nexafia-own-photo-changed', changed);
+  }, []);
+  useEffect(() => {
+    if (!realPlazaEnabled || !profileOwner) { setOwnPhoto(null); return; }
+    const controller = new AbortController(); let url = '';
+    setOwnPhoto(null);
+    fetch('/api/account/profile/photo', { credentials: 'same-origin', cache: 'no-store', signal: controller.signal })
+      .then(response => response.ok ? response.blob() : null)
+      .then(blob => { if (blob && !controller.signal.aborted) { url = URL.createObjectURL(blob); setOwnPhoto({owner: profileOwner, url}); } })
+      .catch(() => {});
+    return () => { controller.abort(); if (url) URL.revokeObjectURL(url); };
+  }, [profileOwner, photoVersion]);
   const [noticesOpen, setNoticesOpen] = useState(false);
   const noticeOwner = accountsEnabled ? (account.account ? `account:${account.account.id}` : null) : "prototype";
   const notices = useNotices(state, setState, noticeOwner);
@@ -631,7 +648,7 @@ function App() {
               aria-label="Editar mi perfil"
               onClick={() => prepareProfile("plaza")}
             >
-              <Avatar name={participationProfile?.alias || "T"} />
+              {ownPhoto?.owner === profileOwner ? <img className="own-profile-avatar" src={ownPhoto.url} alt="" /> : <Avatar name={participationProfile?.alias || "T"} />}
             </button>
           </div>
         </header>

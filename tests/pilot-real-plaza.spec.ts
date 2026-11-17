@@ -123,8 +123,12 @@ test('foto de Conexiones requiere declaración y se puede quitar', async ({ brow
     await page.getByLabel('Declaro que aparezco en esta foto.').check();
     await page.getByRole('button', {name:'Guardar mi foto'}).click();
     await expect(page.getByText('Tu foto quedó guardada de forma privada.')).toBeVisible();
+    await expect(page.getByRole('button', {name:'Editar mi perfil'}).locator('img')).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('button', {name:'Editar mi perfil'}).locator('img')).toBeVisible();
     page.once('dialog', dialog => void dialog.accept()); await page.getByRole('button', {name:'Quitar mi foto'}).click();
     await expect(page.getByText('Quitaste tu foto de Conexiones.')).toBeVisible();
+    await expect(page.getByRole('button', {name:'Editar mi perfil'}).locator('img')).toHaveCount(0);
   } finally { await context.close(); }
 });
 test('cada persona controla si revela su foto en una conexión', async ({ browser }, info) => {
