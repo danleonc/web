@@ -7,6 +7,8 @@ export function privacyInventory(storage: Storage, userId: string) {
     accounts: "SELECT count(*) AS n FROM accounts WHERE id=?",
     profiles: "SELECT count(*) AS n FROM account_profiles WHERE user_id=?",
     profilePhotos: "SELECT count(*) AS n FROM account_profile_photos WHERE user_id=?",
+    dismissedRoomHistories: "SELECT count(*) AS n FROM room_history_dismissals WHERE user_id=?",
+    dismissedConnections: "SELECT count(*) AS n FROM connection_dismissals WHERE user_id=?",
     profilePhotoShares: "SELECT count(*) AS n FROM profile_photo_shares WHERE owner_id=?",
     photoChallenges: "SELECT count(*) AS n FROM connection_photo_challenges q JOIN plaza_connections c ON c.id=q.connection_id WHERE c.sender_id=? OR c.recipient_id=?",
     emails: "SELECT count(*) AS n FROM account_emails WHERE user_id=?",

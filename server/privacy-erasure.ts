@@ -2,8 +2,8 @@ import { randomUUID } from "node:crypto";
 import type { Storage } from "./storage.ts";
 import { digest } from "./storage.ts";
 
-// Pinned to the v25 tables, columns and foreign keys; schema changes require review.
-const supportedSchema = "4aed7790d749217699efd09f560e3fa3cb4a0a437ba020c0e4f49c88199b7041";
+// Pinned to the v26 tables, columns and foreign keys; schema changes require review.
+const supportedSchema = "18a8b402f0d8230977f5bb586018b1424f496c6c1f5a18100d6c4af8e2d5731b";
 function schemaFingerprint(storage: Storage) {
   const db = storage.db;
   const names = db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all();
@@ -23,15 +23,15 @@ export function eraseEmptyAccount(storage: Storage, target: string, actor: strin
     if (!request || request.status !== "seen" || Number(request.version) !== version) return { error: "request_changed" } as const;
     const triggers = db.prepare("SELECT 1 FROM sqlite_schema WHERE type='trigger' UNION ALL SELECT 1 FROM sqlite_temp_schema WHERE type='trigger' LIMIT 1").get();
     const attached = db.prepare("PRAGMA database_list").all().some((row) => row.name !== "main" && row.name !== "temp");
-    if (Number(db.prepare("PRAGMA user_version").get()!.user_version) !== 25 || triggers || attached || schemaFingerprint(storage) !== supportedSchema) return { error: "manual_review_required" } as const;
+    if (Number(db.prepare("PRAGMA user_version").get()!.user_version) !== 26 || triggers || attached || schemaFingerprint(storage) !== supportedSchema) return { error: "manual_review_required" } as const;
     if (target === actor || isLive(target)) return { error: "manual_review_required" } as const;
     const account = db.prepare("SELECT a.username,a.alias,e.email FROM accounts a LEFT JOIN account_emails e ON e.user_id=a.id WHERE a.id=?").get(target);
     if (!account) return { error: "request_changed" } as const;
     if (db.prepare("SELECT 1 FROM account_google WHERE user_id=?").get(target) || db.prepare("SELECT 1 FROM google_flows WHERE expires_at>? LIMIT 1").get(now)) return { error: "manual_review_required" } as const;
 
     // Unknown future relations fail closed rather than being silently cascaded.
-    const safe = new Set(["account_profiles.user_id", "account_profile_photos.user_id", "notifications.recipient_id", "notification_mutes.user_id", "account_emails.user_id", "sessions.user_id", "push_subscriptions.user_id", "privacy_requests.user_id", "privacy_request_events.user_id"]);
-    const known = new Set(["connection_photo_challenges", "account_profiles", "account_profile_photos", "profile_photo_shares", "plaza_images", "notifications", "notification_mutes", "accounts", "sessions", "blocks", "offerings", "reservations", "rooms", "memberships", "messages", "receipts", "auth_limits", "moderators", "reports", "moderation_actions", "restrictions", "appeals", "media", "account_emails", "account_google", "google_flows", "push_subscriptions", "plaza_posts", "plaza_replies", "plaza_reports", "plaza_moderation_actions", "plaza_appeals", "plaza_appeal_actions", "plaza_connections", "plaza_private_messages", "scheduled_meetings", "push_queue", "push_private_queue", "privacy_operators", "privacy_requests", "privacy_request_events", "privacy_erasure_receipts", "privacy_erasure_events"]);
+    const safe = new Set(["room_history_dismissals.user_id", "connection_dismissals.user_id", "account_profiles.user_id", "account_profile_photos.user_id", "notifications.recipient_id", "notification_mutes.user_id", "account_emails.user_id", "sessions.user_id", "push_subscriptions.user_id", "privacy_requests.user_id", "privacy_request_events.user_id"]);
+    const known = new Set(["room_history_dismissals", "connection_dismissals", "connection_photo_challenges", "account_profiles", "account_profile_photos", "profile_photo_shares", "plaza_images", "notifications", "notification_mutes", "accounts", "sessions", "blocks", "offerings", "reservations", "rooms", "memberships", "messages", "receipts", "auth_limits", "moderators", "reports", "moderation_actions", "restrictions", "appeals", "media", "account_emails", "account_google", "google_flows", "push_subscriptions", "plaza_posts", "plaza_replies", "plaza_reports", "plaza_moderation_actions", "plaza_appeals", "plaza_appeal_actions", "plaza_connections", "plaza_private_messages", "scheduled_meetings", "push_queue", "push_private_queue", "privacy_operators", "privacy_requests", "privacy_request_events", "privacy_erasure_receipts", "privacy_erasure_events"]);
     const tables = db.prepare("SELECT name FROM sqlite_schema WHERE type='table' AND name NOT LIKE 'sqlite_%'").all();
     for (const row of tables) {
       const table = String(row.name); if (!known.has(table) || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table)) return { error: "manual_review_required" } as const;

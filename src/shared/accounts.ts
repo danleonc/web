@@ -48,7 +48,7 @@ export type Offering = {
   bookingOpen: boolean;
   ended: boolean;
 };
-export type HistoryRoom = { id: string; activityId: string; phase: string };
+export type HistoryRoom = { id: string; activityId: string; phase: string; archived: boolean };
 const errors: Record<string, string> = {
   google_unavailable: "El acceso con Google aún no está configurado.",
   google_link_requires_access:
@@ -353,6 +353,14 @@ function useAccountState() {
         );
     }
   }
+  async function dismissHistory(id: string) {
+    const success = await request(`/api/history/${encodeURIComponent(id)}`, "DELETE");
+    if (success && selectedHistory === id) {
+      historyVersion.current++;
+      setMessages([]);
+      setSelectedHistory("");
+    }
+  }
   return {
     account,
     loaded,
@@ -375,6 +383,7 @@ function useAccountState() {
     error,
     request,
     history,
+    dismissHistory,
     refresh,
     clearHistory: () => {
       historyVersion.current++;

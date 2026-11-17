@@ -63,7 +63,8 @@ export class Storage {
       version !== 22 &&
       version !== 23 &&
       version !== 24 &&
-      version !== 25
+      version !== 25 &&
+      version !== 26
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -224,6 +225,10 @@ export class Storage {
         PRAGMA user_version=25; COMMIT;`);
       else this.db.exec("PRAGMA user_version=25");
     }
+    if (version < 26) this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS connection_dismissals(user_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,connection_id TEXT NOT NULL REFERENCES plaza_connections(id) ON DELETE CASCADE,created_at INTEGER NOT NULL,PRIMARY KEY(user_id,connection_id));
+      CREATE TABLE IF NOT EXISTS room_history_dismissals(user_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,created_at INTEGER NOT NULL,PRIMARY KEY(user_id,room_id));
+      PRAGMA user_version=26; COMMIT;`);
     } catch (error) { this.db.close(); throw error; }
   }
   transaction<T>(work: () => T): T {
@@ -490,14 +495,25 @@ export class Storage {
   history(userId: string) {
     return this.db
       .prepare(
-        "SELECT r.id,r.activity_id AS activityId,r.session_json AS session FROM rooms r JOIN memberships m ON m.room_id=r.id WHERE m.user_id=? ORDER BY r.rowid DESC LIMIT 20",
+        "SELECT r.id,r.activity_id AS activityId,r.session_json AS session,r.archived_at AS archivedAt FROM rooms r JOIN memberships m ON m.room_id=r.id WHERE m.user_id=? AND NOT EXISTS (SELECT 1 FROM room_history_dismissals d WHERE d.user_id=m.user_id AND d.room_id=r.id) ORDER BY r.rowid DESC LIMIT 20",
       )
       .all(userId)
       .map((r) => ({
         id: r.id,
         activityId: r.activityId,
         phase: (JSON.parse(r.session as string) as Session).phase,
+        archived: r.archivedAt !== null,
       }));
+  }
+  dismissHistory(userId: string, roomId: string, now: number) {
+    const row=this.db.prepare("SELECT r.archived_at FROM rooms r JOIN memberships m ON m.room_id=r.id WHERE r.id=? AND m.user_id=?").get(roomId,userId);
+    if (!row) return "not_found";
+    if (row.archived_at === null) return "active";
+    this.db.prepare("INSERT OR IGNORE INTO room_history_dismissals(user_id,room_id,created_at) VALUES(?,?,?)").run(userId,roomId,now);
+    return "ok";
+  }
+  historyVisible(userId: string, roomId: string) {
+    return this.member(userId,roomId) && !this.db.prepare("SELECT 1 FROM room_history_dismissals WHERE user_id=? AND room_id=?").get(userId,roomId);
   }
   member(userId: string, roomId: string) {
     return !!this.db

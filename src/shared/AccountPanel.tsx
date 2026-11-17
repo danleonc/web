@@ -350,15 +350,14 @@ export function AccountPanel({
                   historial archivado se elimina a los 30 días.
                 </p>
                 {state.rooms.map((r) => (
-                  <button
-                    className="button text"
-                    key={r.id}
-                    onClick={() => void state.history(r.id)}
-                  >
-                    Ver mensajes de{" "}
-                    {featuredActivities.find((a) => a.id === r.activityId)
-                      ?.title || "encuentro"}
-                  </button>
+                  <div className="session-actions" key={r.id}>
+                    <button className="button text" onClick={() => void state.history(r.id)}>
+                      Ver mensajes de {featuredActivities.find((a) => a.id === r.activityId)?.title || "encuentro"}
+                    </button>
+                    {r.archived && <button className="button text" disabled={state.busy} onClick={() => {
+                      if (window.confirm("¿Quitar este encuentro de tu historial? Solo desaparecerá de tu vista; las demás personas conservarán su historial.")) void state.dismissHistory(r.id);
+                    }}>Quitar de mi historial</button>}
+                  </div>
                 ))}
                 {state.selectedHistory && (
                   <div className="messages" aria-label="Historial guardado">

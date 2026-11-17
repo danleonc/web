@@ -47,8 +47,15 @@ export class ConnectionsStore {
   list(actor: string) {
     return this.storage.db.prepare(`SELECT c.id,c.sender_id AS senderId,c.recipient_id AS recipientId,c.note,c.origin_kind AS originKind,c.origin_id AS originId,c.status,c.created_at AS createdAt,a.id AS personId,a.alias AS person
       FROM plaza_connections c JOIN accounts a ON a.id=CASE WHEN c.sender_id=? THEN c.recipient_id ELSE c.sender_id END
-      WHERE (c.sender_id=? OR c.recipient_id=?) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=c.sender_id AND b.blocked_id=c.recipient_id) OR (b.user_id=c.recipient_id AND b.blocked_id=c.sender_id))
-      ORDER BY c.updated_at DESC,c.id DESC LIMIT 100`).all(actor, actor, actor);
+      WHERE (c.sender_id=? OR c.recipient_id=?) AND NOT EXISTS (SELECT 1 FROM connection_dismissals d WHERE d.user_id=? AND d.connection_id=c.id) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=c.sender_id AND b.blocked_id=c.recipient_id) OR (b.user_id=c.recipient_id AND b.blocked_id=c.sender_id))
+      ORDER BY c.updated_at DESC,c.id DESC LIMIT 100`).all(actor, actor, actor, actor);
+  }
+  dismiss(actor: string, id: string) {
+    const row = this.visible(id,actor);
+    if (!row) return "not_found";
+    if (!["closed","declined"].includes(String(row.status))) return "active";
+    this.storage.db.prepare("INSERT OR IGNORE INTO connection_dismissals(user_id,connection_id,created_at) VALUES(?,?,?)").run(actor,id,this.now());
+    return "ok";
   }
   get(actor: string, id: string) {
     return this.storage.db.prepare(`SELECT c.id,c.sender_id AS senderId,c.recipient_id AS recipientId,c.note,c.origin_kind AS originKind,c.origin_id AS originId,c.status,c.created_at AS createdAt,a.id AS personId,a.alias AS person

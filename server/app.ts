@@ -450,7 +450,7 @@ export function createRoomServer(options: Options = {}) {
         return;
       }
       const id = path.split("/").at(-1)!;
-      if (!storage.member(identity.id, id)) {
+      if (!storage.historyVisible(identity.id, id)) {
         json(res, 404, { error: "not_found" });
         return;
       }
@@ -458,6 +458,12 @@ export function createRoomServer(options: Options = {}) {
         messages: visibleMessages(storage.messages(id), identity),
       });
       return;
+    }
+    if (storage && req.method === "DELETE" && /^\/api\/history\/[a-f0-9-]+$/.test(path)) {
+      if (!validOrigin(req)) { req.resume(); json(res,403,{error:"origin_rejected"}); return; }
+      if (!identity) { req.resume(); json(res,401,{error:"session_required"}); return; }
+      req.resume(); const result=storage.dismissHistory(identity.id,path.split("/").at(-1)!,now());
+      json(res,result === "ok" ? 200 : result === "active" ? 409 : 404,result === "ok" ? {ok:true} : {error:result}); return;
     }
     const reservation =
       storage && path.match(/^\/api\/reservations\/([a-z0-9-]+)$/);

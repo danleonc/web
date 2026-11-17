@@ -80,6 +80,13 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile,
     return () => { cancelled = true; clearTimeout(timer); };
   }, [ready, busy, selected, account?.id]);
   async function decision(id: string, action: string) { if (busy) return; setBusy(true); setError(""); try { await api(`/api/plaza/invitations/${id}/decision`, { action, ...(action === "accept" ? { photoChallengeAccepted: true } : {}) }); if (selected === id) { requestVersion.current++; setSelected(null); setMessages([]); } await refresh(); } catch (e) { setError(e instanceof Error ? e.message : "No se pudo actualizar."); } finally { setBusy(false); } }
+  async function dismissConnection(id: string) {
+    if (busy || !window.confirm("¿Quitar esta conexión cerrada de tu lista? Esto no elimina los datos compartidos de la otra persona.")) return;
+    setBusy(true); setError("");
+    try { await api(`/api/plaza/connections/${id}/dismiss`, {}); setConnections(previous => previous.filter(item => item.id !== id)); setNotice("Conexión quitada de tu lista."); }
+    catch { setError("No pudimos quitar la conexión. Inténtalo nuevamente."); }
+    finally { setBusy(false); }
+  }
   async function open(id: string) { navigation.enter(); const version = ++requestVersion.current; setSelected(id); setMessages([]); setDraft(""); setQuoteId(null); setError(""); try { const result = await api<{ messages: Message[] }>(`/api/plaza/connections/${id}/messages`); if (version === requestVersion.current) { setMessages(result.messages); void markSeen(id, result.messages); } } catch { if (version === requestVersion.current) setError("No pudimos cargar la conversación."); } }
   const openedNotice = useRef<number | null>(null);
   const fetchingNotice = useRef<number | null>(null);
@@ -135,7 +142,7 @@ export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile,
           {c.status === "pending" && c.senderId === account?.id && <><p>Esperando respuesta</p><button className="button text" disabled={busy} onClick={() => void decision(c.id, "withdraw")}>Retirar solicitud</button></>}
           {c.status === "pending" && c.recipientId === account?.id && <><p>Solicitud recibida</p><label className="checkbox-row"><input type="checkbox" checked={!!agreements[c.id]} onChange={e => setAgreements(previous => ({...previous,[c.id]:e.target.checked}))} /> Acepto que nuestras fotos se compartan automáticamente después de 10 vueltas de conversación.</label><button className="button primary" disabled={busy || !agreements[c.id]} onClick={() => void decision(c.id, "accept")}>Aceptar solicitud</button><button className="button text" disabled={busy} onClick={() => void decision(c.id, "decline")}>Rechazar solicitud</button></>}
           {c.status === "accepted" && <><p>Conexión aceptada</p><button className="button secondary" disabled={busy} onClick={() => void open(c.id)}>Abrir conversación</button><button className="button text" disabled={busy} onClick={() => { if (window.confirm("¿Cerrar esta conexión? La conversación dejará de estar disponible.")) void decision(c.id, "withdraw"); }}>Cerrar conexión</button></>}
-          {c.status === "declined" && <p>Solicitud rechazada</p>}{c.status === "closed" && <p>Conexión cerrada</p>}
+          {c.status === "declined" && <p>Solicitud rechazada</p>}{c.status === "closed" && <p>Conexión cerrada</p>}{(c.status === "declined" || c.status === "closed") && <button className="button text" disabled={busy} onClick={() => void dismissConnection(c.id)}>Quitar de mi lista</button>}
         </article>)}
       </section>
       {active && <section className="real-plaza-panel connection-chat"><button className="button text" disabled={busy} onClick={navigation.back}>← Volver a Conexiones</button><h2 ref={chatHeading} tabIndex={-1}>Conversación con {active.person}</h2><p className="connection-chat-subtitle">Un espacio para conocerse, a su ritmo.</p><button className="button secondary" disabled={busy} onClick={() => void open(active.id)}>Actualizar conversación</button><button className="button text" disabled={busy} onClick={() => void block(active.id)}>Bloquear persona</button><ConnectionPhoto key={active.id} id={active.id} person={active.person} onProfile={onProfile} />

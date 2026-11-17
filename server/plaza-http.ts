@@ -45,6 +45,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   const block = path.match(/^\/api\/plaza\/blocks\/([a-f0-9-]{36})$/);
   const invitation = path.match(/^\/api\/plaza\/invitations\/([a-f0-9-]{36})\/decision$/);
   const connection = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})$/);
+  const dismissConnection = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/dismiss$/);
   const privateMessages = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages$/);
   const privateMessage = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages\/([a-f0-9-]{36})$/);
   const privateSeen = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/seen$/);
@@ -80,7 +81,8 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   }
   if (!validOrigin(req)) { req.resume(); json(res, 403, { error: "origin_rejected" }); return true; }
   try {
-    if (req.method === 'POST' && photoChallenge) { const value=await body(req); if (!fields(value,['action']) || !['join','start'].includes(String(value.action))) throw Error('invalid_body'); const ok=value.action === 'join' ? connections.joinChallenge(actor.id,photoChallenge[1]) : connections.startChallenge(actor.id,photoChallenge[1]); json(res,ok?200:404,ok?{ok:true}:{error:'not_found'}); }
+    if (req.method === 'POST' && dismissConnection) { const value=await body(req); if (Object.keys(value).length) throw Error('invalid_body'); const result=connections.dismiss(actor.id,dismissConnection[1]); json(res,result==='ok'?200:result==='active'?409:404,result==='ok'?{ok:true}:{error:result}); }
+    else if (req.method === 'POST' && photoChallenge) { const value=await body(req); if (!fields(value,['action']) || !['join','start'].includes(String(value.action))) throw Error('invalid_body'); const ok=value.action === 'join' ? connections.joinChallenge(actor.id,photoChallenge[1]) : connections.startChallenge(actor.id,photoChallenge[1]); json(res,ok?200:404,ok?{ok:true}:{error:'not_found'}); }
     else if (req.method === 'POST' && photoShare) {
       const value=await body(req); if (!fields(value,['action']) || !['share','revoke'].includes(String(value.action))) throw Error('invalid_body');
       const peer=connections.peer(actor.id,photoShare[1]);
