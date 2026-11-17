@@ -16,7 +16,17 @@ test('filtro de Plaza encuentra conversaciones antiguas y permite cargar más', 
   await expect(page.getByRole('article').filter({hasText:'Anime antiguo'})).toHaveCount(50);
   await page.getByRole('button',{name:'Cargar más conversaciones'}).click();
   await expect.poll(() => page.getByRole('article').filter({hasText:'Anime antiguo'}).count()).toBeGreaterThan(50);
-  await page.getByLabel('Buscar conversaciones').fill('ANIME ANTIGUO 0');
+  const searchInput=page.getByLabel('Buscar conversaciones');
+  const panel=page.locator('.real-plaza-panel').filter({has:searchInput});
+  const inputBox=await searchInput.boundingBox(); const panelBox=await panel.boundingBox();
+  expect(inputBox).not.toBeNull(); expect(panelBox).not.toBeNull();
+  expect(inputBox!.width).toBeGreaterThan(panelBox!.width * 0.6);
+  await searchInput.focus();
+  await panel.screenshot({path: info.outputPath('buscador.png')});
+  const searchButtonBox=await page.getByRole('button',{name:'Buscar',exact:true}).boundingBox();
+  expect(searchButtonBox).not.toBeNull();
+  expect(searchButtonBox!.x >= inputBox!.x + inputBox!.width || searchButtonBox!.y >= inputBox!.y + inputBox!.height).toBeTruthy();
+  await searchInput.fill('ANIME ANTIGUO 0');
   await page.getByRole('button',{name:'Buscar',exact:true}).click();
   await expect.poll(() => page.getByRole('article').filter({hasText:'Anime antiguo 0'}).count()).toBeGreaterThan(0);
   await expect(page.getByRole('article').filter({hasText:'Anime antiguo 1'})).toHaveCount(0);
