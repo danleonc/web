@@ -19,7 +19,7 @@ type Connection = { id: string; senderId: string; recipientId: string; person: s
 type Message = { replyTo?: string | null; imageId?: string | null; imageDescription?: string | null; stickerId?: string | null; id: string; senderId: string; body: string };
 async function api<T>(path: string, data?: object): Promise<T> {
   const response = await fetch(path, { method: data ? "POST" : "GET", credentials: "same-origin", headers: data ? { "Content-Type": "application/json" } : undefined, body: data ? JSON.stringify(data) : undefined });
-  if (!response.ok) { const detail = await response.json().catch(() => ({})); throw Error(detail.error === 'profile_photo_required' ? 'Agrega tu foto de Conexiones para aceptar una solicitud nueva.' : "No pudimos completar la acción. Actualiza e inténtalo de nuevo."); }
+  if (!response.ok) { const detail = await response.json().catch(() => ({})); throw Error(detail.error === 'profile_photo_required' ? 'Agrega tu foto de Conexiones para continuar.' : "No pudimos completar la acción. Actualiza e inténtalo de nuevo."); }
   return response.json() as Promise<T>;
 }
 export function RealConnections({ account, loaded, onAccess, onPlaza, onProfile, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onPlaza: () => void; onProfile: () => void; noticeTarget?: { kind: "reply" | "message" | "invitation" | "acceptance"; id: string; serial: number } | null } & StickerActions) {

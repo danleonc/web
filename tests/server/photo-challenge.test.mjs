@@ -28,6 +28,8 @@ test('el desafío requiere acuerdo de ambos y diez vueltas antes de revelar foto
  assert.equal(state.unlocked,true); assert.equal((await f.raw(image,{headers:{Cookie:b.cookie}})).status,200);
  assert.equal((await f.raw(image,{headers:{Cookie:c.cookie}})).status,404);
  await f.restart(); assert.equal((await f.request(path,'GET',undefined,b.cookie)).body.unlocked,true);
+ assert.equal((await f.raw('/api/account/profile/photo',{method:'DELETE',headers:{Origin:'http://localhost:4173',Cookie:a.cookie}})).status,200);
+ assert.equal((await f.request(`/api/plaza/connections/${invite.id}/messages`,'POST',{clientId:'no-photo-message-unique',body:'Hola'},a.cookie)).status,403);
  assert.equal((await f.raw('/api/account/profile/photo',{method:'POST',headers:{Origin:'http://localhost:4173',Cookie:a.cookie,'Content-Type':'image/png','X-Photo-Declaration':'yes'},body:png})).status,201);
  assert.equal((await f.raw(image,{headers:{Cookie:b.cookie}})).status,404);
  assert.equal((await f.request(path,'GET',undefined,b.cookie)).body.ready,false);
@@ -47,7 +49,14 @@ test('nuevas conexiones requieren acuerdo explícito de ambos antes de contar', 
  const id=inv.body.invitation.id;
  assert.equal((await f.request(`/api/plaza/invitations/${id}/decision`,'POST',{action:'accept'},a.cookie)).status,422);
  assert.equal((await f.request(`/api/plaza/invitations/${id}/decision`,'POST',{action:'accept',photoChallengeAccepted:true},a.cookie)).status,200);
- const state=(await f.request(`/api/plaza/connections/${id}/photo-challenge`,'GET',undefined,a.cookie)).body; assert.equal(state.ready,true);
+ let state=(await f.request(`/api/plaza/connections/${id}/photo-challenge`,'GET',undefined,a.cookie)).body; assert.equal(state.ready,true); assert.equal(state.started,false);
+ for(const [p,side] of [[a,'a'],[b,'b']]) assert.equal((await f.request(`/api/plaza/connections/${id}/messages`,'POST',{clientId:`before-start-${side}-unique`,body:'Hola'},p.cookie)).status,201);
+ assert.equal((await f.request(`/api/plaza/connections/${id}/photo-challenge`,'GET',undefined,a.cookie)).body.rounds,0);
+ assert.equal((await f.request(`/api/plaza/connections/${id}/photo-challenge`,'POST',{action:'start'},b.cookie)).status,200);
+ assert.equal((await f.request(`/api/plaza/connections/${id}/photo-challenge`,'GET',undefined,a.cookie)).body.started,true);
+ for(let n=0;n<10;n++) for(const [p,side] of [[a,'a'],[b,'b']]) assert.equal((await f.request(`/api/plaza/connections/${id}/messages`,'POST',{clientId:`shared-start-${side}-${n}-unique`,body:'Hola'},p.cookie)).status,201);
+ state=(await f.request(`/api/plaza/connections/${id}/photo-challenge`,'GET',undefined,a.cookie)).body; assert.equal(state.rounds,10); assert.equal(state.unlocked,true);
+ for(const p of [a,b]) assert.equal((await f.raw(`/api/plaza/connections/${id}/profile-photo/image`,{headers:{Cookie:p.cookie}})).status,200);
 });
 
 test('el acuerdo nuevo también se registra al reenviar una solicitud pendiente anterior', async t => {

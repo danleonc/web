@@ -65,7 +65,7 @@ export class ConnectionsStore {
     return this.storage.transaction(() => {
       const changed = this.storage.db.prepare("UPDATE plaza_connections SET status=?,updated_at=? WHERE id=? AND status=?").run(next, this.now(), id, row.status).changes === 1;
       if (changed && next === "accepted") {
-        if (challengeAccepted && this.storage.db.prepare("SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0").get(actor)) this.joinChallenge(actor,id);
+        if (challengeAccepted && this.storage.db.prepare("SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0").get(actor)) this.joinChallenge(actor,id,false);
         new Notifications(this.storage, this.now).connectionEvent(id, actor, "acceptance");
       }
       return changed;
@@ -108,22 +108,28 @@ export class ConnectionsStore {
     const row = this.storage.db.prepare("SELECT * FROM connection_photo_challenges WHERE connection_id=?").get(id);
     const mine = connection.sender_id === actor ? row?.sender_photo : row?.recipient_photo;
     const theirs = connection.sender_id === actor ? row?.recipient_photo : row?.sender_photo;
-    return { mine: !!mine, theirs: !!theirs, ready: !!mine && !!theirs, rounds: Number(row?.rounds || 0), unlocked: row?.unlocked === 1 };
+    return { mine: !!mine, theirs: !!theirs, ready: !!mine && !!theirs, started: !!row?.requested_by, rounds: Number(row?.rounds || 0), unlocked: row?.unlocked === 1 };
   }
-  joinChallenge(actor: string, id: string) {
+  joinChallenge(actor: string, id: string, request = true) {
     const connection = this.visible(id, actor);
     if (!connection || connection.status !== "accepted") return false;
     const photo = this.storage.db.prepare("SELECT id FROM account_profile_photos WHERE user_id=? AND hidden=0").get(actor);
     if (!photo) throw Error("profile_photo_required");
     const field = connection.sender_id === actor ? "sender_photo" : "recipient_photo";
     this.storage.db.prepare("INSERT OR IGNORE INTO connection_photo_challenges(connection_id) VALUES(?)").run(id);
-    this.storage.db.prepare(`UPDATE connection_photo_challenges SET ${field}=? WHERE connection_id=?`).run(photo.id,id);
+    this.storage.db.prepare(`UPDATE connection_photo_challenges SET ${field}=?, requested_by=CASE WHEN ? THEN COALESCE(requested_by,?) ELSE requested_by END WHERE connection_id=?`).run(photo.id,request ? 1 : 0,actor,id);
     return true;
+  }
+  startChallenge(actor: string, id: string) {
+    const connection = this.visible(id,actor); if (!connection || connection.status !== "accepted") return false;
+    const row = this.storage.db.prepare("SELECT sender_photo,recipient_photo FROM connection_photo_challenges WHERE connection_id=?").get(id);
+    if (!row || !(connection.sender_id === actor ? row.sender_photo : row.recipient_photo)) throw Error("agreement_required");
+    this.storage.db.prepare("UPDATE connection_photo_challenges SET requested_by=COALESCE(requested_by,?) WHERE connection_id=?").run(actor,id); return true;
   }
   advanceChallenge(id: string, actor: string) {
     const db = this.storage.db;
     const row = db.prepare(`SELECT q.*,c.sender_id,c.recipient_id FROM connection_photo_challenges q JOIN plaza_connections c ON c.id=q.connection_id WHERE q.connection_id=? AND c.status='accepted'`).get(id);
-    if (!row || !row.sender_photo || !row.recipient_photo || row.unlocked) return;
+    if (!row || !row.sender_photo || !row.recipient_photo || !row.requested_by || row.unlocked) return;
     if (!db.prepare("SELECT 1 FROM account_profile_photos WHERE user_id=? AND id=? AND hidden=0").get(row.sender_id,row.sender_photo) || !db.prepare("SELECT 1 FROM account_profile_photos WHERE user_id=? AND id=? AND hidden=0").get(row.recipient_id,row.recipient_photo)) return;
     const progress = advancePhotoChallenge({rounds:Number(row.rounds),first:row.first_sender ? String(row.first_sender) : null,unlocked:false},actor,String(row.sender_id),String(row.recipient_id));
     db.prepare("UPDATE connection_photo_challenges SET rounds=?,first_sender=?,unlocked=? WHERE connection_id=?").run(progress.rounds,progress.first,progress.unlocked ? 1 : 0,id);

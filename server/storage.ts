@@ -35,6 +35,7 @@ export class Storage {
     this.db.exec(
       "PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL; PRAGMA busy_timeout=5000;",
     );
+    try {
     const version = this.db.prepare("PRAGMA user_version").get()!.user_version;
     if (
       version !== 0 &&
@@ -61,7 +62,8 @@ export class Storage {
       version !== 21 &&
       version !== 22 &&
       version !== 23 &&
-      version !== 24
+      version !== 24 &&
+      version !== 25
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -214,6 +216,15 @@ export class Storage {
       this.db.exec(`BEGIN IMMEDIATE;
       CREATE TABLE IF NOT EXISTS connection_photo_challenges(connection_id TEXT PRIMARY KEY REFERENCES plaza_connections(id) ON DELETE CASCADE, sender_photo TEXT, recipient_photo TEXT, rounds INTEGER NOT NULL DEFAULT 0, first_sender TEXT, unlocked INTEGER NOT NULL DEFAULT 0);
       PRAGMA user_version=24; COMMIT;`);
+    if (version < 25) {
+      const columns = this.db.prepare("PRAGMA table_info(connection_photo_challenges)").all();
+      if (!columns.some(column => column.name === "requested_by")) this.db.exec(`BEGIN IMMEDIATE;
+        ALTER TABLE connection_photo_challenges ADD COLUMN requested_by TEXT;
+        UPDATE connection_photo_challenges SET requested_by=(SELECT sender_id FROM plaza_connections c WHERE c.id=connection_id);
+        PRAGMA user_version=25; COMMIT;`);
+      else this.db.exec("PRAGMA user_version=25");
+    }
+    } catch (error) { this.db.close(); throw error; }
   }
   transaction<T>(work: () => T): T {
     this.db.exec("BEGIN IMMEDIATE");

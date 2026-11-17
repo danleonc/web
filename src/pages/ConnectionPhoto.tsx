@@ -3,7 +3,7 @@ import { ReportDialog } from '../safety/ReportDialog';
 import { LockKeyhole, Sparkles } from 'lucide-react';
 
 export function ConnectionPhoto({ id, person, onProfile }: { id:string; person:string; onProfile:() => void }) {
-  const [challenge, setChallenge] = useState<{mine:boolean;theirs:boolean;ready:boolean;rounds:number;unlocked:boolean} | null>(null);
+  const [challenge, setChallenge] = useState<{mine:boolean;theirs:boolean;ready:boolean;started:boolean;rounds:number;unlocked:boolean} | null>(null);
   const [status, setStatus] = useState<{mine:boolean;theirs:boolean;theirsId:string|null} | null>(null);
   const [error, setError] = useState(''); const [busy, setBusy] = useState(false); const [revision, setRevision] = useState(0);
   const [reportId, setReportId] = useState<string|null>(null); const [reported, setReported] = useState(false);
@@ -20,7 +20,7 @@ export function ConnectionPhoto({ id, person, onProfile }: { id:string; person:s
   async function join() {
     if (busy) return;
     setBusy(true); setError('');
-    try { const response=await fetch(`/api/plaza/connections/${id}/photo-challenge`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'join'})}); if (!response.ok) throw Error(response.status === 422 ? 'Agrega tu foto en tu perfil antes de empezar.' : 'No pudimos activar el desafío.'); setRevision(v=>v+1); }
+    try { const response=await fetch(`/api/plaza/connections/${id}/photo-challenge`,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:challenge?.mine ? 'start' : 'join'})}); if (!response.ok) throw Error(response.status === 422 ? 'Agrega tu foto en tu perfil antes de empezar.' : 'No pudimos activar el desafío.'); setRevision(v=>v+1); }
     catch(e) {setError(e instanceof Error ? e.message : 'No pudimos activar el desafío.');} finally {setBusy(false);}
   }
   return <section className="connection-discovery" aria-label="Fotos de la conexión">
@@ -31,10 +31,9 @@ export function ConnectionPhoto({ id, person, onProfile }: { id:string; person:s
       <h3>Diez vueltas para descubrirse</h3>
       {status && challenge ? <>
         {status.theirs ? <p>{person} compartió su foto contigo.</p> : challenge.unlocked && <p>La foto de {person} no está disponible en este momento.</p>}
-        {!challenge.unlocked && (challenge.ready ? <><p>Cada vuelta los acerca a descubrir sus fotos.</p><progress max={10} value={challenge.rounds} aria-label="Progreso del desafío" /><p><strong>{challenge.rounds} de 10 vueltas</strong> · Una vuelta es un mensaje de cada persona.</p></> : challenge.mine ? <p>Esperando a {person} para empezar el desafío.</p> : <><p>Cuando ambos participen, sus fotos se revelarán automáticamente tras 10 vueltas.</p><button type="button" className="button secondary" disabled={busy} onClick={() => void join()}>Activar desafío</button></>)}
+        {!challenge.unlocked && (challenge.ready && challenge.started ? <><p>Cada vuelta los acerca a descubrir sus fotos.</p><progress max={10} value={challenge.rounds} aria-label="Progreso del desafío" /><p><strong>{challenge.rounds} de 10 vueltas</strong> · Una vuelta es un mensaje de cada persona.</p></> : challenge.mine && challenge.started ? <p>Esperando a {person} para empezar el desafío.</p> : <><p>Al completar 10 vueltas, descubrirán ambas fotos al mismo tiempo.</p><button type="button" className="button secondary" disabled={busy} onClick={() => void join()}>{challenge.started ? 'Aceptar desafío' : 'Solicitar descubrir fotos'}</button></>)}
         {status.theirs && <button type="button" className="button text" onClick={() => setReportId(status.theirsId)}>Reportar foto</button>}
       </> : <p role="status">Consultando fotos…</p>}
-      <p className="connection-discovery-note">Puedes retirar tu foto desde tu perfil.</p>
     </div>
     {error && <p role="alert">{error}</p>}{error.startsWith('Agrega tu foto') && <button type="button" className="button text" onClick={onProfile}>Ir a mi perfil</button>}
     {reported && <p role="status">Tu reporte fue enviado para revisión.</p>}

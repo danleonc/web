@@ -80,7 +80,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   }
   if (!validOrigin(req)) { req.resume(); json(res, 403, { error: "origin_rejected" }); return true; }
   try {
-    if (req.method === 'POST' && photoChallenge) { const value=await body(req); if (!fields(value,['action']) || value.action !== 'join') throw Error('invalid_body'); const ok=connections.joinChallenge(actor.id,photoChallenge[1]); json(res,ok?200:404,ok?{ok:true}:{error:'not_found'}); }
+    if (req.method === 'POST' && photoChallenge) { const value=await body(req); if (!fields(value,['action']) || !['join','start'].includes(String(value.action))) throw Error('invalid_body'); const ok=value.action === 'join' ? connections.joinChallenge(actor.id,photoChallenge[1]) : connections.startChallenge(actor.id,photoChallenge[1]); json(res,ok?200:404,ok?{ok:true}:{error:'not_found'}); }
     else if (req.method === 'POST' && photoShare) {
       const value=await body(req); if (!fields(value,['action']) || !['share','revoke'].includes(String(value.action))) throw Error('invalid_body');
       const peer=connections.peer(actor.id,photoShare[1]);
@@ -126,6 +126,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
     } else if (req.method === "POST" && privateMessages) {
       const value = await body(req);
       if (typeof value.clientId !== "string" || typeof value.body !== "string" || Object.keys(value).some(k => !["clientId", "body", "stickerId", "replyTo"].includes(k)) || (value.stickerId !== undefined && typeof value.stickerId !== "string") || (value.replyTo !== undefined && typeof value.replyTo !== "string")) throw Error("invalid_body");
+      if (storage.db.prepare("SELECT 1 FROM connection_photo_challenges WHERE connection_id=?").get(privateMessages[1]) && connections.peer(actor.id, privateMessages[1]) && !storage.db.prepare("SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0").get(actor.id)) { json(res,403,{error:'profile_photo_required'}); return true; }
       const message = connections.send(actor.id, privateMessages[1], value.clientId, value.body, String(value.stickerId || ""), String(value.replyTo || ""));
       json(res, message ? 201 : 404, message ? { message } : { error: "not_found" });
     } else if (req.method === "POST" && path === "/api/plaza/appeals") {

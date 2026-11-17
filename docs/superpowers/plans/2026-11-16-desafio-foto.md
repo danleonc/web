@@ -26,3 +26,11 @@ Verificación local: pruebas de autorización, acuerdo de dos personas, mensajes
 ## Protección del despliegue preparada
 
 El arranque normal incorpora una comprobación específica cuando detecta la base v23: crea una copia consistente privada en el mismo directorio, valida integridad y claves foráneas, ensaya la migración en otra copia y compara los conteos de cuentas, conexiones, fotos y permisos antes de abrir la base activa. Si el ensayo falla, no inicia la migración y conserva el respaldo. El comportamiento se probó localmente con el proceso real de arranque y una base sintética. La copia no está fuera de Render y su ejecución sobre la base del entorno solo se podrá confirmar durante el despliegue; no sustituye un respaldo externo restaurable.
+
+## Ajuste del titular · solicitud compartida
+
+Una sola persona puede solicitar descubrir las fotos. Si ambas personas aceptaron la regla al crear la conexión, no se requiere una segunda activación: el contador común comienza con la solicitud de cualquiera. En conexiones anteriores sin acuerdo de una persona, se conserva el chat y se solicita ese acuerdo antes de revelar su imagen. Después de diez vueltas compartidas se habilitan ambas fotos en la misma transacción. Se retiró del bloque de descubrimiento el texto que invitaba a quitar la foto. En chats de dos personas se mantienen burbujas y nombres; los avatares por mensaje quedan para evaluar en conversaciones grupales.
+
+El esquema v25 conserva el progreso y el inicio de desafíos v24. El preensayo de arranque admite bases v23 o v24, crea una copia privada en el mismo disco y comprueba una migración en copia. La prueba local no sustituye el respaldo externo ni prueba por sí sola la ejecución en Render.
+
+Si una cuenta de un desafío retira o pierde su foto, se bloquean sus nuevos mensajes en esa conexión hasta volver a cargar una foto. El progreso se reinicia y la nueva imagen requiere acuerdo; esto evita continuar el desafío sin foto, pero no garantiza que una persona no retire una imagen o cierre una conexión. Los casos de mensajes agrupados, rechazo de acceso por parte de terceros y migración desde v24 se cubren en pruebas locales.

@@ -146,10 +146,11 @@ test('cada persona controla si revela su foto en una conexión', async ({ browse
     await pa.getByRole('button',{name:'Abrir conversación'}).click(); await pb.getByRole('button',{name:'Abrir conversación'}).click();
     await expect(pb.getByLabel('Foto por descubrir')).toBeVisible();
     await expect(pb.locator('.connection-chat')).toBeVisible();
-    await expect(pb.getByRole('button',{name:'Activar desafío'})).toBeVisible();
+    await expect(pb.getByRole('button',{name:'Solicitar descubrir fotos'})).toBeVisible();
     await pb.screenshot({path:info.outputPath('desafio-conexion.png'),fullPage:true});
-    await pa.getByRole('button',{name:'Activar desafío'}).click();
-    await pb.getByRole('button',{name:'Activar desafío'}).click();
+    await pa.getByRole('button',{name:'Solicitar descubrir fotos'}).click();
+    await expect(pb.getByRole('button',{name:'Aceptar desafío'})).toBeVisible({timeout:10000});
+    await pb.getByRole('button',{name:'Aceptar desafío'}).click();
     await expect(pa.getByText('0 de 10 vueltas')).toBeVisible({timeout:10000});
     for(let n=0;n<10;n++) for(const [context,side] of [[a,'a'],[b,'b']] as const) expect((await context.request.post(`/api/plaza/connections/${invite.invitation.id}/messages`,{headers:{Origin:origin},data:{clientId:`photo-ui-${side}-${n}-unique`,body:'Hola'}})).status()).toBe(201);
     await expect(pb.getByAltText(`Foto compartida por ${nameA}`)).toBeVisible({timeout:10000});

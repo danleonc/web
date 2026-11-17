@@ -27,6 +27,7 @@ test('foto privada propia y requisito en nuevas conexiones sin interrumpir conve
   assert.equal((await upload(a.cookie,'yes')).status,201);
   assert.equal((await f.request(`/api/plaza/invitations/${invite.body.invitation.id}/decision`,'POST',{action:'accept',photoChallengeAccepted:true},a.cookie)).status,200);
   const share=`/api/plaza/connections/${invite.body.invitation.id}/profile-photo`;
+  assert.equal((await f.request(`/api/plaza/connections/${invite.body.invitation.id}/photo-challenge`,'POST',{action:'start'},a.cookie)).status,200);
   assert.equal((await f.raw(share+'/image',{headers:{Cookie:a.cookie}})).status,404);
   assert.equal((await f.request(share,'POST',{action:'share'},c.cookie)).status,403);
   for(let n=0;n<10;n++) for(const [p,side] of [[a,'a'],[c,'c']]) assert.equal((await f.request(`/api/plaza/connections/${invite.body.invitation.id}/messages`,'POST',{clientId:`photo-first-${side}-${n}`,body:'Hola'},p.cookie)).status,201);
@@ -52,6 +53,7 @@ test('una foto compartida puede reportarse con evidencia y moderarse sin afectar
   const inv=(await f.request('/api/plaza/invitations','POST',{kind:'post',contentId:post.id,note:'',photoChallengeAccepted:true},b.cookie)).body.invitation;
   await f.request(`/api/plaza/invitations/${inv.id}/decision`,'POST',{action:'accept',photoChallengeAccepted:true},a.cookie);
   const share=`/api/plaza/connections/${inv.id}/profile-photo`;
+  assert.equal((await f.request(`/api/plaza/connections/${inv.id}/photo-challenge`,'POST',{action:'start'},b.cookie)).status,200);
   for(let n=0;n<10;n++) for(const [p,side] of [[a,'a'],[b,'b']]) assert.equal((await f.request(`/api/plaza/connections/${inv.id}/messages`,'POST',{clientId:`photo-report-${side}-${n}`,body:'Hola'},p.cookie)).status,201);
   const state=(await f.request(share,'GET',undefined,a.cookie)).body;
   assert.ok(state.theirsId);
