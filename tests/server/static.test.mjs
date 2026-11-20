@@ -24,6 +24,8 @@ test("serves the public build without exposing files outside its root", async (t
   const base = `http://127.0.0.1:${app.server.address().port}`;
   const index = await fetch(`${base}/`);
   assert.equal(index.status, 200);
+  assert.match(index.headers.get("content-security-policy"), /object-src 'none'/);
+  assert.match(index.headers.get("content-security-policy"), /frame-src 'none'/);
   assert.equal(await index.text(), "<h1>Nexafia</h1>");
   const asset = await fetch(`${base}/assets/app.js`);
   assert.equal(asset.status, 200);

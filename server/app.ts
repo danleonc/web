@@ -280,7 +280,7 @@ export function createRoomServer(options: Options = {}) {
             ? "public, max-age=31536000, immutable"
             : "no-cache",
           "Content-Security-Policy":
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
         });
         res.end(req.method === "HEAD" ? undefined : body);
       } catch {

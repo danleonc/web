@@ -68,3 +68,5 @@ Se añadió Gitleaks a GitHub Actions con acciones fijadas a una revisión, perm
 ### Errores internos en moderación e imágenes
 
 Se corrigieron dos respuestas que devolvían literalmente mensajes de excepciones inesperadas. Los errores de negocio expresamente autorizados mantienen sus explicaciones; errores internos de SQLite, bibliotecas u otros componentes devuelven un mensaje genérico. Se probaron fallos de base de datos inyectados en moderación y carga de imágenes, junto con mensajes válidos de rechazo de archivos. Estos controles no constituyen monitoreo ni resolución automática de incidentes.
+
+Se reforzó además la política de contenido del sitio para impedir objetos incrustados y marcos, manteniendo las excepciones existentes para los estilos actuales. Las pruebas comprueban esas directivas; eliminar `unsafe-inline` requiere trabajo adicional sobre los estilos y una revisión funcional posterior.
