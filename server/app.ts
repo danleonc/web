@@ -2,7 +2,7 @@ import { createServer } from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { resolve, extname, relative as relativePath, isAbsolute, sep } from "node:path";
 import { Storage, digest } from "./storage.ts";
 import { Auth, accountCookie, readToken } from "./auth.ts";
@@ -219,7 +219,7 @@ export function createRoomServer(options: Options = {}) {
     res.end(JSON.stringify(value));
   }
   const validOrigin = (req: IncomingMessage) =>
-    typeof req.headers.origin === "string" && allowed.has(req.headers.origin);
+    typeof req.headers.origin === "string" && allowed.has(req.headers.origin) && req.headers["sec-fetch-site"] !== "cross-site";
   const securityLog = options.securityLog ?? ((event) => console.warn(JSON.stringify({ type: "security", ...event })));
   const server = createServer(async (req, res) => {
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -250,11 +250,18 @@ export function createRoomServer(options: Options = {}) {
       try {
         const relative =
           decodeURIComponent(path).replace(/^\/+/, "") || "index.html";
+        if (relative.split(/[\\/]/).some((segment) => segment.startsWith(".")) || relative.toLowerCase().endsWith(".map"))
+          throw new Error("invalid_path");
         const file = resolve(root, relative);
         const fromRoot = relativePath(root, file);
         if (!fromRoot || fromRoot === ".." || fromRoot.startsWith(`..${sep}`) || isAbsolute(fromRoot))
           throw new Error("invalid_path");
-        const body = await readFile(file);
+        const actualRoot = await realpath(root);
+        const actualFile = await realpath(file);
+        const actualRelative = relativePath(actualRoot, actualFile);
+        if (!actualRelative || actualRelative === ".." || actualRelative.startsWith(`..${sep}`) || isAbsolute(actualRelative))
+          throw new Error("invalid_path");
+        const body = await readFile(actualFile);
         const type: Record<string, string> = {
           ".html": "text/html; charset=utf-8",
           ".js": "text/javascript",
@@ -711,6 +718,9 @@ export function createRoomServer(options: Options = {}) {
       if (trackedId) { const left = (activeRequests.get(trackedId) || 1) - 1; if (left) activeRequests.set(trackedId, left); else activeRequests.delete(trackedId); }
     }
   });
+  server.headersTimeout = 10_000;
+  server.requestTimeout = 30_000;
+  server.maxHeadersCount = 100;
   const wss = new WebSocketServer({
     noServer: true,
     maxPayload: 4096,

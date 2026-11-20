@@ -22,3 +22,15 @@ test('registra intentos sospechosos sin contraseñas, tokens ni identificadores 
  assert.ok(events.some(event=>event.event==='auth_rate_limited' && event.status===429));
  assert.doesNotMatch(JSON.stringify(events),/private_user_01|very-private|127\.0\.0\.1/);
 });
+
+test('las mutaciones rechazan solicitudes cross-site incluso con origen aceptado y admiten clientes sin Fetch Metadata',async t=>{
+ const dir=await mkdtemp(join(tmpdir(),'nexafia-csrf-')); const origin='http://localhost:4173';
+ const app=createRoomServer({databasePath:join(dir,'db.sqlite'),allowedOrigins:[origin]});app.server.listen(0,'127.0.0.1');await once(app.server,'listening');t.after(async()=>{await app.close();await rm(dir,{recursive:true,force:true});}); const base=`http://127.0.0.1:${app.server.address().port}`;
+ const payload=JSON.stringify({username:'security_test',password:'a-very-private-password'});const request=(site)=>fetch(base+'/api/auth/login',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json',...(site?{'Sec-Fetch-Site':site}:{})},body:payload});
+ assert.equal((await request('cross-site')).status,403);assert.equal((await request('same-origin')).status,401);assert.equal((await request()).status,401);
+});
+
+test('los tiempos de recepción y cabeceras están acotados',async t=>{
+ const app=createRoomServer(); t.after(()=>app.close());
+ assert.equal(app.server.headersTimeout,10000); assert.equal(app.server.requestTimeout,30000); assert.equal(app.server.maxHeadersCount,100);
+});

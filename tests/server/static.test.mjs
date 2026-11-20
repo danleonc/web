@@ -34,3 +34,10 @@ test("serves the public build without exposing files outside its root", async (t
   assert.equal(secret.status, 404);
   assert.doesNotMatch(await secret.text(), /private/);
 });
+
+ test('no publica archivos ocultos ni mapas de código accidentalmente copiados', async t => {
+  const dir=await mkdtemp(join(tmpdir(),'nexafia-static-private-'));const root=join(dir,'public');await mkdir(join(root,'assets'),{recursive:true});await mkdir(join(root,'.git'));
+  await writeFile(join(root,'index.html'),'ok');await writeFile(join(root,'.env'),'PRIVATE');await writeFile(join(root,'.git','config'),'PRIVATE');await writeFile(join(root,'assets','app.js.map'),'PRIVATE');
+  const app=createRoomServer({staticRoot:root});app.server.listen(0,'127.0.0.1');await once(app.server,'listening');t.after(async()=>{await app.close();await rm(dir,{recursive:true,force:true})}); const base=`http://127.0.0.1:${app.server.address().port}`;
+  for(const name of ['/.env','/.git/config','/assets/app.js.map','/%2eenv']) assert.equal((await fetch(base+name)).status,404);
+ });

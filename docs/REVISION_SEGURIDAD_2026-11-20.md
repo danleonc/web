@@ -47,3 +47,13 @@ Revisión del repositorio `web` en la rama `codex/nexafia-desarrollo`, de su con
 - `npm audit`: cero avisos conocidos reportados en la consulta.
 - HTTP público redirige a HTTPS; la barrera pública respondió 401 a una solicitud no autenticada. No se hicieron intentos de intrusión contra cuentas reales.
 - Fuentes técnicas: [OWASP Session Management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html), [OWASP CSRF Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), [OWASP File Upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html), [Node.js Security Best Practices](https://nodejs.org/learn/getting-started/security-best-practices).
+
+## Continuación: endurecimiento adicional
+
+En el código posterior a esta revisión se añadió una comprobación complementaria de Fetch Metadata: una solicitud marcada `Sec-Fetch-Site: cross-site` no pasa la validación de origen, incluso si presenta un Origin incluido en la lista; los clientes sin esa cabecera siguen sujetos a la comprobación estricta de Origin. Esto no es un token CSRF y no mitiga XSS.
+
+Se limitó la recepción de cabeceras y solicitudes y el número de cabeceras. Se reforzó la entrega de archivos estáticos para rechazar archivos o carpetas ocultos, mapas de código y rutas cuyo destino real salga de la carpeta publicada. El riesgo de exposición de archivos ocultos se reproducía si por error existían dentro de esa carpeta; no se encontró evidencia de que estuvieran publicados realmente.
+
+Se agregó un flujo de GitHub Actions para auditoría de dependencias, pruebas de servidor y compilación en pushes/PR y programación. El archivo está preparado en la rama de desarrollo; su ejecución depende de que GitHub Actions esté habilitado. Las ejecuciones programadas de GitHub Actions utilizan la rama predeterminada, por lo que no debe darse por activa la programación hasta integrar el flujo allí y verificarla en GitHub.
+
+Las pruebas locales incluyen 169 pruebas de servidor y la compilación del modo compartido. El conjunto no acredita una auditoría externa ni demuestra el funcionamiento en Render. Los compromisos de operación y las limitaciones anteriores siguen vigentes.

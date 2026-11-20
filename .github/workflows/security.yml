@@ -1,0 +1,37 @@
+name: Security checks
+
+on:
+  push:
+    branches: [codex/nexafia-desarrollo]
+  pull_request:
+  schedule:
+    - cron: '23 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24.19.0'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Check known vulnerabilities
+        run: npm audit --audit-level=moderate
+      - name: Exercise server protections
+        run: npm run test:server
+      - name: Build shared application
+        run: npm run build:pilot
+        env:
+          VITE_ENTRE_PLAZA_REAL: '1'
