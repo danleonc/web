@@ -57,3 +57,10 @@ Se limitó la recepción de cabeceras y solicitudes y el número de cabeceras. S
 Se agregó un flujo de GitHub Actions para auditoría de dependencias, pruebas de servidor y compilación en pushes/PR y programación. El archivo está preparado en la rama de desarrollo; su ejecución depende de que GitHub Actions esté habilitado. Las ejecuciones programadas de GitHub Actions utilizan la rama predeterminada, por lo que no debe darse por activa la programación hasta integrar el flujo allí y verificarla en GitHub.
 
 Las pruebas locales incluyen 169 pruebas de servidor y la compilación del modo compartido. El conjunto no acredita una auditoría externa ni demuestra el funcionamiento en Render. Los compromisos de operación y las limitaciones anteriores siguen vigentes.
+
+
+### Escaneo especializado
+
+Se ejecutó localmente Gitleaks 8.30.1 sobre todos los refs Git locales con salida censurada. Señaló cuatro coincidencias históricas de tipo genérico en tres archivos de pruebas; al revisar sus contextos, las cuatro corresponden a claves fijas para fixtures de prueba. Esto no confirma que la configuración desplegada sea distinta: los valores efectivos de Render no se inspeccionaron. No se detectó una clave real comprometida ni se revocó ninguna. Las reglas automáticas pueden tener falsos positivos y falsos negativos.
+
+Se añadió Gitleaks a GitHub Actions con acciones fijadas a una revisión, permisos de solo lectura y comentarios y artefactos desactivados. En pushes analiza el rango seleccionado por la acción, y no debe confundirse una ejecución exitosa con una revisión exhaustiva de todo el historial. La programación semanal requiere que el flujo esté en la rama predeterminada.
