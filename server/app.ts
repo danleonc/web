@@ -67,6 +67,7 @@ type Connection = {
   expires: number;
 };
 type Options = {
+  securityLog?: (event: { event: string; action: string; status: number }) => void;
   requireConnectionPhoto?: boolean;
   stagingPassword?: string;
   plazaEnabled?: boolean;
@@ -219,7 +220,13 @@ export function createRoomServer(options: Options = {}) {
   }
   const validOrigin = (req: IncomingMessage) =>
     typeof req.headers.origin === "string" && allowed.has(req.headers.origin);
+  const securityLog = options.securityLog ?? ((event) => console.warn(JSON.stringify({ type: "security", ...event })));
   const server = createServer(async (req, res) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("X-Frame-Options", "DENY");
+    res.setHeader("Referrer-Policy", "same-origin");
+    res.setHeader("Permissions-Policy", "camera=(self), microphone=(), geolocation=()");
+    if (options.secureCookies) res.setHeader("Strict-Transport-Security", "max-age=31536000");
     let trackedId: string | null = null;
     try {
     const path = new URL(req.url || "/", "http://localhost").pathname;
@@ -634,6 +641,9 @@ export function createRoomServer(options: Options = {}) {
           return;
         }
         const result = await auth.action(authPath[1], value, req, res);
+        if (["login", "recover"].includes(authPath[1]) && (result.status === 401 || result.status === 429)) {
+          try { securityLog({ event: result.status === 429 ? "auth_rate_limited" : "auth_failed", action: authPath[1], status: result.status }); } catch { /* Logging must not prevent authentication responses. */ }
+        }
         if (result.revoked)
           for (const c of connections)
             if (c.tokenHash === result.revoked)
