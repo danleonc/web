@@ -1,3 +1,4 @@
+import { PublicError, publicErrorMessage } from "./public-error.ts";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import type { Storage, StoredRoom } from "./storage.ts";
@@ -33,12 +34,12 @@ function json(res: ServerResponse, status: number, body: unknown) {
 }
 async function readJson(req: IncomingMessage) {
   if (!req.headers["content-type"]?.startsWith("application/json"))
-    throw Error("Se requiere JSON.");
+    throw new PublicError("Se requiere JSON.");
   let size = 0;
   const chunks: Buffer[] = [];
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > 4096) throw Error("Solicitud demasiado grande.");
+    if (size > 4096) throw new PublicError("Solicitud demasiado grande.");
     chunks.push(chunk);
   }
   return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
@@ -80,7 +81,7 @@ export async function handleFeatures(
     }
     try {
       const v = await readJson(req);
-      if (!record(v)) throw Error("Solicitud no válida.");
+      if (!record(v)) throw new PublicError("Solicitud no válida.");
       if (path === "/api/appeals") {
         if (
           !keys(v, ["note"]) ||
@@ -88,7 +89,7 @@ export async function handleFeatures(
           v.note.trim().length < 5 ||
           v.note.length > 1000
         )
-          throw Error("Describe tu apelación en 5–1000 caracteres.");
+          throw new PublicError("Describe tu apelación en 5–1000 caracteres.");
         json(res, 200, { id: moderation.appeal(actor.id, v.note.trim()) });
         return true;
       }
@@ -108,7 +109,7 @@ export async function handleFeatures(
               Number(v.hours) < 1 ||
               Number(v.hours) > 168))
         )
-          throw Error("Elige una acción y justifica la decisión.");
+          throw new PublicError("Elige una acción y justifica la decisión.");
         const decision = moderation.decide(
           actor.id,
           v.reportId,
@@ -129,7 +130,7 @@ export async function handleFeatures(
           v.note.trim().length < 5 ||
           v.note.length > 500
         )
-          throw Error("Justifica la revisión de la apelación.");
+          throw new PublicError("Justifica la revisión de la apelación.");
         moderation.reviewAppeal(
           actor.id,
           v.id,
@@ -143,7 +144,7 @@ export async function handleFeatures(
     } catch (e) {
       json(res, 422, {
         error: "moderation_action_failed",
-        message: e instanceof Error ? e.message : "No se pudo completar.",
+        message: publicErrorMessage(e),
       });
     }
     return true;
@@ -220,7 +221,7 @@ export async function handleFeatures(
           v.note.length > 500 ||
           (v.messageId !== undefined && typeof v.messageId !== "string")
         )
-          throw Error("Reporte no válido.");
+          throw new PublicError("Reporte no válido.");
         const message =
           typeof v.messageId === "string"
             ? room.messages.find(
@@ -228,7 +229,7 @@ export async function handleFeatures(
               )
             : undefined;
         if (v.messageId && !message)
-          throw Error("El mensaje no pertenece al participante señalado.");
+          throw new PublicError("El mensaje no pertenece al participante señalado.");
         const id = moderation.report(
           room.key,
           actor.id,
@@ -256,10 +257,10 @@ export async function handleFeatures(
         !ctx.isPresent(room, actor.id) ||
         room.safety.expelled.includes(actor.id)
       )
-        throw Error("Necesitas estar presente en una sala con quórum.");
+        throw new PublicError("Necesitas estar presente en una sala con quórum.");
       const clientId = req.headers["x-upload-id"];
       if (typeof clientId !== "string" || !/^[a-f0-9-]{36}$/.test(clientId))
-        throw Error("Identificador de envío no válido.");
+        throw new PublicError("Identificador de envío no válido.");
       const old = storage.db
         .prepare(
           "SELECT id FROM media WHERE room_id=? AND owner_id=? AND client_id=?",
@@ -271,7 +272,7 @@ export async function handleFeatures(
         return true;
       }
       if (!storage.takeLimit(digest(`images:${actor.id}`), 10, 60_000, now()))
-        throw Error("Espera un minuto antes de enviar más imágenes.");
+        throw new PublicError("Espera un minuto antes de enviar más imágenes.");
       if (
         Number(
           storage.db
@@ -282,7 +283,7 @@ export async function handleFeatures(
           storage.db.prepare("SELECT COUNT(*) AS n FROM media").get()!.n,
         ) >= 200
       )
-        throw Error("Se alcanzó el límite de imágenes de este piloto.");
+        throw new PublicError("Se alcanzó el límite de imágenes de este piloto.");
       const body = await normalizeUpload(req);
       ctx.advance(room);
       if (
@@ -292,7 +293,7 @@ export async function handleFeatures(
         room.safety.expelled.includes(actor.id) ||
         !ctx.isPresent(room, actor.id)
       )
-        throw Error("La sesión o sala dejó de estar disponible.");
+        throw new PublicError("La sesión o sala dejó de estar disponible.");
       const duplicate = storage.db
         .prepare(
           "SELECT id FROM media WHERE room_id=? AND owner_id=? AND client_id=?",
@@ -312,7 +313,7 @@ export async function handleFeatures(
           storage.db.prepare("SELECT COUNT(*) AS n FROM media").get()!.n,
         ) >= 200
       )
-        throw Error("Se alcanzó el límite de imágenes de este piloto.");
+        throw new PublicError("Se alcanzó el límite de imágenes de este piloto.");
       const id = randomUUID();
       storage.db
         .prepare(
@@ -325,7 +326,7 @@ export async function handleFeatures(
       req.resume();
       json(res, 422, {
         error: "room_action_failed",
-        message: e instanceof Error ? e.message : "No se pudo completar.",
+        message: publicErrorMessage(e),
       });
     }
     return true;

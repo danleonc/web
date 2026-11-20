@@ -618,3 +618,17 @@ test("cerrar el encuentro cancela en el mismo estado una votación y rechaza el 
   );
   assert.deepEqual(clients[2].snapshot.safety.expelled, []);
 });
+
+test('moderación no revela detalles internos si falla la base de datos',async t=>{
+ const {f,users,room}=await group(t,3);const mod=await f.signup();promote(f,mod);
+ const r=await report(f,room,users[0],users[1]);assert.equal(r.status,201);
+ db(f,d=>d.exec("CREATE TRIGGER fail_security_test BEFORE INSERT ON moderation_actions BEGIN SELECT RAISE(ABORT, 'internal-database-sensitive-detail'); END"));
+ const result=await action(f,mod,r.body.id,'dismiss');assert.equal(result.status,422);assert.doesNotMatch(JSON.stringify(result.body),/internal-database-sensitive-detail/);assert.equal(result.body.message,'No se pudo completar.');
+});
+
+test('subida de imágenes oculta fallos internos y mantiene mensajes de validación',async t=>{
+ const {f,users,room}=await group(t,3);const mod=await f.signup();promote(f,mod);
+ const invalid=await upload(f,room,users[0],Buffer.from('invalid'),'image/png');assert.equal(invalid.status,422);assert.equal(invalid.body.message,'Solo se admiten JPG, PNG y WebP válidos.');
+ db(f,d=>d.exec("CREATE TRIGGER fail_media_security_test BEFORE INSERT ON media BEGIN SELECT RAISE(ABORT, 'internal-media-sensitive-detail'); END"));
+ const result=await upload(f,room,users[0],await png());assert.equal(result.status,422);assert.equal(result.body.message,'No se pudo completar.');assert.doesNotMatch(JSON.stringify(result.body),/internal-media-sensitive-detail/);
+});

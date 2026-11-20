@@ -64,3 +64,7 @@ Las pruebas locales incluyen 169 pruebas de servidor y la compilación del modo 
 Se ejecutó localmente Gitleaks 8.30.1 sobre todos los refs Git locales con salida censurada. Señaló cuatro coincidencias históricas de tipo genérico en tres archivos de pruebas; al revisar sus contextos, las cuatro corresponden a claves fijas para fixtures de prueba. Esto no confirma que la configuración desplegada sea distinta: los valores efectivos de Render no se inspeccionaron. No se detectó una clave real comprometida ni se revocó ninguna. Las reglas automáticas pueden tener falsos positivos y falsos negativos.
 
 Se añadió Gitleaks a GitHub Actions con acciones fijadas a una revisión, permisos de solo lectura y comentarios y artefactos desactivados. En pushes analiza el rango seleccionado por la acción, y no debe confundirse una ejecución exitosa con una revisión exhaustiva de todo el historial. La programación semanal requiere que el flujo esté en la rama predeterminada.
+
+### Errores internos en moderación e imágenes
+
+Se corrigieron dos respuestas que devolvían literalmente mensajes de excepciones inesperadas. Los errores de negocio expresamente autorizados mantienen sus explicaciones; errores internos de SQLite, bibliotecas u otros componentes devuelven un mensaje genérico. Se probaron fallos de base de datos inyectados en moderación y carga de imágenes, junto con mensajes válidos de rechazo de archivos. Estos controles no constituyen monitoreo ni resolución automática de incidentes.

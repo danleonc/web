@@ -1,3 +1,4 @@
+import { PublicError } from "./public-error.ts";
 import { randomUUID } from "node:crypto";
 import type { Storage } from "./storage.ts";
 import { digest } from "./storage.ts";
@@ -36,7 +37,7 @@ export class ModerationStore {
   }
   role(username: string, enabled: boolean) {
     const account = this.storage.account(username.toLowerCase());
-    if (!account) throw Error("Account not found");
+    if (!account) throw new PublicError("Account not found");
     if (enabled)
       this.storage.db
         .prepare("INSERT OR IGNORE INTO moderators VALUES(?)")
@@ -70,12 +71,12 @@ export class ModerationStore {
         this.now(),
       )
     )
-      throw Error("Espera antes de registrar otro reporte.");
+      throw new PublicError("Espera antes de registrar otro reporte.");
     const count = this.storage.db
       .prepare("SELECT COUNT(*) AS n FROM reports")
       .get()!.n as number;
     if (count >= 5000)
-      throw Error("La cola de reportes está llena. No se pudo guardar.");
+      throw new PublicError("La cola de reportes está llena. No se pudo guardar.");
     const id = randomUUID();
     this.storage.db
       .prepare(
@@ -111,20 +112,20 @@ export class ModerationStore {
     hours: number,
   ) {
     if (!this.moderator(moderatorId) || this.restriction(moderatorId))
-      throw Error("Se requiere moderación.");
+      throw new PublicError("Se requiere moderación.");
     const report = this.storage.db
       .prepare("SELECT * FROM reports WHERE id=?")
       .get(reportId);
-    if (!report) throw Error("Reporte no encontrado.");
+    if (!report) throw new PublicError("Reporte no encontrado.");
     if (report.status !== "open")
-      throw Error("Este reporte ya tiene una decisión.");
+      throw new PublicError("Este reporte ya tiene una decisión.");
     const target = report.target_id as string;
     if (target === moderatorId || this.moderator(target))
-      throw Error(
+      throw new PublicError(
         "Esta decisión requiere intervención del responsable del servicio.",
       );
     if (kind === "hide-image" && !report.image_id)
-      throw Error("El reporte no contiene una imagen.");
+      throw new PublicError("El reporte no contiene una imagen.");
     const id = randomUUID();
     const until = kind === "suspend" ? this.now() + hours * 60 * 60_000 : null;
     this.storage.transaction(() => {
@@ -195,7 +196,7 @@ export class ModerationStore {
   }
   appeal(id: string, note: string) {
     const restriction = this.restriction(id);
-    if (!restriction) throw Error("No hay una restricción vigente que apelar.");
+    if (!restriction) throw new PublicError("No hay una restricción vigente que apelar.");
     const old = this.storage.db
       .prepare("SELECT id FROM appeals WHERE user_id=? AND action_id=?")
       .get(id, restriction.actionId);
@@ -210,21 +211,21 @@ export class ModerationStore {
   }
   reviewAppeal(actor: string, id: string, restore: boolean, note: string) {
     if (!this.moderator(actor) || this.restriction(actor))
-      throw Error("Se requiere moderación.");
+      throw new PublicError("Se requiere moderación.");
     const appeal = this.storage.db
       .prepare("SELECT * FROM appeals WHERE id=?")
       .get(id);
     if (!appeal || appeal.status !== "pending")
-      throw Error("Apelación no disponible.");
+      throw new PublicError("Apelación no disponible.");
     if (
       restore &&
       this.restriction(appeal.user_id as string)?.actionId !== appeal.action_id
     )
-      throw Error(
+      throw new PublicError(
         "La restricción cambió o ya terminó; no se puede restaurar desde esta apelación.",
       );
     if (appeal.user_id === actor)
-      throw Error("No puedes revisar tu propia apelación.");
+      throw new PublicError("No puedes revisar tu propia apelación.");
     this.storage.transaction(() => {
       if (restore)
         this.storage.db

@@ -1,3 +1,4 @@
+import { PublicError } from "./public-error.ts";
 import sharp from "sharp";
 import type { IncomingMessage } from "node:http";
 import { imageHeader } from "../src/media/header.ts";
@@ -6,10 +7,10 @@ sharp.cache({ memory: 16, files: 0, items: 20 });
 sharp.concurrency(1);
 let jobs = 0;
 export async function normalizeUpload(req: IncomingMessage) {
-  if (jobs >= 2) throw Error("El servicio está ocupado. Vuelve a intentarlo.");
+  if (jobs >= 2) throw new PublicError("El servicio está ocupado. Vuelve a intentarlo.");
   if (Number(req.headers["content-length"] || 0) > 2 * 1024 * 1024) {
     req.resume();
-    throw Error("La imagen supera 2 MB.");
+    throw new PublicError("La imagen supera 2 MB.");
   }
   jobs++;
   req.setTimeout(15_000, () => req.destroy(Error("La carga tardó demasiado.")));
@@ -18,7 +19,7 @@ export async function normalizeUpload(req: IncomingMessage) {
     const chunks: Buffer[] = [];
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > 2 * 1024 * 1024) throw Error("La imagen supera 2 MB.");
+      if (size > 2 * 1024 * 1024) throw new PublicError("La imagen supera 2 MB.");
       chunks.push(chunk);
     }
     const input = Buffer.concat(chunks);
@@ -34,7 +35,7 @@ export async function normalizeUpload(req: IncomingMessage) {
             ? "image/webp"
             : "";
     if (!type || req.headers["content-type"] !== type)
-      throw Error("Solo se admiten JPG, PNG y WebP válidos.");
+      throw new PublicError("Solo se admiten JPG, PNG y WebP válidos.");
     imageHeader(input, type);
     const metadata = await sharp(input, {
       limitInputPixels: 16_000_000,
@@ -44,7 +45,7 @@ export async function normalizeUpload(req: IncomingMessage) {
       (metadata.width || 0) > 8192 ||
       (metadata.height || 0) > 8192
     )
-      throw Error("Elige una imagen sin animación y de hasta 16 megapíxeles.");
+      throw new PublicError("Elige una imagen sin animación y de hasta 16 megapíxeles.");
     for (const edge of compressionSizes) {
       for (const quality of [78, 62, 45]) {
         const output = await sharp(input, { limitInputPixels: 16_000_000 })
@@ -61,7 +62,7 @@ export async function normalizeUpload(req: IncomingMessage) {
         if (output.length <= maxImageBytes) return output;
       }
     }
-    throw Error("No se pudo reducir la imagen al tamaño permitido.");
+    throw new PublicError("No se pudo reducir la imagen al tamaño permitido.");
   } finally {
     req.setTimeout(0);
     jobs--;
