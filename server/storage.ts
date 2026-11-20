@@ -308,6 +308,20 @@ export class Storage {
       );
     return true;
   }
+  takePrivateLimit(rawKey: string, maximum: number, duration: number, now: number) {
+    return this.transaction(() => {
+      const key = digest(rawKey);
+      const read = this.db.prepare("SELECT count,until_at AS untilAt FROM auth_limits WHERE key=?");
+      const old = read.get(rawKey) as {count:number;untilAt:number} | undefined;
+      if (old) {
+        const current = read.get(key) as {count:number;untilAt:number} | undefined;
+        const active = [old,current].filter((row): row is {count:number;untilAt:number} => !!row && row.untilAt > now);
+        if (active.length) this.db.prepare("INSERT OR REPLACE INTO auth_limits VALUES(?,?,?)").run(key,active.reduce((n,row)=>n+row.count,0),Math.max(...active.map(row=>row.untilAt)));
+        this.db.prepare("DELETE FROM auth_limits WHERE key=?").run(rawKey);
+      }
+      return this.takeLimit(key,maximum,duration,now);
+    });
+  }
   block(userId: string, blockedId: string) {
     this.transaction(() => {
       this.db.prepare("INSERT OR IGNORE INTO blocks VALUES(?,?)").run(userId, blockedId);

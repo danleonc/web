@@ -8,6 +8,13 @@ import {DatabaseSync} from 'node:sqlite';
 const keys=webpush.generateVAPIDKeys();
 const config={...keys,subject:'mailto:pilot@example.test'};
 const subscription=(suffix='one')=>({endpoint:`https://fcm.googleapis.com/fcm/send/test-${suffix}`,expirationTime:null,keys:{p256dh:keys.publicKey,auth:Buffer.alloc(16,2).toString('base64url')}});
+test('push no guarda direcciones ni identificadores en claro en sus límites',async t=>{
+ const f=await fixture(t,{push:{...config,send:async()=>{}}});
+ const person=await f.signup('push_privacy_test');
+ assert.equal((await f.request('/api/push/subscribe','POST',{subscription:subscription('privacy')},person.cookie)).status,200);
+ const db=new DatabaseSync(f.path,{readOnly:true});
+ try {const raw=db.prepare("SELECT key FROM auth_limits WHERE key LIKE 'push-%'").all();assert.equal(raw.length,0);} finally {db.close();}
+});
 test('push privado agrupa mensajes, respeta consentimiento y no revela contenido',async t=>{
  const sent=[]; const f=await fixture(t,{plazaEnabled:true,push:{...config,send:async()=>{}}});
  const ana=await f.signup('priv_ana'), bea=await f.signup('priv_bea'), otra=await f.signup('priv_otra');

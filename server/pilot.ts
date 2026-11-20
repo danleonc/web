@@ -29,6 +29,7 @@ const databasePath = process.env.ENTRE_DATABASE_PATH || resolve(".data/entre.sql
 const migrationBackup = await preflightPhotoMigration(databasePath);
 if (migrationBackup) console.log("La copia privada previa a la migración fue creada y ensayada.");
 const app = createRoomServer({
+  trustedProxies: process.env.ENTRE_TRUSTED_PROXIES ? process.env.ENTRE_TRUSTED_PROXIES.split(',').map(x => x.trim()) : [],
   ...featureMode,
   requireConnectionPhoto: featureMode.plazaEnabled,
   ...(process.env.ENTRE_STAGING_PASSWORD !== undefined ? { stagingPassword: process.env.ENTRE_STAGING_PASSWORD } : {}),

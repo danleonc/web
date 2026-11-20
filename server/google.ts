@@ -1,5 +1,6 @@
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import {clientIp} from "./client-ip.ts";
 import { createRemoteJWKSet, customFetch, jwtVerify } from "jose";
 import { cookie, accountCookie, readToken } from "./auth.ts";
 import { Storage, digest } from "./storage.ts";
@@ -131,7 +132,7 @@ export class GoogleAuth {
       return failure(403, "google_link_requires_access");
     if (value.intent === "login" && session)
       return failure(409, "google_logout_first");
-    const ip = req.socket.remoteAddress || "local";
+    const ip = clientIp(req);
     if (
       !this.storage.takeLimit(
         digest(`google-start:${ip}`),

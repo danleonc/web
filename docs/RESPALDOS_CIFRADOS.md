@@ -1,8 +1,20 @@
 # Respaldos cifrados de Nexafia
 
+## Transferencia al computador (preparación, no activada)
+
+`scripts/local-backup.mjs` prepara una instantánea SQLite en la instancia activa, la transfiere por SSH, cifra el flujo recibido y solo publica el archivo nuevo después de comprobar autenticación e integridad mediante restauración temporal. Requiere clave SSH, huella de Render verificada en known_hosts y clave de cifrado de 32 bytes. Rechaza destinos SSH ajenos a Render y no sobrescribe copias existentes. Se probó con datos sintéticos, no con el servicio real.
+
+**Estado 20-11-2026:** se registró con autorización una clave SSH dedicada en Render y se contrastó la huella de Oregon con la documentación de Render. La primera copia real y dos ejecuciones adicionales finalizaron con autenticación e integridad verificadas. La tarea de Windows `Nexafia - Respaldo local cifrado` se ejecutó correctamente: se inicia diariamente a las 11:00 y al entrar en la cuenta; conserva 14 archivos con el patrón de la tarea después de una copia exitosa, además de la primera copia manual. Se requiere equipo encendido, conexión y sesión de la cuenta configurada. La clave de cifrado se guarda con DPAPI en el equipo y como texto en la carpeta privada de Google Drive autorizada por Daniel: el control de esa cuenta es crítico. Se verificó por hash que la clave recuperada desde Drive coincide con la clave local usada para restaurar la copia real; no se ha ensayado en otro equipo.
+
+La tarea `Nexafia - Avisos de respaldo` revisa diariamente a las 11:15 y cinco minutos después de iniciar sesión si la última copia falló, tiene más de 36 horas, falta o hay menos de 1 GiB libre (o menos de tres veces el tamaño de la copia, si es mayor). El estado se consulta en `%LOCALAPPDATA%\NexafiaBackup\ultimo-estado.txt`. Al detectar un problema intenta mostrar un cuadro durante 60 segundos; no envía correo ni avisa con el equipo apagado. Las reglas se probaron con fallas simuladas y se observó que el proceso creó la ventana; la visualización efectiva en una ejecución programada con fallo no se ha confirmado. La tarea programada sana finalizó con código 0.
+
+El mismo monitor consulta mediante SSH verificado el espacio del disco montado en `/var/data` en Render. Avisa si queda 20 % o menos, marca como crítico 10 % o menos y avisa si no consigue comprobarlo. Verifica que el punto esté montado antes de medir y limita la espera SSH. El 20-11-2026 se comprobó el servicio real y una ejecución programada terminó con código 0; las condiciones de poco espacio y desconexión se probaron con datos simulados. La comprobación solo ocurre cuando se ejecuta la tarea en este computador y la ventana de fallo programado aún no se ha observado directamente; no sustituye alertas independientes del proveedor.
+
+El proceso crea temporales SQLite sin cifrar en el servidor y en el computador durante la validación; los borra al finalizar normalmente pero un cierre inesperado puede dejarlos. Deben protegerse y revisarse. La clave SSH habilita acceso amplio a la instancia, no solo al respaldo; quien acceda a la cuenta de Windows que custodia la clave puede potencialmente usarla. El procedimiento respalda la base SQLite, no garantiza cubrir futuros archivos externos o secretos de proveedores.
+
 ## Estado
 
-Herramienta local preparada y verificada con bases sintéticas. **No hay programación ni copia externa configuradas por este cambio**, y no se ha probado una restauración de los datos alojados en Render. Antes de usarla con datos reales, definir almacenamiento externo, permisos, ubicación segura de la clave, retención, supervisión y responsable operativo. No borrar los respaldos existentes.
+La herramienta original se verificó con bases sintéticas. Véase la sección anterior para el estado actualizado del respaldo local real. No borrar los respaldos existentes sin verificar su recuperación.
 
 ## Qué hace
 

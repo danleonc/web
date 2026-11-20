@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID, scrypt, timingSafeEqual } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Storage, digest } from "./storage.ts";
+import {clientIp} from "./client-ip.ts";
 const lifetime = 4 * 60 * 60_000;
 export const accountCookie = "entre_session";
 export const readToken = (req: IncomingMessage, name: string) =>
@@ -106,7 +107,7 @@ export class Auth {
     )
       return { status: 422, body: { error: "invalid_recovery" } };
     const username = value.username.toLowerCase();
-    const ip = req.socket.remoteAddress || "local";
+    const ip = clientIp(req);
     if (
       !this.storage.takeLimit(
         digest(`ip:${ip}`),

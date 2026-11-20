@@ -1,5 +1,6 @@
 import { createECDH, ECDH } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
+import {clientIp} from "./client-ip.ts";
 import webpush from "web-push";
 import { digest } from "./storage.ts";
 import type { Storage } from "./storage.ts";
@@ -111,7 +112,7 @@ export class PushDelivery {
     if (path === "/api/push/subscribe") {
       const sub = validSubscription(value.subscription);
       if (!sub || Object.keys(value).some(k => k !== "subscription")) { json(res, 422, { error: "invalid_subscription" }); return; }
-      if (!this.storage.takeLimit(`push-sub:${identity.id}`, 10, 600_000, this.now()) || !this.storage.takeLimit(`push-sub-ip:${req.socket.remoteAddress || "unknown"}`, 30, 600_000, this.now())) { json(res, 429, { error: "rate_limited" }); return; }
+      if (!this.storage.takePrivateLimit(`push-sub:${identity.id}`, 10, 600_000, this.now()) || !this.storage.takePrivateLimit(`push-sub-ip:${clientIp(req)}`, 30, 600_000, this.now())) { json(res, 429, { error: "rate_limited" }); return; }
       const key = digest(sub.endpoint);
       const existing = db.prepare("SELECT user_id FROM push_subscriptions WHERE endpoint_hash=?").get(key);
       if (existing && existing.user_id !== identity.id) { json(res, 409, { error: "device_conflict" }); return; }
@@ -130,8 +131,8 @@ export class PushDelivery {
     if (path.endsWith("/status")) { json(res, 200, { enabled: !!row }); return; }
     if (path.endsWith("/unsubscribe")) { db.prepare("DELETE FROM push_subscriptions WHERE endpoint_hash=? AND user_id=?").run(key, identity.id); json(res, 200, { ok: true }); return; }
     if (!row) { json(res, 404, { error: "device_not_found" }); return; }
-    const peer = req.socket.remoteAddress || "unknown";
-    if (!this.storage.takeLimit(`push-test:${identity.id}`, 5, 3_600_000, this.now()) || !this.storage.takeLimit(`push-test-ip:${peer}`, 20, 3_600_000, this.now())) { json(res, 429, { error: "rate_limited" }); return; }
+    const peer = clientIp(req);
+    if (!this.storage.takePrivateLimit(`push-test:${identity.id}`, 5, 3_600_000, this.now()) || !this.storage.takePrivateLimit(`push-test-ip:${peer}`, 20, 3_600_000, this.now())) { json(res, 429, { error: "rate_limited" }); return; }
     const sub = validSubscription(JSON.parse(String(row.subscription_json)));
     if (!sub) { db.prepare("DELETE FROM push_subscriptions WHERE endpoint_hash=?").run(key); json(res, 410, { error: "device_expired" }); return; }
     const payload = JSON.stringify({ title: "Nexafia", body: "Este es tu aviso de prueba. Los avisos reales de La Plaza requieren conectar su backend.", tag: "nexafia-test" });

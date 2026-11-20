@@ -1,3 +1,4 @@
+import {clientIp} from "./client-ip.ts";
 import {
   createHmac,
   randomBytes,
@@ -74,7 +75,7 @@ export class EmailConfirmation {
   ) {
     const now = this.now(),
       db = this.storage.db;
-    const ip = req.socket.remoteAddress || "local";
+    const ip = clientIp(req);
     if (path === "email-code") {
       if (
         Object.keys(value).some((k) => !["email", "adult"].includes(k)) ||

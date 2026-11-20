@@ -38,6 +38,7 @@ import { handleAccountProfile } from "./account-profile.ts";
 import { handleAccountPhoto } from "./account-photo.ts";
 import { handlePrivacy } from "./privacy-requests.ts";
 import type { PushConfig } from "./push.ts";
+import {clientIp, createClientIpResolver, setClientIp} from "./client-ip.ts";
 
 type Identity = {
   id: string;
@@ -67,6 +68,7 @@ type Connection = {
   expires: number;
 };
 type Options = {
+  trustedProxies?: string[];
   securityLog?: (event: { event: string; action: string; status: number }) => void;
   requireConnectionPhoto?: boolean;
   stagingPassword?: string;
@@ -100,6 +102,7 @@ function record(v: unknown): v is Record<string, unknown> {
   return !!v && typeof v === "object" && !Array.isArray(v);
 }
 export function createRoomServer(options: Options = {}) {
+  const resolveClientIp = createClientIpResolver(options.trustedProxies ?? []);
   if (options.stagingPassword !== undefined && (!/^[A-Za-z0-9_+/-]{32,128}={0,2}$/.test(options.stagingPassword) || options.stagingPassword.length > 128)) throw Error(`Invalid staging password (length=${options.stagingPassword.length}, charset=${/^[A-Za-z0-9_+/=-]*$/.test(options.stagingPassword) ? "supported" : "unsupported"})`);
   const gateHash = options.stagingPassword === undefined ? null : createHash("sha256").update(`nexafia:${options.stagingPassword}`).digest();
   function gateAllowed(req: IncomingMessage) {
@@ -222,6 +225,7 @@ export function createRoomServer(options: Options = {}) {
     typeof req.headers.origin === "string" && allowed.has(req.headers.origin) && req.headers["sec-fetch-site"] !== "cross-site";
   const securityLog = options.securityLog ?? ((event) => console.warn(JSON.stringify({ type: "security", ...event })));
   const server = createServer(async (req, res) => {
+    setClientIp(req, resolveClientIp(req));
     res.setHeader("X-Content-Type-Options", "nosniff");
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("Referrer-Policy", "same-origin");
@@ -679,7 +683,7 @@ export function createRoomServer(options: Options = {}) {
         json(res, 200, { id: existing.id, alias: existing.alias });
         return;
       }
-      const ip = req.socket.remoteAddress || "local";
+      const ip = clientIp(req);
       const limit = creationLimits.get(ip);
       if (limit && limit.until > now() && limit.count >= 30) {
         json(res, 429, { error: "too_many_sessions" });
@@ -818,6 +822,7 @@ export function createRoomServer(options: Options = {}) {
     );
   }
   server.on("upgrade", (req, socket, head) => {
+    setClientIp(req, resolveClientIp(req));
     if (!gateAllowed(req)) {
       socket.end('HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm="Nexafia pruebas", charset="UTF-8"\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
       return;
