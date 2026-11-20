@@ -480,3 +480,7 @@ La preparación del despliegue incorpora en el arranque una copia consistente y 
 ### Trabajo local · solicitud compartida de descubrimiento
 
 Se ajustó el desafío para que cualquiera de las dos personas lo solicite una vez y ambas fotos se liberen juntas tras diez vueltas compartidas, sujetos al acuerdo informado. Migración v25 y preensayo v23/v24 comprobados localmente; no desplegado. Se retiró del bloque de descubrimiento la indicación de quitar la foto. El acceso a la propia foto y las funciones de privacidad siguen separadas de esta presentación.
+
+### Trabajo local · respaldos cifrados
+
+Se preparó una herramienta de respaldo y restauración aislada con cifrado autenticado, claves independientes y protección contra sobrescritura. Las pruebas usan datos sintéticos y cubren clave incorrecta, manipulación, truncamiento, contenido inválido y uso de la herramienta. La copia consistente pasa por un archivo temporal sin cifrar y la documentación explica esta limitación. No hay destino externo, programación ni restauración real comprobada; la herramienta no se ejecuta automáticamente en Render. Detalles y tareas operativas: [respaldos cifrados](RESPALDOS_CIFRADOS.md).
