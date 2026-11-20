@@ -80,3 +80,7 @@ El código incorpora resolución común de IP para límites de autenticación, c
 ### Límites de Web Push (trabajo local)
 
 Los cuatro límites de alta y prueba de push ahora guardan una huella de su clave en lugar de direcciones o identificadores en texto. Al volver a usar una clave anterior, su contador se traslada de forma transaccional; si existen ambos registros activos, se suman conservadoramente y se mantiene la expiración más tardía. Las entradas antiguas que no se vuelvan a usar siguen hasta el vencimiento y limpieza normal. La huella es SHA-256 sin clave, por lo que es seudonimización, no anonimización ni cifrado. Cambio desplegado en `a284000`; el despliegue no verifica por sí solo el envío real de notificaciones.
+
+### Verificación operativa posterior
+
+El 20 de noviembre una solicitud HTTPS pública sin credenciales devolvió 401 y las cabeceras HSTS, protección de marcos y tipo de contenido. La ejecución de GitHub Actions del commit desplegado `a284000` aprobó dependencias, pruebas y compilación, pero falló el escaneo de secretos al detectar una contraseña fija de una prueba contra un usuario inexistente. La siguiente ejecución pasó, pero examinó otro commit y no descarta el hallazgo anterior. Se comprobó el contexto: era un dato ficticio de prueba; se reemplazó por un valor aleatorio generado durante la prueba sin desactivar el detector. El dato histórico permanece en Git y las búsquedas históricas pueden volver a señalarlo. Esto no acredita ausencia de otros secretos.

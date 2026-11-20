@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {randomUUID} from 'node:crypto';
 import {createClientIpResolver} from '../../server/client-ip.ts';
 
 const request=(peer,xff)=>({socket:{remoteAddress:peer},headers:xff===undefined?{}:{'x-forwarded-for':xff}});
@@ -32,7 +33,7 @@ test('la API utiliza la dirección resuelta para límites sin confiar en cabecer
   const path=join(dir,`${name}.sqlite`),app=createRoomServer({databasePath:path,trustedProxies:proxies,allowedOrigins:['http://localhost:4173'],securityLog:()=>{}});
   app.server.listen(0,'127.0.0.1');await once(app.server,'listening');
   try {
-   const res=await fetch(`http://127.0.0.1:${app.server.address().port}/api/auth/login`,{method:'POST',headers:{origin:'http://localhost:4173','content-type':'application/json','x-forwarded-for':'198.51.100.5'},body:JSON.stringify({username:'missing_user',password:'clave-de-prueba-123'})});
+   const res=await fetch(`http://127.0.0.1:${app.server.address().port}/api/auth/login`,{method:'POST',headers:{origin:'http://localhost:4173','content-type':'application/json','x-forwarded-for':'198.51.100.5'},body:JSON.stringify({username:'missing_user',password:randomUUID()})});
    assert.equal(res.status,401);
   } finally {await app.close();}
   const db=new DatabaseSync(path,{readOnly:true});try {assert.ok(db.prepare('SELECT 1 FROM auth_limits WHERE key=?').get(digest(`ip:${expected}`)));} finally {db.close();}
