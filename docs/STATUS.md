@@ -484,3 +484,7 @@ Se ajustó el desafío para que cualquiera de las dos personas lo solicite una v
 ### Trabajo local · respaldos cifrados
 
 Se preparó una herramienta de respaldo y restauración aislada con cifrado autenticado, claves independientes y protección contra sobrescritura. Las pruebas usan datos sintéticos y cubren clave incorrecta, manipulación, truncamiento, contenido inválido y uso de la herramienta. La copia consistente pasa por un archivo temporal sin cifrar y la documentación explica esta limitación. No hay destino externo, programación ni restauración real comprobada; la herramienta no se ejecuta automáticamente en Render. Detalles y tareas operativas: [respaldos cifrados](RESPALDOS_CIFRADOS.md).
+
+### Trabajo local · opción de copia externa
+
+Se preparó una integración manual desactivada para guardar respaldos cifrados en Cloudflare R2 y comprobar su lectura mediante hash. Pruebas con almacenamiento simulado, sin cuentas ni datos reales. No se ha creado ni contratado el destino, no se ha programado y no se ha validado una restauración externa; selección de proveedor, credenciales, retención, alertas y costos siguen pendientes. Ver [respaldos cifrados](RESPALDOS_CIFRADOS.md).
