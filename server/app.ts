@@ -224,6 +224,19 @@ export function createRoomServer(options: Options = {}) {
   const validOrigin = (req: IncomingMessage) =>
     typeof req.headers.origin === "string" && allowed.has(req.headers.origin) && req.headers["sec-fetch-site"] !== "cross-site";
   const securityLog = options.securityLog ?? ((event) => console.warn(JSON.stringify({ type: "security", ...event })));
+  let gateWindowStart = now(), gateFailures = 0;
+  function recordGateFailure(req: IncomingMessage) {
+    // A missing header is an ordinary first browser challenge, not a failed attempt.
+    if (!req.headers.authorization) return;
+    const current = now();
+    if (current < gateWindowStart || current - gateWindowStart >= 60_000) {
+      gateWindowStart = current;
+      gateFailures = 0;
+    }
+    if (gateFailures < 10 && ++gateFailures === 10) {
+      try { securityLog({ event: "staging_gate_suspicious", action: "authentication", status: 401 }); } catch { /* Logging must not block requests. */ }
+    }
+  }
   const server = createServer(async (req, res) => {
     setClientIp(req, resolveClientIp(req));
     res.setHeader("X-Content-Type-Options", "nosniff");
@@ -235,6 +248,7 @@ export function createRoomServer(options: Options = {}) {
     try {
     const path = new URL(req.url || "/", "http://localhost").pathname;
     if (!(path === "/api/health" && req.method === "GET") && !gateAllowed(req)) {
+      recordGateFailure(req);
       res.writeHead(401, { "WWW-Authenticate": 'Basic realm="Nexafia pruebas", charset="UTF-8"', "Cache-Control": "no-store" });
       res.end(); return;
     }
@@ -824,6 +838,7 @@ export function createRoomServer(options: Options = {}) {
   server.on("upgrade", (req, socket, head) => {
     setClientIp(req, resolveClientIp(req));
     if (!gateAllowed(req)) {
+      recordGateFailure(req);
       socket.end('HTTP/1.1 401 Unauthorized\r\nWWW-Authenticate: Basic realm="Nexafia pruebas", charset="UTF-8"\r\nConnection: close\r\nContent-Length: 0\r\n\r\n');
       return;
     }

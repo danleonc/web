@@ -84,3 +84,7 @@ Los cuatro límites de alta y prueba de push ahora guardan una huella de su clav
 ### Verificación operativa posterior
 
 El 20 de noviembre una solicitud HTTPS pública sin credenciales devolvió 401 y las cabeceras HSTS, protección de marcos y tipo de contenido. La ejecución de GitHub Actions del commit desplegado `a284000` aprobó dependencias, pruebas y compilación, pero falló el escaneo de secretos al detectar una contraseña fija de una prueba contra un usuario inexistente. La siguiente ejecución pasó, pero examinó otro commit y no descarta el hallazgo anterior. Se comprobó el contexto: era un dato ficticio de prueba; se reemplazó por un valor aleatorio generado durante la prueba sin desactivar el detector. El dato histórico permanece en Git y las búsquedas históricas pueden volver a señalarlo. Esto no acredita ausencia de otros secretos.
+
+### Señal para la puerta de pruebas
+
+El servidor registra `staging_gate_suspicious` al recibir diez intentos fallidos con cabecera de autorización en una ventana fija de un minuto. Agrupa HTTP y WebSocket por instancia, sin datos de la credencial, dirección ni usuario, y emite como máximo un evento por ventana activa; las solicitudes sin credenciales no se cuentan. El contador vive en memoria, se pierde al reiniciar y no identifica atacantes individuales. Es una señal en los registros, no una alerta automática ni un límite de intentos. Puede haber falsos positivos y no sustituye un control de fuerza bruta en un borde confiable. El código debe desplegarse y verificarse antes de atribuirlo al servicio.
