@@ -2,6 +2,7 @@ import {readFile,stat,statfs,access} from 'node:fs/promises';
 import {join,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {readRenderDisk,evaluateRenderDisk} from './render-disk-health.mjs';
+import {checkPublicHealth} from './public-health.mjs';
 
 export function evaluateBackupHealth({status,now,exists,freeBytes,backupBytes}) {
  const alerts=[];
@@ -14,7 +15,7 @@ export function evaluateBackupHealth({status,now,exists,freeBytes,backupBytes}) 
  return alerts;
 }
 
-export async function checkBackupHealth(configRoot,now=Date.now(),remoteCheck=readRenderDisk) {
+export async function checkBackupHealth(configRoot,now=Date.now(),remoteCheck=readRenderDisk,publicCheck=checkPublicHealth) {
  const dir=join(configRoot,'copias');
  let status=''; try {status=await readFile(join(configRoot,'ultimo-estado.txt'),'utf8')} catch {}
  const m=/^OK \S+ (nexafia-\d{8}T\d{6}Z-[a-f0-9]{8}\.enc)$/.exec(status.trim());
@@ -24,10 +25,11 @@ export async function checkBackupHealth(configRoot,now=Date.now(),remoteCheck=re
  const alerts=evaluateBackupHealth({status,now,exists,freeBytes,backupBytes});
  try {const identity=join(configRoot,'render_backup_ed25519'),hosts=join(configRoot,'known_hosts.render');await Promise.all([access(identity),access(hosts)]);const disk=await remoteCheck(identity,hosts);const warning=evaluateRenderDisk(disk);if(warning) alerts.push(warning);}
  catch {alerts.push('No se pudo comprobar el espacio del servidor de Nexafia en Render.');}
+ try {alerts.push(...await publicCheck());} catch {alerts.push('No se pudo comprobar el acceso público a Nexafia.');}
  return alerts;
 }
 if(process.argv[1] && import.meta.url===pathToFileURL(resolve(process.argv[1])).href) {
  if(!process.argv[2]) throw Error('Ruta de configuración requerida');
  const alerts=await checkBackupHealth(process.argv[2]);
- if(alerts.length) {console.log(alerts.join('\n'));process.exitCode=1;} else console.log('Respaldo reciente y espacio disponible local y en Render.');
+ if(alerts.length) {console.log(alerts.join('\n'));process.exitCode=1;} else console.log('Respaldo reciente, espacio disponible y acceso público de Nexafia comprobados.');
 }

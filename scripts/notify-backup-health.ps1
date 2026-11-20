@@ -14,6 +14,6 @@ try {
 if ($TestNoPopup) { Write-Output $description; exit 1 }
 try {
   $shell = New-Object -ComObject WScript.Shell
-  $null = $shell.Popup("$description`n`nAbre Codex para revisar el respaldo de Nexafia.", 60, 'Nexafia: revisa tus respaldos', 48)
-} catch { Write-Error 'No se pudo mostrar el aviso de respaldo.' }
+  $null = $shell.Popup("$description`n`nAbre Codex para revisar el estado de Nexafia.", 60, 'Nexafia: revisa su estado', 48)
+} catch { Write-Error 'No se pudo mostrar el aviso de estado de Nexafia.' }
 exit 1
