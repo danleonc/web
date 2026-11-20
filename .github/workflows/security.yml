@@ -17,11 +17,12 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Check out code
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
+          fetch-depth: 0
       - name: Set up Node.js
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: '24.19.0'
           cache: npm
@@ -35,3 +36,10 @@ jobs:
         run: npm run build:pilot
         env:
           VITE_ENTRE_PLAZA_REAL: '1'
+      - name: Scan Git history for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_COMMENTS: 'false'
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: 'false'
+          GITLEAKS_ENABLE_SUMMARY: 'false'
