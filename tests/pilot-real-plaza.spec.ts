@@ -475,6 +475,19 @@ test("dos personas aceptan una solicitud antes de conversar en privado", async (
   } finally { await ana.close(); await bea.close(); }
 });
 
+test("una reserva explica cuándo estará disponible el acceso", async ({browser},info) => {
+  const user=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+  try {
+    await register(user,`horario_${info.project.name}`);
+    const page=await user.newPage();
+    await page.route('**/api/activities*',route=>route.fulfill({json:{activities:[{id:'proximo',title:'Encuentro futuro',startsAt:'2099-01-01T12:00:00.000Z',minimum:3,maximum:4,reserved:1,mine:true,accessible:false,bookingOpen:true,ended:false}],nextOffset:null}}));
+    await page.goto('/#discover');
+    const card=page.getByRole('article').filter({hasText:'Encuentro futuro'});
+    await expect(card.getByRole('button',{name:'Entrar al encuentro'})).toBeDisabled();
+    await expect(card.getByText(/cinco minutos antes/)).toBeVisible();
+  } finally {await user.close();}
+});
+
 test("una convocatoria programada se puede reservar y abrir como encuentro compartido", async ({ browser }, info) => {
   const mod = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   const user = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
@@ -484,7 +497,7 @@ test("una convocatoria programada se puede reservar y abrir como encuentro compa
     await register(user, `encuentro_${info.project.name}`);
     const moderator = await mod.newPage(); await moderator.goto("/#discover");
     await moderator.getByText("Programar un encuentro", { exact: true }).click();
-    const time = await moderator.evaluate(() => { const d = new Date(Date.now() + 2 * 60 * 60_000); const pad = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; });
+    const time = await moderator.evaluate((hours) => { const d = new Date(Date.now() + hours * 60 * 60_000); const pad = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`; }, info.project.name === 'mobile' ? 3 : 2);
     await moderator.getByLabel("Fecha y hora del encuentro").fill(time);
     await moderator.getByRole("button", { name: "Crear convocatoria" }).click();
     await expect(moderator.getByText("Convocatoria creada.", { exact: true })).toBeVisible();
@@ -492,9 +505,10 @@ test("una convocatoria programada se puede reservar y abrir como encuentro compa
     await expect(participant.getByText(/Lo que compartes se guarda solo en este navegador/)).toHaveCount(0);
     expect((await new AxeBuilder({ page: participant }).include(".real-plaza").withTags(["wcag2a", "wcag2aa"]).analyze()).violations).toEqual([]);
     await participant.screenshot({ path: info.outputPath("encuentros.png"), fullPage: true });
-    await participant.getByRole("button", { name: "Reservar encuentro" }).click();
+    const meetingCard = participant.getByRole('article').filter({hasText:'¿Y si pudieras vivir otra vida?'}).last();
+    await meetingCard.getByRole("button", { name: "Reservar encuentro" }).click();
     await expect(participant.getByText("Reserva confirmada", { exact: true })).toBeVisible();
-    await participant.getByRole("button", { name: "Entrar al encuentro" }).click();
+    await meetingCard.getByRole("button", { name: "Entrar al encuentro" }).click();
     await participant.getByLabel(/Entiendo que esta prueba comparte/).check();
     await participant.getByRole("button", { name: "Conectar con esta sala" }).click();
     await expect(participant.getByText("Conectado al servidor", { exact: true })).toBeVisible();
@@ -514,7 +528,7 @@ test("tres cuentas comparten una convocatoria programada", async ({ browser }, i
     const pages = await Promise.all(people.map((context) => context.newPage()));
     for (const page of pages) {
       await page.goto("/#discover");
-      const card = page.getByRole("article").filter({ hasText: "Ideas tan locas que podrían funcionar" });
+      const card = page.getByRole("article").filter({ hasText: "Ideas tan locas que podrían funcionar" }).last();
       await card.getByRole("button", { name: "Reservar encuentro" }).click();
       await card.getByRole("button", { name: "Entrar al encuentro" }).click();
       await page.getByLabel(/Entiendo que esta prueba comparte/).check(); await page.getByRole("button", { name: "Conectar con esta sala" }).click();
@@ -535,7 +549,7 @@ test("una cancelación muestra el motivo a la persona con reserva", async ({ bro
     const headers = { Origin: "http://127.0.0.1:4190" };
     expect((await mod.request.post("/api/auth/login", { headers, data: { username: "moderator_fixture", password: "Una clave exclusiva del fixture 123" } })).status()).toBe(200);
     await register(user, `cancelacion_${info.project.name}`);
-    const created = await mod.request.post("/api/meetings", { headers, data: { themeId: "cafe", startsAt: Date.now() + 7200_000, capacity: 4 } });
+    const created = await mod.request.post("/api/meetings", { headers, data: { themeId: "cafe", startsAt: Date.now() + (info.project.name === 'mobile' ? 5 : 4) * 3600_000, capacity: 4 } });
     const id = (await created.json()).meeting.id;
     expect((await user.request.post(`/api/reservations/${id}`, { headers })).status()).toBe(200);
     const moderator = await mod.newPage(); await moderator.goto("/#discover");

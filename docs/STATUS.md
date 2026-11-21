@@ -488,3 +488,7 @@ Se preparó una herramienta de respaldo y restauración aislada con cifrado aute
 ### Trabajo local · opción de copia externa
 
 Se preparó una integración manual desactivada para guardar respaldos cifrados en Cloudflare R2 y comprobar su lectura mediante hash. Pruebas con almacenamiento simulado, sin cuentas ni datos reales. No se ha creado ni contratado el destino, no se ha programado y no se ha validado una restauración externa; selección de proveedor, credenciales, retención, alertas y costos siguen pendientes. Ver [respaldos cifrados](RESPALDOS_CIFRADOS.md).
+
+### Encuentros · claridad de acceso y comprobación
+
+En una reserva cuya sala aún no está accesible se explica que abre cinco minutos antes y que el acceso puede cerrarse después del inicio. Se corrigió la interferencia entre los recorridos de escritorio y móvil en el fixture compartido. Pasaron ocho pruebas de navegador: explicación de acceso, programación y reserva, encuentro con tres cuentas y cancelación, en ambos tamaños. El fixture de navegador omite las restricciones reales de horario; otras tres pruebas de servidor cubrieron horario, cupos y cancelación usando reloj controlado. No se ha realizado aquí un encuentro completo con personas en Render ni validado la experiencia real en teléfono físico. Pendiente verificar despliegue.
