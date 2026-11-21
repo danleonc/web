@@ -39,4 +39,7 @@ test('el aviso detecta configuración inexistente y sale con error', {skip:proce
  const dir=await mkdtemp(join(tmpdir(),'nex-health-')); t.after(()=>rm(dir,{recursive:true,force:true}));
  const r=spawnSync('powershell.exe',['-NoProfile','-File',resolve('scripts/notify-backup-health.ps1'),'-NodePath',process.execPath,'-HealthScript',resolve('scripts/backup-health.mjs'),'-ConfigRoot',dir,'-TestNoPopup'],{encoding:'utf8'});
  assert.equal(r.status,1); assert.match(r.stdout,/respaldo/i);
+ await (await import('node:fs/promises')).writeFile(join(dir,'security-monitor-enabled'),'');
+ const withSecurity=spawnSync('powershell.exe',['-NoProfile','-File',resolve('scripts/notify-backup-health.ps1'),'-NodePath',process.execPath,'-HealthScript',resolve('scripts/backup-health.mjs'),'-ConfigRoot',dir,'-TestNoPopup'],{encoding:'utf8'});
+ assert.equal(withSecurity.status,1);assert.match(withSecurity.stdout,/monitor de seguridad de Render/i);
 });
