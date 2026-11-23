@@ -104,6 +104,21 @@ async function register(context: BrowserContext, name: string) {
   const { code } = JSON.parse(await readFile(join(tmpdir(), "afinia-test-pilot-mailbox", createHash("sha256").update(email).digest("hex") + ".json"), "utf8"));
   expect((await context.request.post(`${origin}/api/auth/confirm-email`, { headers, data: { code } })).status()).toBe(200);
 }
+test('La Plaza actualiza respuestas mientras conserva el borrador', async ({ browser }, info) => {
+  const a = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
+  const b = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
+  try {
+    await register(a, `liveplaza_a_${info.project.name}`); await register(b, `liveplaza_b_${info.project.name}`);
+    const headers = { Origin: 'http://127.0.0.1:4190' };
+    const { post } = await (await a.request.post('/api/plaza/posts', { headers, data: { topic: 'cultura', title: `Charla activa ${info.project.name}`, body: 'Hablemos' } })).json();
+    const page = await a.newPage(); await page.goto('/#plaza');
+    await page.getByRole('article').filter({ hasText: `Charla activa ${info.project.name}` }).getByRole('button', { name: 'Ver conversación' }).click();
+    await page.getByLabel('Tu respuesta').fill('Estoy escribiendo una respuesta');
+    expect((await b.request.post(`/api/plaza/posts/${post.id}/replies`, { headers, data: { body: 'Una respuesta nueva' } })).status()).toBe(201);
+    await expect(page.getByText('Una respuesta nueva', { exact: true })).toBeVisible({ timeout: 12000 });
+    await expect(page.getByLabel('Tu respuesta')).toHaveValue('Estoy escribiendo una respuesta');
+  } finally { await a.close(); await b.close(); }
+});
 test('el perfil se guarda en la cuenta y no se mezcla al cambiar de persona', async ({ browser }, info) => {
   const a = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
   const b = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });

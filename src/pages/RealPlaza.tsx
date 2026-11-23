@@ -100,6 +100,23 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
     catch { if (current === threadRequest.current) setError("No pudimos cargar las respuestas. Inténtalo de nuevo."); }
     finally { if (current === threadRequest.current) setThreadLoading(false); }
   }
+  useEffect(() => {
+    if (!ready || !active || busy || threadLoading) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const update = async () => {
+      if (document.visibilityState === "visible") {
+        const current = threadRequest.current;
+        try {
+          const result = await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`);
+          if (!cancelled && current === threadRequest.current) setReplies(result.replies);
+        } catch { /* Se intentará nuevamente sin interrumpir el borrador. */ }
+      }
+      if (!cancelled) timer = setTimeout(update, 4000);
+    };
+    timer = setTimeout(update, 4000);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [ready, active, busy, threadLoading]);
   const openedNotice = useRef<number | null>(null);
   useEffect(() => {
     if (!ready || !noticeTarget || openedNotice.current === noticeTarget.serial) return;

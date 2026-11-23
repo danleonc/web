@@ -492,3 +492,7 @@ Se preparó una integración manual desactivada para guardar respaldos cifrados 
 ### Encuentros · claridad de acceso y comprobación
 
 En una reserva cuya sala aún no está accesible se explica que abre cinco minutos antes y que el acceso puede cerrarse después del inicio. Se corrigió la interferencia entre los recorridos de escritorio y móvil en el fixture compartido. Pasaron ocho pruebas de navegador: explicación de acceso, programación y reserva, encuentro con tres cuentas y cancelación, en ambos tamaños. El fixture de navegador omite las restricciones reales de horario; otras tres pruebas de servidor cubrieron horario, cupos y cancelación usando reloj controlado. No se ha realizado aquí un encuentro completo con personas en Render ni validado la experiencia real en teléfono físico. Render informó despliegue exitoso del commit `4a0b9ab` y la salud pública respondió 200.
+
+### La Plaza · actualización de respuestas
+
+La conversación abierta consulta periódicamente las respuestas cuando la pestaña está visible; conserva el borrador y no aplica resultados de un hilo anterior al navegar. Se detiene durante acciones en curso y reintenta errores de lectura. Compilación y seis recorridos de navegador aprobados en escritorio y móvil simulado, con cuentas de prueba. No equivale a entrega instantánea ni a pruebas en teléfonos físicos.
