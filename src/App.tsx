@@ -686,7 +686,7 @@ function App() {
         )}
         <main id="main-content" ref={mainRef} tabIndex={-1}>
           {page === "plaza" && realPlazaEnabled && (
-            <RealPlaza key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onProfile={() => prepareProfile('plaza')} noticeTarget={noticeTarget?.kind === "reply" ? noticeTarget : null} {...stickerActions} />
+            <RealPlaza key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} notices={realNotices} onAccess={() => setAccessOpen(true)} onProfile={() => prepareProfile('plaza')} noticeTarget={noticeTarget?.kind === "reply" ? noticeTarget : null} {...stickerActions} />
           )}
           {page === "plaza" && !realPlazaEnabled && (
             <Plaza
@@ -796,7 +796,7 @@ function App() {
               }}
             />
           )}
-          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} onAccess={() => setAccessOpen(true)} onProfile={() => prepareProfile('connections')} onPlaza={() => navigate("plaza")} noticeTarget={noticeTarget && noticeTarget.kind !== "reply" ? noticeTarget : null} {...stickerActions} />}
+          {page === "connections" && realPlazaEnabled && <RealConnections key={account.account?.id || "guest"} account={account.account} loaded={account.loaded} notices={realNotices} onAccess={() => setAccessOpen(true)} onProfile={() => prepareProfile('connections')} onPlaza={() => navigate("plaza")} noticeTarget={noticeTarget && noticeTarget.kind !== "reply" ? noticeTarget : null} {...stickerActions} />}
           {page === "connections" && !realPlazaEnabled && (
             <Connections
               {...stickerActions}

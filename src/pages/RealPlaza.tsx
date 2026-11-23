@@ -17,6 +17,7 @@ import { ImagePlus, Sticker, Send } from "lucide-react";
 import { ReplyDraft, ReplyQuote } from "../chat/replies";
 import { getSticker } from "../chat/stickers";
 import type { StickerActions } from "../chat/stickers";
+import { ConversationMute, useRealNotices } from "../notifications/RealNoticeCenter";
 
 type Post = { imageId?: string | null; imageDescription?: string | null; stickerId?: string | null; id: string; topic: string; title: string; body: string; authorId: string; author: string };
 type Reply = { replyTo?: string | null; quote?: {id:string;name:string;summary:string} | null; imageId?: string | null; imageDescription?: string | null; stickerId?: string | null; id: string; body: string; authorId: string; author: string };
@@ -26,7 +27,7 @@ async function request<T>(path: string, method = "GET", body?: object): Promise<
   if (!response.ok) { const detail = await response.json().catch(() => ({})); throw Error(detail.error === 'profile_photo_required' ? 'Agrega tu foto de Conexiones para enviar una solicitud nueva.' : response.status === 401 || response.status === 403 ? "Revisa tu sesión y confirma tu correo para participar." : "No pudimos completar la acción. Inténtalo de nuevo."); }
   return response.json() as Promise<T>;
 }
-export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onProfile: () => void; noticeTarget?: { id: string; serial: number } | null } & StickerActions) {
+export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, notices, ...stickers }: { account: AccountView | null; loaded: boolean; onAccess: () => void; onProfile: () => void; notices: ReturnType<typeof useRealNotices>; noticeTarget?: { id: string; serial: number } | null } & StickerActions) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [topicFilter, setTopicFilter] = useState('todos');
   const [searchDraft, setSearchDraft] = useState('');
@@ -258,7 +259,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
         {nextCursor && !loading && <button type="button" className="button secondary" disabled={loadingMore} onClick={() => void loadMore()}>{loadingMore ? 'Cargando…' : 'Cargar más conversaciones'}</button>}
       </section>
       </div>
-      {selected && <section className="real-plaza-panel" aria-labelledby="thread-title"><button className="button text" disabled={busy} onClick={navigation.back}>← Volver a La Plaza</button><h2 id="thread-title" ref={threadHeading} tabIndex={-1}>{selected.title}</h2><p>{selected.author} · {plazaTopics.find((t) => t.id === selected.topic)?.short}</p><p>{selected.body}</p>{selected.stickerId && <StickerImage id={selected.stickerId}/>}
+      {selected && <section className="real-plaza-panel" aria-labelledby="thread-title"><button className="button text" disabled={busy} onClick={navigation.back}>← Volver a La Plaza</button><h2 id="thread-title" ref={threadHeading} tabIndex={-1}>{selected.title}</h2><ConversationMute key={selected.id} notices={notices} kind="post" id={selected.id}/><p>{selected.author} · {plazaTopics.find((t) => t.id === selected.topic)?.short}</p><p>{selected.body}</p>{selected.stickerId && <StickerImage id={selected.stickerId}/>}
         {selected.imageId && <ImageView plaza image={{id:selected.imageId,description:selected.imageDescription || ""}} />}
         {(olderReplies || replyCursor) && <nav aria-label="Páginas de respuestas">{olderReplies && <button type="button" className="button secondary" disabled={busy || replyPageLoading} onClick={() => void showReplyPage(selected.id, olderReplies)}>Ver respuestas anteriores</button>}{replyCursor && <button type="button" className="button text" disabled={busy || replyPageLoading} onClick={() => void showReplyPage(selected.id, null)}>Ver respuestas recientes</button>}</nav>}
         {threadLoading || replyPageLoading ? <p role="status">Cargando respuestas…</p> : replies.length === 0 ? <p>Aún no hay respuestas.</p> : <div className="plaza-replies">{replies.map((item) => <article key={item.id} className="real-plaza-reply" data-message-id={item.id} tabIndex={-1}><strong>{item.author}</strong>{item.replyTo && <ReplyQuote target={item.quote || (replies.find(original => original.id === item.replyTo) ? asTarget(replies.find(original => original.id === item.replyTo)!) : undefined)} available={replies.some(original => original.id === item.replyTo)} />}<p>{item.body}</p>{item.stickerId && <StickerImage id={item.stickerId}/>}

@@ -508,3 +508,7 @@ La lista de conexiones y el historial privado permiten consultar páginas anteri
 ### Citas entre páginas
 
 Las respuestas de La Plaza y los mensajes privados incluyen un resumen acotado de la cita visible aunque el original esté en otra página. El servidor solo lo entrega mientras el contenido original siga disponible y se respeten los bloqueos y permisos; cuando el original no está cargado, el resumen no se presenta como un botón que permita saltar a él. Pruebas de servidor de eliminación, bloqueo y aislamiento entre cuentas, más ocho recorridos de navegador en escritorio y móvil simulado. Cambio preparado localmente; consultar el estado del despliegue antes de afirmar que está publicado.
+
+### Avisos · controles en cada conversación
+
+La Plaza y los chats privados permiten silenciar o reactivar los avisos desde la conversación, sin depender de un aviso anterior en la campana. Se reutilizan las preferencias y verificaciones de autorización existentes; los avisos enviados previamente no se retiran. Pruebas locales con dos cuentas, recarga y silencio/reactivación en escritorio y móvil simulado. No acredita recepción push en dispositivos reales ni configuración de proveedor. Pendiente de despliegue y comprobación en Render.

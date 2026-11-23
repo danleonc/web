@@ -7,22 +7,29 @@ type Notice = { id: string; kind: "reply" | "message" | "invitation" | "acceptan
 type Mute = { kind: "post" | "connection"; targetId: string };
 export function useRealNotices(accountId: string | null) {
   const currentAccount = useRef(accountId); currentAccount.current = accountId;
-  const [items, setItems] = useState<Notice[]>([]); const [unread, setUnread] = useState(0); const [mutes, setMutes] = useState<Mute[]>([]); const [error, setError] = useState("");
+  const refreshVersion = useRef(0);
+  const [items, setItems] = useState<Notice[]>([]); const [unread, setUnread] = useState(0); const [mutes, setMutes] = useState<Mute[]>([]); const [error, setError] = useState(""); const [loaded, setLoaded] = useState(false);
   const refresh = useCallback(async () => {
     if (!accountId) return;
+    const version = ++refreshVersion.current;
     const r = await fetch("/api/plaza/notifications", { credentials: "same-origin" });
     if (!r.ok) throw Error("No pudimos actualizar las notificaciones.");
-    const result = await r.json(); if (currentAccount.current !== accountId) return; setItems(result.items); setUnread(result.unread); setMutes(result.mutes); setError("");
+    const result = await r.json(); if (currentAccount.current !== accountId || version !== refreshVersion.current) return; setItems(result.items); setUnread(result.unread); setMutes(result.mutes); setError(""); setLoaded(true);
   }, [accountId]);
   useEffect(() => {
-    let stopped = false; setItems([]); setUnread(0); setMutes([]);
+    let stopped = false; setItems([]); setUnread(0); setMutes([]); setLoaded(false);
     if (!accountId) return;
     const update = () => { if (!stopped && document.visibilityState === "visible") void refresh().catch(() => { if (!stopped) setError("No pudimos actualizar las notificaciones."); }); };
     update(); const timer = window.setInterval(update, 10000); document.addEventListener("visibilitychange", update);
     return () => { stopped = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", update); };
   }, [accountId, refresh]);
   const post = async (path: string, body: object) => { const r = await fetch(path, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); if (!r.ok) throw Error("No pudimos guardar el cambio."); await refresh(); };
-  return { items, unread, mutes, error, refresh, read: (id: string) => post("/api/plaza/notifications/read", { id }), mute: (kind: Mute["kind"], targetId: string, muted: boolean) => post("/api/plaza/notifications/mute", { kind, targetId, muted }) };
+  return { items, unread, mutes, error, loaded, refresh, read: (id: string) => post("/api/plaza/notifications/read", { id }), mute: (kind: Mute["kind"], targetId: string, muted: boolean) => post("/api/plaza/notifications/mute", { kind, targetId, muted }) };
+}
+export function ConversationMute({ notices, kind, id }: { notices: ReturnType<typeof useRealNotices>; kind: Mute['kind']; id: string }) {
+  const [busy,setBusy] = useState(false); const [error,setError] = useState('');
+  const muted = notices.mutes.some(item => item.kind === kind && item.targetId === id);
+  return <div><button type="button" className="button text" disabled={!notices.loaded || busy} onClick={() => { setBusy(true); setError(''); void notices.mute(kind,id,!muted).catch(() => setError('No pudimos cambiar tus avisos. Inténtalo nuevamente.')).finally(() => setBusy(false)); }}>{muted ? <Bell size={16} aria-hidden="true" /> : <BellOff size={16} aria-hidden="true" />}{muted ? 'Reactivar avisos de esta conversación' : 'Silenciar avisos de esta conversación'}</button>{error && <p role="alert">{error}</p>}</div>;
 }
 export function RealNoticeCenter({ notices, signedIn, onClose, onAccess, onOpen, children }: { children?: ReactNode; notices: ReturnType<typeof useRealNotices>; signedIn: boolean; onClose: () => void; onAccess: () => void; onOpen: (kind: Notice["kind"], id: string) => void }) {
   const [error, setError] = useState("");

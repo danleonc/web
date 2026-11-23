@@ -677,6 +677,31 @@ test("la campana abre solicitudes y aceptaciones de conexión", async ({browser}
  } finally {await a.close();await b.close();}
 });
 
+test('silenciar y reactivar desde conversaciones sin aviso previo', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use}); const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`mute_ui_a_${info.project.name}`); await register(b,`mute_ui_b_${info.project.name}`); const headers={Origin:'http://127.0.0.1:4190'};
+  const {post}=await (await a.request.post('/api/plaza/posts',{headers,data:{topic:'cultura',title:`Control avisos ${info.project.name}`,body:'Hola'}})).json();
+  const page=await a.newPage(); await page.goto('/#plaza'); await page.getByRole('article').filter({hasText:`Control avisos ${info.project.name}`}).getByRole('button',{name:'Ver conversación'}).click();
+  await page.getByRole('button',{name:'Silenciar avisos de esta conversación'}).click();
+  expect((await b.request.post(`/api/plaza/posts/${post.id}/replies`,{headers,data:{body:'Respuesta sin aviso'}})).status()).toBe(201);
+  expect((await (await a.request.get('/api/plaza/notifications')).json()).items.filter((x:any)=>x.kind==='reply')).toHaveLength(0);
+  await page.getByRole('button',{name:'Reactivar avisos de esta conversación'}).click();
+  expect((await b.request.post(`/api/plaza/posts/${post.id}/replies`,{headers,data:{body:'Respuesta con aviso'}})).status()).toBe(201);
+  expect((await (await a.request.get('/api/plaza/notifications')).json()).items.filter((x:any)=>x.kind==='reply')).toHaveLength(1);
+  const {invitation}=await (await b.request.post('/api/plaza/invitations',{headers,data:{kind:'post',contentId:post.id,note:''}})).json();
+  await a.request.post(`/api/plaza/invitations/${invitation.id}/decision`,{headers,data:{action:'accept'}});
+  await page.goto('/#connections'); await page.getByRole('button',{name:'Abrir conversación'}).click();
+  await page.getByRole('button',{name:'Silenciar avisos de esta conversación'}).click();
+  await b.request.post(`/api/plaza/connections/${invitation.id}/messages`,{headers,data:{clientId:'mute-before-0001',body:'Mensaje sin aviso'}});
+  expect((await (await a.request.get('/api/plaza/notifications')).json()).items.filter((x:any)=>x.kind==='message')).toHaveLength(0);
+  await page.reload(); await page.getByRole('button',{name:'Abrir conversación'}).click(); await expect(page.getByRole('button',{name:'Reactivar avisos de esta conversación'})).toBeVisible();
+  await page.getByRole('button',{name:'Reactivar avisos de esta conversación'}).click();
+  await b.request.post(`/api/plaza/connections/${invitation.id}/messages`,{headers,data:{clientId:'mute-after-0002',body:'Mensaje con aviso'}});
+  expect((await (await a.request.get('/api/plaza/notifications')).json()).items.filter((x:any)=>x.kind==='message')).toHaveLength(1);
+ } finally {await a.close();await b.close();}
+});
+
 test("la campana muestra respuestas reales y permite silenciar", async ({ browser }, info) => {
   const a = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   const b = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
