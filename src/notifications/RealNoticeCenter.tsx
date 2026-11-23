@@ -24,7 +24,7 @@ export function useRealNotices(accountId: string | null) {
     return () => { stopped = true; window.clearInterval(timer); document.removeEventListener("visibilitychange", update); };
   }, [accountId, refresh]);
   const post = async (path: string, body: object) => { const r = await fetch(path, { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); if (!r.ok) throw Error("No pudimos guardar el cambio."); await refresh(); };
-  return { items, unread, mutes, error, loaded, refresh, read: (id: string) => post("/api/plaza/notifications/read", { id }), mute: (kind: Mute["kind"], targetId: string, muted: boolean) => post("/api/plaza/notifications/mute", { kind, targetId, muted }) };
+  return { items, unread, mutes, error, loaded, refresh, read: (id: string) => post("/api/plaza/notifications/read", { id }), readAll: () => post("/api/plaza/notifications/read-all", {}), mute: (kind: Mute["kind"], targetId: string, muted: boolean) => post("/api/plaza/notifications/mute", { kind, targetId, muted }) };
 }
 export function ConversationMute({ notices, kind, id }: { notices: ReturnType<typeof useRealNotices>; kind: Mute['kind']; id: string }) {
   const [busy,setBusy] = useState(false); const [error,setError] = useState('');
@@ -33,10 +33,12 @@ export function ConversationMute({ notices, kind, id }: { notices: ReturnType<ty
 }
 export function RealNoticeCenter({ notices, signedIn, onClose, onAccess, onOpen, children }: { children?: ReactNode; notices: ReturnType<typeof useRealNotices>; signedIn: boolean; onClose: () => void; onAccess: () => void; onOpen: (kind: Notice["kind"], id: string) => void }) {
   const [error, setError] = useState("");
+  const [reading, setReading] = useState(false);
   return <Modal title="Notificaciones" wide onClose={onClose}><div className="notice-center">
     {!signedIn ? <div className="notice-empty"><p>Entra a tu cuenta para ver tus avisos.</p><button className="button primary" onClick={onAccess}>Entrar</button></div> : <>
       <p className="notice-scope">Aquí aparecen respuestas, mensajes y novedades de tus conexiones.</p>
       {(error || notices.error) && <p role="alert">{error || notices.error}</p>}
+      {notices.unread > 0 && <button type="button" className="button text" disabled={reading} onClick={() => { setReading(true); setError(''); void notices.readAll().catch(() => setError('No pudimos marcar los avisos. Inténtalo nuevamente.')).finally(() => setReading(false)); }}>Marcar todos como leídos</button>}
       {notices.items.length ? <ul className="notice-list">{notices.items.map(item => { const kind = item.kind === "reply" ? "post" : "connection"; const muted = notices.mutes.some(m => m.kind === kind && m.targetId === item.targetId); return <li key={item.id} className={item.readAt ? "" : "notice-unread"}>
         <button className="notice-open" onClick={() => { void notices.read(item.id).then(() => onOpen(item.kind, item.targetId)).catch(() => setError("No pudimos abrir el aviso. Inténtalo de nuevo.")); }}><span className="notice-kind">{item.kind === "reply" ? "Nueva respuesta" : item.kind === "message" ? "Nuevo mensaje" : item.kind === "invitation" ? "Nueva solicitud" : "Solicitud aceptada"}{!item.readAt && <span className="notice-dot" aria-label="Sin leer" />}</span><strong>{item.kind === "invitation" || item.kind === "acceptance" ? "Conexiones" : item.title}</strong><span>{item.actor} {item.kind === "reply" ? "respondió una conversación" : item.kind === "message" ? "te envió un mensaje" : item.kind === "invitation" ? "quiere seguir conversando contigo" : "aceptó tu solicitud"}.</span><span className="notice-link">{item.kind === "invitation" ? "Ver solicitud →" : "Ver conversación →"}</span></button>
         {(item.kind === "reply" || item.kind === "message") && <button className="button text" onClick={() => void notices.mute(kind, item.targetId, !muted).catch(() => setError("No pudimos guardar tu preferencia."))}>{muted ? <Bell size={15} /> : <BellOff size={15} />}{muted ? "Reactivar" : "Silenciar"}</button>}

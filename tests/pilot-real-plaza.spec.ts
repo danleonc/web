@@ -716,6 +716,8 @@ test("la campana muestra respuestas reales y permite silenciar", async ({ browse
     await expect(page.getByRole('article').filter({hasText:`Aviso ${info.project.name}`})).toHaveCount(0);
     const bell = page.getByRole('button', { name: /Notificaciones, 1 aviso sin leer/ }); await expect(bell).toBeVisible(); await bell.click();
     await expect(page.getByText('Nueva respuesta', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Marcar todos como leídos' }).click();
+    await expect(page.getByRole('button', { name: /Notificaciones, sin avisos sin leer/ })).toBeVisible();
     await page.getByRole('button', { name: /Silenciar/ }).click();
     await expect(page.getByRole('button', { name: /Reactivar/ })).toBeVisible();
     await page.getByRole('button', { name: /Nueva respuesta/ }).click();

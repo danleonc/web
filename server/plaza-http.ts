@@ -110,6 +110,9 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
     } else if (req.method === "POST" && path === "/api/plaza/notifications/read") {
       const value = await body(req); if (!fields(value, ["id"])) throw Error("invalid_body");
       const ok = notifications.read(actor.id, String(value.id)); json(res, ok ? 200 : 404, ok ? {ok:true} : {error:'not_found'});
+    } else if (req.method === "POST" && path === "/api/plaza/notifications/read-all") {
+      const value = await body(req); if (Object.keys(value).length) throw Error('invalid_body');
+      notifications.readAll(actor.id); json(res,200,{ok:true});
     } else if (req.method === "POST" && path === "/api/plaza/notifications/mute") {
       const value = await body(req); if (Object.keys(value).length !== 3 || typeof value.kind !== 'string' || typeof value.targetId !== 'string' || typeof value.muted !== 'boolean') throw Error('invalid_body');
       const ok = notifications.mute(actor.id, value.kind, value.targetId, value.muted); json(res, ok ? 200 : 404, ok ? {ok:true} : {error:'not_found'});

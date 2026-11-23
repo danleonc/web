@@ -512,3 +512,7 @@ Las respuestas de La Plaza y los mensajes privados incluyen un resumen acotado d
 ### Avisos · controles en cada conversación
 
 La Plaza y los chats privados permiten silenciar o reactivar los avisos desde la conversación, sin depender de un aviso anterior en la campana. Se reutilizan las preferencias y verificaciones de autorización existentes; los avisos enviados previamente no se retiran. Pruebas locales con dos cuentas, recarga y silencio/reactivación en escritorio y móvil simulado. No acredita recepción push en dispositivos reales ni configuración de proveedor. Pendiente de despliegue y comprobación en Render.
+
+### Avisos · marcar como leídos
+
+La campana permite marcar como leídos todos los avisos visibles de la cuenta, incluidos los que superan los cien elementos mostrados. La operación conserva los filtros de visibilidad y no modifica avisos de otras cuentas. Marcar leídos no cancela notificaciones push que ya puedan haberse enviado. Se probaron 105 avisos y aislamiento entre cuentas en el servidor, y seis recorridos de campana en escritorio y móvil simulado. Pendiente de despliegue en Render.

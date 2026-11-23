@@ -1,6 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fixture } from './feature-fixture.mjs';
+import { DatabaseSync } from 'node:sqlite';
+
+test('marcar todos como leídos alcanza avisos antiguos sin afectar otras cuentas', async t => {
+ const f=await fixture(t,{plazaEnabled:true});const a=await f.signup('all_notices_a'),b=await f.signup('all_notices_b');
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'cultura',title:'Avisos',body:'Hola'},a.cookie)).body.post;
+ const db=new DatabaseSync(f.path);const reply=db.prepare('INSERT INTO plaza_replies(id,post_id,author_id,body,created_at) VALUES(?,?,?,?,?)');
+ const notice=db.prepare("INSERT INTO notifications(id,recipient_id,actor_id,kind,target_id,event_id,created_at) VALUES(?,?,?,'reply',?,?,?)");
+ for(let n=0;n<105;n++){const id=`70000000-0000-4000-8000-${String(n).padStart(12,'0')}`;reply.run(id,post.id,b.id,'Hola',n+1);notice.run(`80000000-0000-4000-8000-${String(n).padStart(12,'0')}`,a.id,b.id,post.id,id,n+1);}
+ db.close();
+ const before=(await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body; assert.equal(before.unread,105);assert.equal(before.items.length,100);
+ assert.equal((await f.request('/api/plaza/notifications/read-all','POST',{},b.cookie)).status,200);
+ assert.equal((await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body.unread,105);
+ assert.equal((await f.request('/api/plaza/notifications/read-all','POST',{extra:'x'},a.cookie)).status,422);
+ assert.equal((await f.request('/api/plaza/notifications/read-all','POST',{},a.cookie)).status,200);
+ const after=(await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body;assert.equal(after.unread,0);assert.ok(after.items.every(x=>x.readAt!==null));
+});
 
 test('respuestas generan avisos por cuenta, permiten silenciar y marcar leídos', async t => {
   const f = await fixture(t, { plazaEnabled: true });
