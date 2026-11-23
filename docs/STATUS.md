@@ -516,3 +516,9 @@ La Plaza y los chats privados permiten silenciar o reactivar los avisos desde la
 ### Avisos · marcar como leídos
 
 La campana permite marcar como leídos todos los avisos visibles de la cuenta, incluidos los que superan los cien elementos mostrados. La operación conserva los filtros de visibilidad y no modifica avisos de otras cuentas. Marcar leídos no cancela notificaciones push que ya puedan haberse enviado. Se probaron 105 avisos y aislamiento entre cuentas en el servidor, y seis recorridos de campana en escritorio y móvil simulado. Pendiente de despliegue en Render.
+
+### Continuidad después de encuentros · trabajo preparado
+
+Al finalizar un encuentro que llegó a comenzar, cada participante puede solicitar una conexión individual a otra persona de la misma sala, también desde el historial. La solicitud requiere el acuerdo de fotografía y, cuando está configurado, una foto propia; la otra persona debe aceptar antes de que se abra el chat. El servidor comprueba membresía de ambas personas, estado del encuentro, bloqueos y retiro del historial; reutiliza los límites y avisos de invitación existentes. La foto declarada no verifica identidad. Se probaron casos de permisos y un recorrido de tres cuentas con fotos de prueba, aceptación y mensaje privado en escritorio y móvil simulado, usando un reloj acelerado solo en el fixture. Pendiente verificar el recorrido con personas y dispositivos reales. No desplegado en Render.
+
+Revisión posterior: se verificaron el rechazo sin acuerdo, las solicitudes simultáneas en sentidos opuestos y la existencia de una sola solicitud pendiente. En escritorio y móvil simulado se comprobó el recorrido sin foto: ir al perfil, guardar una imagen sintética, regresar al historial y enviar la solicitud. Compilación del piloto compartido y pruebas específicas de servidor y navegador aprobadas. Quedan pendientes la integración y comprobación del despliegue, y las pruebas con personas y dispositivos reales.

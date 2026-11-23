@@ -8,6 +8,7 @@ import { useState, useId } from "react";
 import type { useAccount } from "./accounts";
 import { featuredActivities } from "../data";
 import { ChatMessageBubble, chatReplyTarget } from "../chat/ChatMessage";
+import { HistoryContinuity } from "./RoomContinuity";
 type State = ReturnType<typeof useAccount>;
 const date = (value: string) =>
   new Intl.DateTimeFormat("es-CL", {
@@ -19,12 +20,14 @@ export function AccountPanel({
   state,
   active,
   onLogout,
+  onProfile,
   compact = false,
 }: {
   state: State;
   compact?: boolean;
   active: boolean;
   onLogout: () => void;
+  onProfile?: () => void;
 }) {
   const recoveryId = useId();
   const [mode, setMode] = useState<"login" | "register" | "recover">("login");
@@ -354,8 +357,9 @@ export function AccountPanel({
                     <button className="button text" onClick={() => void state.history(r.id)}>
                       Ver mensajes de {featuredActivities.find((a) => a.id === r.activityId)?.title || "encuentro"}
                     </button>
+                    {realPlazaEnabled && r.phase === 'closed' && onProfile && <HistoryContinuity roomId={r.id} onProfile={onProfile}/>}
                     {r.archived && <button className="button text" disabled={state.busy} onClick={() => {
-                      if (window.confirm("¿Quitar este encuentro de tu historial? Solo desaparecerá de tu vista; las demás personas conservarán su historial.")) void state.dismissHistory(r.id);
+                      if (window.confirm("¿Quitar este encuentro de tu historial? Las demás personas conservarán su historial, pero ya no podrán enviarte solicitudes desde este encuentro.")) void state.dismissHistory(r.id);
                     }}>Quitar de mi historial</button>}
                   </div>
                 ))}

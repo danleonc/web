@@ -19,8 +19,24 @@ export class ConnectionsStore {
     return row;
   }
   invite(actor: string, kind: string, contentId: string, note: string, challengeAccepted = false) {
-    if (typeof note !== "string" || note.length > 500) throw Error("invalid_note");
     const recipient = new PlazaStore(this.storage).blockTarget(actor, kind, contentId);
+    return this.inviteRecipient(actor, recipient, kind, contentId, note, challengeAccepted);
+  }
+  inviteFromRoom(actor: string, roomId: string, recipient: string, note: string, challengeAccepted = false) {
+    if (!/^[a-f0-9-]{36}$/.test(roomId) || !/^[a-f0-9-]{36}$/.test(recipient) || actor === recipient) throw Error('invalid_target');
+    if (!this.roomPeople(actor,roomId)?.some(person => person.id === recipient)) throw Error('invalid_target');
+    return this.inviteRecipient(actor, recipient, 'room', roomId, note, challengeAccepted);
+  }
+  roomPeople(actor: string, roomId: string) {
+    const db=this.storage.db;
+    const room=db.prepare('SELECT session_json FROM rooms WHERE id=?').get(roomId);
+    let session: {phase?:unknown;sessionUntil?:unknown};
+    try { session=JSON.parse(String(room?.session_json)); } catch { return null; }
+    if (session?.phase!=='closed' || typeof session.sessionUntil!=='number' || !Number.isFinite(session.sessionUntil) || session.sessionUntil<=0 || !db.prepare('SELECT 1 FROM memberships WHERE room_id=? AND user_id=?').get(roomId,actor) || db.prepare('SELECT 1 FROM room_history_dismissals WHERE room_id=? AND user_id=?').get(roomId,actor)) return null;
+    return db.prepare(`SELECT a.id,a.alias AS name FROM memberships m JOIN accounts a ON a.id=m.user_id WHERE m.room_id=? AND m.user_id<>? AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=m.user_id) OR (b.blocked_id=? AND b.user_id=m.user_id)) AND NOT EXISTS (SELECT 1 FROM room_history_dismissals d WHERE d.room_id=m.room_id AND d.user_id=m.user_id) ORDER BY a.alias,a.id`).all(roomId,actor,actor,actor);
+  }
+  private inviteRecipient(actor: string, recipient: string, kind: string, contentId: string, note: string, challengeAccepted: boolean) {
+    if (typeof note !== "string" || note.length > 500) throw Error("invalid_note");
     const [low, high] = [actor, recipient].sort();
     const db = this.storage.db;
     const existing = db.prepare("SELECT id,sender_id,status FROM plaza_connections WHERE low_id=? AND high_id=? AND status IN ('pending','accepted')").get(low, high);

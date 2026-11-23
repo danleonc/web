@@ -41,7 +41,10 @@ setup.db.prepare("INSERT INTO account_emails(user_id,email,verified_at,adult_dec
   .run(secondModerator.id, "moderator2@example.test", Date.now(), Date.now());
 new ModerationStore(setup, Date.now).role("moderator_fixture_second", true);
 setup.close();
+const clockStart = Date.now();
+const clockScale = process.env.NEXAFIA_TEST_CLOCK_SPEED === '300' ? 300 : 1;
 const app = createRoomServer({
+  now: () => clockStart + (Date.now() - clockStart) * clockScale,
   ...(process.env.NEXAFIA_TEST_GATE === "1" ? { stagingPassword: "0123456789abcdef0123456789abcdef0123456789abcdef" } : {}),
   plazaEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
   requireConnectionPhoto: process.env.NEXAFIA_TEST_PROFILE_PHOTOS === "1",

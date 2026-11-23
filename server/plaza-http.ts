@@ -45,6 +45,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
   const block = path.match(/^\/api\/plaza\/blocks\/([a-f0-9-]{36})$/);
   const invitation = path.match(/^\/api\/plaza\/invitations\/([a-f0-9-]{36})\/decision$/);
   const connection = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})$/);
+  const roomPeople = path.match(/^\/api\/plaza\/rooms\/([a-f0-9-]{36})\/people$/);
   const dismissConnection = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/dismiss$/);
   const privateMessages = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages$/);
   const privateMessage = path.match(/^\/api\/plaza\/connections\/([a-f0-9-]{36})\/messages\/([a-f0-9-]{36})$/);
@@ -76,6 +77,7 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       else { try { json(res,200,connections.list(actor.id,params.has('page') || params.has('cursor') ? params.get('cursor') || '' : undefined)); } catch { json(res,422,{error:'invalid_page'}); } }
     }
     else if (connection) { const found=connections.get(actor.id,connection[1]); json(res,found?200:404,found?{connection:found}:{error:"not_found"}); }
+    else if (roomPeople) { const people=connections.roomPeople(actor.id,roomPeople[1]); json(res,people?200:404,people?{people}:{error:'not_found'}); }
     else if (privateMessages) {
       const params = new URL(req.url || '', 'http://localhost').searchParams;
       if ([...params.keys()].some(key => !['page','cursor'].includes(key)) || ['page','cursor'].some(key => params.getAll(key).length > 1) || (params.has('page') && params.get('page') !== '1') || (params.has('page') && params.has('cursor')) || (params.has('cursor') && !params.get('cursor'))) json(res,422,{error:'invalid_page'});
@@ -127,6 +129,12 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       const peer = connections.peer(actor.id, privateBlock[1]);
       if (!peer) json(res, 404, { error: "not_found" });
       else { onBlock(peer); json(res, 200, { ok: true }); }
+    } else if (req.method === "POST" && path === "/api/plaza/room-invitations") {
+      const value = await body(req);
+      if (typeof value.roomId !== 'string' || typeof value.targetId !== 'string' || typeof value.note !== 'string' || Object.keys(value).some(k => !['roomId','targetId','note','photoChallengeAccepted'].includes(k)) || (value.photoChallengeAccepted !== undefined && typeof value.photoChallengeAccepted !== 'boolean')) throw Error('invalid_body');
+      if (requireConnectionPhoto && !storage.db.prepare('SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0').get(actor.id)) { json(res,403,{error:'profile_photo_required'}); return true; }
+      if (requireConnectionPhoto && value.photoChallengeAccepted !== true) throw Error('challenge_agreement_required');
+      json(res,201,{invitation:connections.inviteFromRoom(actor.id,value.roomId,value.targetId,value.note,value.photoChallengeAccepted === true)});
     } else if (req.method === "POST" && path === "/api/plaza/invitations") {
       const value = await body(req);
       if (typeof value.kind !== "string" || typeof value.contentId !== "string" || typeof value.note !== "string" || Object.keys(value).some(k => !["kind","contentId","note","photoChallengeAccepted"].includes(k)) || (value.photoChallengeAccepted !== undefined && typeof value.photoChallengeAccepted !== "boolean")) throw Error("invalid_body");

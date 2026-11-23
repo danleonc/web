@@ -601,6 +601,51 @@ test("una convocatoria programada se puede reservar y abrir como encuentro compa
   } finally { await mod.close(); await user.close(); }
 });
 
+test('al terminar un encuentro se puede solicitar una conexión', async ({browser},info) => {
+ test.skip(process.env.NEXAFIA_TEST_CLOCK_SPEED !== '300', 'Requiere el reloj acelerado del fixture aislado.');
+ test.setTimeout(60000);
+ const mod=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ const people=await Promise.all(Array.from({length:3},()=>browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use})));
+ try {
+  const headers={Origin:'http://127.0.0.1:4190'};
+  expect((await mod.request.post('/api/auth/login',{headers,data:{username:'moderator_fixture',password:'Una clave exclusiva del fixture 123'}})).status()).toBe(200);
+  const created=await mod.request.post('/api/meetings',{headers,data:{themeId:'crear',startsAt:Date.now()+24*3600_000,capacity:3}});expect(created.status()).toBe(201);
+  for(let i=0;i<people.length;i++) await register(people[i],`continuidad_${info.project.name}_${i}`);
+  const image=await sharp({create:{width:40,height:40,channels:3,background:'#285d4c'}}).png().toBuffer();
+  for(const person of people.slice(0,2)) expect((await person.request.post('/api/account/profile/photo',{headers:{...headers,'Content-Type':'image/png','X-Photo-Declaration':'yes'},data:image})).status()).toBe(201);
+  const pages=await Promise.all(people.map(c=>c.newPage()));
+  for(const page of pages){await page.goto('/#discover');const card=page.getByRole('article').filter({hasText:'Ideas tan locas que podrían funcionar'}).last();await card.getByRole('button',{name:'Reservar encuentro'}).click();await card.getByRole('button',{name:'Entrar al encuentro'}).click();await page.getByLabel(/Entiendo que esta prueba comparte/).check();await page.getByRole('button',{name:'Conectar con esta sala'}).click();await expect(page.getByText('Conectado al servidor',{exact:true})).toBeVisible();}
+  await pages[0].getByRole('button',{name:'Iniciar encuentro compartido'}).click();
+  await expect(pages[0].getByRole('heading',{name:'¿Seguimos conversando?'})).toBeVisible({timeout:30000});
+  await pages[0].getByRole('button',{name:`Conectar con continuidad_${info.project.name}_1`}).click();
+  await pages[0].getByLabel(/Acepto que nuestras fotos/).check();await pages[0].getByRole('button',{name:'Enviar solicitud'}).click();
+  await expect(pages[0].getByText(/Solicitud enviada a/)).toBeVisible();
+  const inbox=await (await people[1].request.get('/api/plaza/connections')).json();expect(inbox.connections.some((c:{status:string})=>c.status==='pending')).toBeTruthy();
+  await pages[1].goto('/#connections');await pages[1].getByLabel(/Acepto que nuestras fotos/).check();await pages[1].getByRole('button',{name:'Aceptar solicitud'}).click();
+  await pages[1].getByRole('button',{name:'Abrir conversación'}).click();await pages[1].getByLabel('Mensaje privado').fill('Sigamos conversando');await pages[1].getByRole('button',{name:'Enviar mensaje'}).click();
+  await pages[0].goto('/#connections');await pages[0].getByRole('button',{name:'Abrir conversación'}).click();await expect(pages[0].getByText('Sigamos conversando',{exact:true})).toBeVisible();
+  await pages[2].goto('/#shared');await pages[2].reload();await pages[2].getByText('Historial de mis salas',{exact:true}).click();
+  await pages[2].getByText('Seguir conversando con participantes',{exact:true}).click();
+  await expect(pages[2].getByRole('region',{name:'Cuenta y reservas'}).getByRole('button',{name:`Conectar con continuidad_${info.project.name}_0`})).toBeVisible();
+  await pages[2].getByRole('button',{name:`Conectar con continuidad_${info.project.name}_0`}).click();
+  await pages[2].getByLabel(/Acepto que nuestras fotos/).check();
+  await pages[2].getByRole('button',{name:'Enviar solicitud'}).click();
+  await expect(pages[2].getByRole('alert')).toContainText('Agrega tu foto de Conexiones');
+  await pages[2].getByRole('button',{name:'Ir a mi perfil'}).click();
+  await pages[2].getByLabel('Elegir foto de galería').setInputFiles({name:'foto.png',mimeType:'image/png',buffer:image});
+  await pages[2].getByLabel('Declaro que aparezco en esta foto.').check();
+  await pages[2].getByRole('button',{name:'Guardar mi foto'}).click();
+  await expect(pages[2].getByText('Tu foto quedó guardada de forma privada.')).toBeVisible();
+  await pages[2].goto('/#shared');
+  await pages[2].getByText('Historial de mis salas',{exact:true}).click();
+  await pages[2].getByText('Seguir conversando con participantes',{exact:true}).click();
+  await pages[2].getByRole('button',{name:`Conectar con continuidad_${info.project.name}_0`}).click();
+  await pages[2].getByLabel(/Acepto que nuestras fotos/).check();
+  await pages[2].getByRole('button',{name:'Enviar solicitud'}).click();
+  await expect(pages[2].getByText(/Solicitud enviada a/)).toBeVisible();
+ } finally {await mod.close();for(const c of people) await c.close();}
+});
+
 test("tres cuentas comparten una convocatoria programada", async ({ browser }, info) => {
   const mod = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   const people = await Promise.all(Array.from({ length: 3 }, () => browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use })));

@@ -9,7 +9,7 @@ import { ChatMessageBubble, chatReplyTarget } from "../chat/ChatMessage";
 import { useSharedRoom } from "../shared/useSharedRoom";
 import { canChat, formatTime, presentPeople } from "../room/engine";
 import { GuidePanel } from "../room/SessionPanels";
-import { accountsEnabled } from "../shared/mode";
+import { accountsEnabled, realPlazaEnabled } from "../shared/mode";
 import { useAccount } from "../shared/accounts";
 import type { Offering } from "../shared/accounts";
 import { AccountPanel } from "../shared/AccountPanel";
@@ -18,6 +18,8 @@ import { RemovalPanel } from "../safety/RemovalPanel";
 import { ReportDialog } from "../safety/ReportDialog";
 import { RoomCare, RoomTyping, useMutedParticipants } from "../room/RoomCare";
 import { useConversationScroll } from "../room/useConversationScroll";
+import { ContinueAfterMeeting } from "../shared/RoomContinuity";
+
 
 export function SharedRoom({
   profile,
@@ -110,6 +112,7 @@ export function SharedRoom({
         <AccountPanel
           state={account}
           active={active}
+          onProfile={onProfile}
           onLogout={() => setActive(false)}
         />
       )}
@@ -309,6 +312,7 @@ export function SharedRoom({
                       </>
                     )}
                   </p>
+                  {accountsEnabled && realPlazaEnabled && session.phase === 'closed' && session.sessionUntil > 0 && snapshot && <ContinueAfterMeeting key={snapshot.roomKey} roomId={snapshot.roomKey} people={session.participants.filter(person=>person.id!==snapshot.me).map(person=>({id:person.id,name:person.name}))} onProfile={onProfile} />}
                 </div>
               ) : (
                 <GuidePanel
