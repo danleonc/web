@@ -75,7 +75,11 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
     else if (privateMessages) { const messages = connections.messages(actor.id, privateMessages[1]); json(res, messages ? 200 : 404, messages ? { messages } : { error: "not_found" }); }
     else if (path === "/api/plaza/moderation/appeals") json(res, 200, { appeals: moderation.appeals(actor.id) });
     else if (path === "/api/plaza/moderation/reports") json(res, 200, { reports: moderation.reports(actor.id) });
-    else if (replies) json(res, 200, { replies: plaza.listReplies(actor.id, replies[1]) });
+    else if (replies) {
+      const params = new URL(req.url || '', 'http://localhost').searchParams;
+      if ([...params.keys()].some(key => !['page','cursor'].includes(key)) || ['page','cursor'].some(key => params.getAll(key).length > 1) || (params.has('page') && params.get('page') !== '1') || (params.has('page') && params.has('cursor')) || (params.has('cursor') && !params.get('cursor'))) json(res,422,{error:'invalid_page'});
+      else { try { json(res,200,plaza.listReplies(actor.id,replies[1],params.has('page') || params.has('cursor') ? params.get('cursor') || '' : undefined)); } catch { json(res,422,{error:'invalid_page'}); } }
+    }
     else json(res, 404, { error: "not_found" });
     return true;
   }

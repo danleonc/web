@@ -95,12 +95,24 @@ export class PlazaStore {
   getPost(userId: string, id: string) {
     return this.storage.db.prepare(`SELECT p.id,p.topic,p.title,p.body,p.sticker_id AS stickerId,(SELECT id FROM plaza_images i WHERE i.post_id=p.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.post_id=p.id) AS imageDescription,p.author_id AS authorId,a.alias AS author,p.created_at AS createdAt FROM plaza_posts p JOIN accounts a ON a.id=p.author_id WHERE p.id=? AND p.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=p.author_id) OR (b.user_id=p.author_id AND b.blocked_id=?))`).get(id,userId,userId);
   }
-  listReplies(userId: string, postId: string) {
-    return this.storage.db.prepare(`SELECT r.id,r.post_id AS postId,r.body,r.sticker_id AS stickerId,CASE WHEN EXISTS (SELECT 1 FROM plaza_replies q WHERE q.id=r.reply_to AND q.post_id=r.post_id AND q.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=q.author_id) OR (b.blocked_id=? AND b.user_id=q.author_id))) THEN r.reply_to ELSE NULL END AS replyTo,(SELECT id FROM plaza_images i WHERE i.reply_id=r.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.reply_id=r.id) AS imageDescription,r.author_id AS authorId,a.alias AS author,r.created_at AS createdAt
+  listReplies(userId: string, postId: string, cursor?: string) {
+    let beforeTime = Number.MAX_SAFE_INTEGER, beforeId = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+    if (cursor) {
+      if (!/^[A-Za-z0-9_-]{1,120}$/.test(cursor)) throw Error('invalid_cursor');
+      let value: unknown;
+      try { value = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')); } catch { throw Error('invalid_cursor'); }
+      if (!Array.isArray(value) || value.length !== 2 || !Number.isSafeInteger(value[0]) || value[0] < 0 || typeof value[1] !== 'string' || !/^[a-f0-9-]{36}$/.test(value[1])) throw Error('invalid_cursor');
+      [beforeTime, beforeId] = value;
+    }
+    const paginated = cursor !== undefined;
+    const rows = this.storage.db.prepare(`SELECT r.id,r.post_id AS postId,r.body,r.sticker_id AS stickerId,CASE WHEN EXISTS (SELECT 1 FROM plaza_replies q WHERE q.id=r.reply_to AND q.post_id=r.post_id AND q.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=q.author_id) OR (b.blocked_id=? AND b.user_id=q.author_id))) THEN r.reply_to ELSE NULL END AS replyTo,(SELECT id FROM plaza_images i WHERE i.reply_id=r.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.reply_id=r.id) AS imageDescription,r.author_id AS authorId,a.alias AS author,r.created_at AS createdAt
       FROM plaza_replies r JOIN plaza_posts p ON p.id=r.post_id JOIN accounts a ON a.id=r.author_id
       WHERE r.post_id=? AND p.hidden=0 AND r.hidden=0 AND NOT EXISTS (SELECT 1 FROM blocks b WHERE
         (b.user_id=? AND b.blocked_id IN (p.author_id,r.author_id)) OR
         (b.blocked_id=? AND b.user_id IN (p.author_id,r.author_id)))
-      ORDER BY r.created_at,r.id LIMIT 100`).all(userId, userId, postId, userId, userId);
+      ${paginated ? 'AND (r.created_at<? OR (r.created_at=? AND r.id<?)) ORDER BY r.created_at DESC,r.id DESC LIMIT 51' : 'ORDER BY r.created_at,r.id LIMIT 100'}`).all(userId, userId, postId, userId, userId, ...(paginated ? [beforeTime, beforeTime, beforeId] : []));
+    if (!paginated) return { replies: rows };
+    const page = rows.slice(0, 50), oldest = page.at(-1);
+    return { replies: page.reverse(), nextCursor: rows.length > 50 && oldest ? Buffer.from(JSON.stringify([oldest.createdAt, oldest.id])).toString('base64url') : null };
   }
 }

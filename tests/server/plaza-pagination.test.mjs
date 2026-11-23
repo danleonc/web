@@ -3,6 +3,22 @@ import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { fixture } from './feature-fixture.mjs';
 
+test('las respuestas recientes y anteriores se pueden recorrer sin duplicados ni bloqueados', async t => {
+ const f=await fixture(t,{plazaEnabled:true}); const reader=await f.signup('reply_pages_reader'), author=await f.signup('reply_pages_author'), blocked=await f.signup('reply_pages_blocked');
+ const post=(await f.request('/api/plaza/posts','POST',{topic:'cultura',title:'Conversación larga',body:'Hola'},author.cookie)).body.post;
+ const db=new DatabaseSync(f.path); const add=db.prepare('INSERT INTO plaza_replies(id,post_id,author_id,body,created_at) VALUES(?,?,?,?,?)');
+ for(let n=0;n<125;n++) add.run(`20000000-0000-4000-8000-${String(n).padStart(12,'0')}`,post.id,author.id,`Respuesta ${n}`,1000+Math.floor(n/2));
+ add.run('20000000-0000-4000-8000-999999999999',post.id,blocked.id,'Oculta',9999); db.prepare('INSERT INTO blocks(user_id,blocked_id) VALUES(?,?)').run(reader.id,blocked.id); db.close();
+ const path=`/api/plaza/posts/${post.id}/replies`;
+ const first=await f.request(`${path}?page=1`,'GET',undefined,reader.cookie); assert.equal(first.status,200); assert.equal(first.body.replies.length,50); assert.equal(first.body.replies.at(-1).body,'Respuesta 124'); assert.ok(first.body.nextCursor);
+ const second=await f.request(`${path}?cursor=${first.body.nextCursor}`,'GET',undefined,reader.cookie); assert.equal(second.body.replies.length,50);
+ const third=await f.request(`${path}?cursor=${second.body.nextCursor}`,'GET',undefined,reader.cookie); assert.equal(third.body.replies.length,25); assert.equal(third.body.nextCursor,null);
+ assert.equal(new Set([...first.body.replies,...second.body.replies,...third.body.replies].map(x=>x.id)).size,125);
+ assert.equal((await f.request(`${path}?cursor=malformado`,'GET',undefined,reader.cookie)).status,422);
+ assert.equal((await f.request(`${path}?page=1&page=1`,'GET',undefined,reader.cookie)).status,422);
+ assert.equal((await f.request(`${path}?page=1`,'GET')).status,401);
+});
+
 test('filtrado y páginas encuentran publicaciones antiguas sin mostrar bloqueos ni duplicados', async t => {
  const f=await fixture(t,{plazaEnabled:true}); const reader=await f.signup('pagination_reader'), author=await f.signup('pagination_author'), blocked=await f.signup('pagination_blocked');
  const db=new DatabaseSync(f.path); const add=db.prepare('INSERT INTO plaza_posts(id,author_id,topic,title,body,created_at) VALUES(?,?,?,?,?,?)');

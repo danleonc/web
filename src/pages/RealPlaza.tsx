@@ -35,6 +35,9 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
   const [loadingMore, setLoadingMore] = useState(false);
   const listRequest = useRef(0);
   const [replies, setReplies] = useState<Reply[]>([]);
+  const [replyCursor, setReplyCursor] = useState<string | null>(null);
+  const [olderReplies, setOlderReplies] = useState<string | null>(null);
+  const [replyPageLoading, setReplyPageLoading] = useState(false);
   const [active, setActive] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -95,28 +98,36 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
   async function openPost(id: string) {
     navigation.enter();
     const current = ++threadRequest.current;
-    setError(""); setActive(id); setReplies([]); setReply(""); setQuoteId(null); pendingImage.current = null; setEditingReply(null); setThreadLoading(true);
-    try { const result = await request<{ replies: Reply[] }>(`/api/plaza/posts/${id}/replies`); if (current === threadRequest.current) setReplies(result.replies); }
+    setError(""); setActive(id); setReplies([]); setReplyCursor(null); setOlderReplies(null); setReplyPageLoading(false); setReply(""); setQuoteId(null); pendingImage.current = null; setEditingReply(null); setThreadLoading(true);
+    try { const result = await request<{ replies: Reply[]; nextCursor: string | null }>(`/api/plaza/posts/${id}/replies?page=1`); if (current === threadRequest.current) { setReplies(result.replies); setOlderReplies(result.nextCursor); } }
     catch { if (current === threadRequest.current) setError("No pudimos cargar las respuestas. Inténtalo de nuevo."); }
     finally { if (current === threadRequest.current) setThreadLoading(false); }
   }
+  async function showReplyPage(id: string, cursor: string | null) {
+    const current = ++threadRequest.current; setReplyPageLoading(true); setError("");
+    try {
+      const result = await request<{ replies: Reply[]; nextCursor: string | null }>(`/api/plaza/posts/${id}/replies?${cursor ? `cursor=${encodeURIComponent(cursor)}` : 'page=1'}`);
+      if (current === threadRequest.current) { setReplies(result.replies); setReplyCursor(cursor); setOlderReplies(result.nextCursor); }
+    } catch { if (current === threadRequest.current) setError("No pudimos cargar las respuestas. Inténtalo nuevamente."); }
+    finally { if (current === threadRequest.current) setReplyPageLoading(false); }
+  }
   useEffect(() => {
-    if (!ready || !active || busy || threadLoading) return;
+    if (!ready || !active || busy || threadLoading || replyCursor || replyPageLoading) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
     const update = async () => {
       if (document.visibilityState === "visible") {
         const current = threadRequest.current;
         try {
-          const result = await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`);
-          if (!cancelled && current === threadRequest.current) setReplies(result.replies);
+          const result = await request<{ replies: Reply[]; nextCursor: string | null }>(`/api/plaza/posts/${active}/replies?page=1`);
+          if (!cancelled && current === threadRequest.current) { setReplies(result.replies); setOlderReplies(result.nextCursor); }
         } catch { /* Se intentará nuevamente sin interrumpir el borrador. */ }
       }
       if (!cancelled) timer = setTimeout(update, 4000);
     };
     timer = setTimeout(update, 4000);
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [ready, active, busy, threadLoading]);
+  }, [ready, active, busy, threadLoading, replyCursor, replyPageLoading]);
   const openedNotice = useRef<number | null>(null);
   useEffect(() => {
     if (!ready || !noticeTarget || openedNotice.current === noticeTarget.serial) return;
@@ -153,7 +164,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
     try {
       await request(editingReply ? `/api/plaza/replies/${editingReply}` : `/api/plaza/posts/${active}/replies`, editingReply ? "PATCH" : "POST", { body: reply, ...(!editingReply && quoteId ? { replyTo: quoteId } : {}) });
       setReply(""); setEditingReply(null); setQuoteId(null);
-      try { setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies); }
+      try { await showReplyPage(active, null); }
       catch { setError("Tu respuesta se guardó, pero no pudimos actualizar la conversación. Vuelve a abrirla para verla."); }
     } catch (e) { setError(e instanceof Error ? e.message : "No pudimos responder."); }
     finally { setBusy(false); }
@@ -249,10 +260,11 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
       </div>
       {selected && <section className="real-plaza-panel" aria-labelledby="thread-title"><button className="button text" disabled={busy} onClick={navigation.back}>← Volver a La Plaza</button><h2 id="thread-title" ref={threadHeading} tabIndex={-1}>{selected.title}</h2><p>{selected.author} · {plazaTopics.find((t) => t.id === selected.topic)?.short}</p><p>{selected.body}</p>{selected.stickerId && <StickerImage id={selected.stickerId}/>}
         {selected.imageId && <ImageView plaza image={{id:selected.imageId,description:selected.imageDescription || ""}} />}
-        {threadLoading ? <p role="status">Cargando respuestas…</p> : replies.length === 0 ? <p>Aún no hay respuestas.</p> : <div className="plaza-replies">{replies.map((item) => <article key={item.id} className="real-plaza-reply" data-message-id={item.id} tabIndex={-1}><strong>{item.author}</strong>{item.replyTo && <ReplyQuote target={replies.find(original => original.id === item.replyTo) ? asTarget(replies.find(original => original.id === item.replyTo)!) : undefined} />}<p>{item.body}</p>{item.stickerId && <StickerImage id={item.stickerId}/>}
+        {(olderReplies || replyCursor) && <nav aria-label="Páginas de respuestas">{olderReplies && <button type="button" className="button secondary" disabled={busy || replyPageLoading} onClick={() => void showReplyPage(selected.id, olderReplies)}>Ver respuestas anteriores</button>}{replyCursor && <button type="button" className="button text" disabled={busy || replyPageLoading} onClick={() => void showReplyPage(selected.id, null)}>Ver respuestas recientes</button>}</nav>}
+        {threadLoading || replyPageLoading ? <p role="status">Cargando respuestas…</p> : replies.length === 0 ? <p>Aún no hay respuestas.</p> : <div className="plaza-replies">{replies.map((item) => <article key={item.id} className="real-plaza-reply" data-message-id={item.id} tabIndex={-1}><strong>{item.author}</strong>{item.replyTo && <ReplyQuote target={replies.find(original => original.id === item.replyTo) ? asTarget(replies.find(original => original.id === item.replyTo)!) : undefined} />}<p>{item.body}</p>{item.stickerId && <StickerImage id={item.stickerId}/>}
         {item.imageId && <ImageView plaza image={{id:item.imageId,description:item.imageDescription || ""}} />}
         <button className="button text" disabled={busy} onClick={() => { setEditingReply(null); setQuoteId(item.id); replyInput.current?.focus(); }}>Responder a este comentario</button>
-        {item.authorId === account?.id && !item.imageId && <button className="button text" disabled={busy} onClick={() => setImageTarget({kind:"reply",id:item.id})}><ImagePlus size={16} aria-hidden="true" /> Agregar imagen</button>}{item.authorId !== account?.id && <><button className="button text" onClick={() => setReport({ kind: "reply", id: item.id, author: item.author })}>Reportar respuesta</button><button className="button text" disabled={busy} onClick={() => { setNotice(""); setInvitationNote(""); setInvitation({ kind: "reply", id: item.id, author: item.author }); }}>Seguir conversando</button><button className="button text" disabled={busy} onClick={() => void blockPerson("reply", item.id, item.authorId)}>Bloquear persona</button></>}{item.authorId === account?.id && <>{item.body && <button className="button text" onClick={() => { setEditingReply(item.id); setReply(item.body); }}>Editar respuesta</button>}<button className="button text" disabled={busy} onClick={() => { if (window.confirm("¿Eliminar esta respuesta?")) void remove(`/api/plaza/replies/${item.id}`, async () => { setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${selected.id}/replies`)).replies); }); }}>Eliminar respuesta</button></>}</article>)}</div>}
+        {item.authorId === account?.id && !item.imageId && <button className="button text" disabled={busy} onClick={() => setImageTarget({kind:"reply",id:item.id})}><ImagePlus size={16} aria-hidden="true" /> Agregar imagen</button>}{item.authorId !== account?.id && <><button className="button text" onClick={() => setReport({ kind: "reply", id: item.id, author: item.author })}>Reportar respuesta</button><button className="button text" disabled={busy} onClick={() => { setNotice(""); setInvitationNote(""); setInvitation({ kind: "reply", id: item.id, author: item.author }); }}>Seguir conversando</button><button className="button text" disabled={busy} onClick={() => void blockPerson("reply", item.id, item.authorId)}>Bloquear persona</button></>}{item.authorId === account?.id && <>{item.body && <button className="button text" onClick={() => { setEditingReply(item.id); setReply(item.body); }}>Editar respuesta</button>}<button className="button text" disabled={busy} onClick={() => { if (window.confirm("¿Eliminar esta respuesta?")) void remove(`/api/plaza/replies/${item.id}`, async () => { await showReplyPage(selected.id, replyCursor); }); }}>Eliminar respuesta</button></>}</article>)}</div>}
         {quote && !editingReply && <ReplyDraft target={asTarget(quote)} onCancel={() => setQuoteId(null)} disabled={busy} />}
         <form onSubmit={(e) => void submitReply(e)} className="real-plaza-form"><label>Tu respuesta<textarea ref={replyInput} value={reply} onChange={(e) => setReply(e.target.value)} maxLength={5000} required /></label><div className="real-compose-actions"><button type="button" className="sticker-trigger" aria-label="Enviar sticker" title="Enviar sticker" disabled={busy || !!editingReply} onClick={() => setPicker("reply")}><Sticker size={22} aria-hidden="true" /></button><button type="button" className="sticker-trigger" aria-label="Adjuntar imagen" title="Adjuntar imagen" disabled={busy || !!editingReply} onClick={() => setImageTarget({kind:"reply",id:"new"})}><ImagePlus size={22} aria-hidden="true" /></button><button className="send-button" aria-label={editingReply ? "Guardar respuesta" : "Responder"} disabled={busy}><Send size={18} aria-hidden="true" /></button>{editingReply && <button type="button" className="button text" onClick={() => { setEditingReply(null); setReply(""); }}>Cancelar edición</button>}</div></form>
       </section>}
@@ -270,9 +282,9 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
         const result = await fetch(`/api/plaza/images/${imageTarget.kind}/${targetId}?description=${encodeURIComponent(image.description)}`, {method:"POST",credentials:"same-origin",headers:{"Content-Type":blob.type},body:blob});
         if (!result.ok) throw Error("No pudimos agregar la imagen. Comprueba que el contenido siga disponible e inténtalo nuevamente.");
         pendingImage.current = null; setQuoteId(null);
-        await refresh(); if (active) setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies);
+        await refresh(); if (active) await showReplyPage(active, null);
       }} />}
-      {picker && <StickerPicker preferences={stickers.stickerPreferences} onToggleFavorite={stickers.onToggleFavorite} onToggleFavoritePack={stickers.onToggleFavoritePack} onClose={() => setPicker(null)} onSend={(id) => { if (picker === "post") { setPostSticker(id); setPicker(null); } else if (active && !busy) { setBusy(true); void request(`/api/plaza/posts/${active}/replies`, "POST", { body: "", stickerId: id, ...(quoteId ? {replyTo: quoteId} : {}) }).then(async () => { setQuoteId(null); stickers.onStickerUsed(id); setPicker(null); setReplies((await request<{ replies: Reply[] }>(`/api/plaza/posts/${active}/replies`)).replies); }).catch(() => setError("No pudimos enviar el sticker. Inténtalo de nuevo.")).finally(() => setBusy(false)); } }} />}
+      {picker && <StickerPicker preferences={stickers.stickerPreferences} onToggleFavorite={stickers.onToggleFavorite} onToggleFavoritePack={stickers.onToggleFavoritePack} onClose={() => setPicker(null)} onSend={(id) => { if (picker === "post") { setPostSticker(id); setPicker(null); } else if (active && !busy) { setBusy(true); void request(`/api/plaza/posts/${active}/replies`, "POST", { body: "", stickerId: id, ...(quoteId ? {replyTo: quoteId} : {}) }).then(async () => { setQuoteId(null); stickers.onStickerUsed(id); setPicker(null); await showReplyPage(active, null); }).catch(() => setError("No pudimos enviar el sticker. Inténtalo de nuevo.")).finally(() => setBusy(false)); } }} />}
       {report && <ReportDialog subject={`Contenido de ${report.author}`} onClose={() => setReport(null)} onSubmit={async (reason, note) => { await request("/api/plaza/reports", "POST", { kind: report.kind, contentId: report.id, reason, note }); }} />}
       {invitation && <Modal title={`Seguir conversando con ${invitation.author}`} onClose={() => setInvitation(null)}><div className="modal-content"><p>La otra persona decide si acepta. El chat se abre solo después de su aceptación.</p><form className="real-plaza-form" onSubmit={(e) => void sendInvitation(e)}><label>Mensaje de invitación<textarea value={invitationNote} maxLength={500} onChange={(e) => setInvitationNote(e.target.value)} /></label>{error && <p role="alert">{error}</p>}{error.startsWith('Agrega tu foto de Conexiones') && <button type="button" className="button secondary" onClick={onProfile}>Ir a mi perfil</button>}<label className="checkbox-row"><input type="checkbox" checked={invitationAgreement} onChange={e => setInvitationAgreement(e.target.checked)} /> Acepto que nuestras fotos se compartan automáticamente después de 10 vueltas de conversación.</label><button className="button primary" disabled={busy || !invitationAgreement}>Enviar solicitud</button></form></div></Modal>}
     </>}

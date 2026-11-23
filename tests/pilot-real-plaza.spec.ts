@@ -119,6 +119,26 @@ test('La Plaza actualiza respuestas mientras conserva el borrador', async ({ bro
     await expect(page.getByLabel('Tu respuesta')).toHaveValue('Estoy escribiendo una respuesta');
   } finally { await a.close(); await b.close(); }
 });
+test('una conversación extensa permite ver respuestas anteriores y volver a las recientes', async ({ browser }, info) => {
+  const context = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
+  try {
+    await register(context, `reply_pages_ui_${info.project.name}`);
+    const { post } = await (await context.request.post('/api/plaza/posts', { headers: { Origin: 'http://127.0.0.1:4190' }, data: { topic: 'cultura', title: `Historial largo ${info.project.name}`, body: 'Hola' } })).json();
+    await context.route(`**/api/plaza/posts/${post.id}/replies?*`, async route => {
+      const old = new URL(route.request().url()).searchParams.has('cursor');
+      await route.fulfill({ json: { replies: [{ id: old ? 'old' : 'new', postId: post.id, authorId: 'other', author: 'Alguien', body: old ? 'Una respuesta anterior' : 'La respuesta reciente' }], nextCursor: old ? null : 'cursor-anterior' } });
+    });
+    const page = await context.newPage(); await page.goto('/#plaza');
+    await page.getByRole('article').filter({ hasText: `Historial largo ${info.project.name}` }).getByRole('button', { name: 'Ver conversación' }).click();
+    await expect(page.getByText('La respuesta reciente')).toBeVisible();
+    await page.getByLabel('Tu respuesta').fill('Un borrador');
+    await page.getByRole('button', { name: 'Ver respuestas anteriores' }).click();
+    await expect(page.getByText('Una respuesta anterior')).toBeVisible();
+    await expect(page.getByLabel('Tu respuesta')).toHaveValue('Un borrador');
+    await page.getByRole('button', { name: 'Ver respuestas recientes' }).click();
+    await expect(page.getByText('La respuesta reciente')).toBeVisible();
+  } finally { await context.close(); }
+});
 test('el perfil se guarda en la cuenta y no se mezcla al cambiar de persona', async ({ browser }, info) => {
   const a = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
   const b = await browser.newContext({ baseURL: 'http://127.0.0.1:4190', ...info.project.use });
@@ -307,7 +327,7 @@ test("al cambiar de conversación una respuesta tardía no mezcla los hilos", as
     await context.request.post(`/api/plaza/posts/${second.post.id}/replies`, { headers, data: { body: "Respuesta de segunda" } });
     let release: () => void = () => {};
     const delayed = new Promise<void>((resolve) => { release = resolve; });
-    await page.route(`**/api/plaza/posts/${first.post.id}/replies`, async (route) => { await delayed; await route.continue(); });
+    await page.route(`**/api/plaza/posts/${first.post.id}/replies?*`, async (route) => { await delayed; await route.continue(); });
     await page.goto("/#plaza");
     await page.getByRole("article").filter({ hasText: `Primera ${info.project.name}` }).getByRole("button", { name: "Ver conversación" }).click();
     await page.getByRole("button", { name: "Volver a La Plaza" }).click();

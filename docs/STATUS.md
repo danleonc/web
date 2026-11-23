@@ -496,3 +496,7 @@ En una reserva cuya sala aún no está accesible se explica que abre cinco minut
 ### La Plaza · actualización de respuestas
 
 La conversación abierta consulta periódicamente las respuestas cuando la pestaña está visible; conserva el borrador y no aplica resultados de un hilo anterior al navegar. Se detiene durante acciones en curso y reintenta errores de lectura. Compilación y seis recorridos de navegador aprobados en escritorio y móvil simulado, con cuentas de prueba. No equivale a entrega instantánea ni a pruebas en teléfonos físicos.
+
+### La Plaza · historial de respuestas
+
+Las conversaciones extensas muestran las 50 respuestas más recientes y permiten recorrer páginas anteriores o volver a las recientes, manteniendo el borrador. La actualización automática se realiza mientras se ve la página reciente; en páginas históricas no cambia la vista. La API conserva filtros de bloqueo y comprueba cursores. Pruebas de servidor con 125 respuestas y bloqueos, y recorridos de interfaz con páginas simuladas en escritorio y móvil. Las páginas pueden cambiar si se eliminan contenidos concurrentemente; no son una instantánea. Persisten límites separados en mensajes privados y lista de conexiones.
