@@ -500,3 +500,7 @@ La conversación abierta consulta periódicamente las respuestas cuando la pesta
 ### La Plaza · historial de respuestas
 
 Las conversaciones extensas muestran las 50 respuestas más recientes y permiten recorrer páginas anteriores o volver a las recientes, manteniendo el borrador. La actualización automática se realiza mientras se ve la página reciente; en páginas históricas no cambia la vista. La API conserva filtros de bloqueo y comprueba cursores. Pruebas de servidor con 125 respuestas y bloqueos, y recorridos de interfaz con páginas simuladas en escritorio y móvil. Las páginas pueden cambiar si se eliminan contenidos concurrentemente; no son una instantánea. Persisten límites separados en mensajes privados y lista de conexiones.
+
+### Conexiones · historial y lista
+
+La lista de conexiones y el historial privado permiten consultar páginas anteriores y regresar a las recientes. Cada página contiene hasta 50 elementos; al navegar mensajes se conserva el borrador. Los mensajes recientes se actualizan automáticamente; al revisar páginas anteriores, la actualización del contenido se pausa mientras se sigue verificando si la conexión continúa activa. La API valida los cursores, la pertenencia y los bloqueos, y conserva los filtros de conexiones retiradas. Pruebas de servidor con 125 mensajes y 125 conexiones, cuentas ajenas y bloqueo; seis recorridos de navegador en escritorio y móvil simulado, con páginas de lista simuladas. Los cambios concurrentes pueden alterar las páginas: no constituyen una instantánea. No se ha probado en dispositivos físicos.

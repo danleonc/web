@@ -459,6 +459,37 @@ test("la autora apela una retirada y otra moderadora puede revisarla", async ({ 
   } finally { for (const context of contexts) await context.close(); }
 });
 
+test('la lista permite consultar conexiones anteriores y regresar', async ({browser},info) => {
+ const context=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(context,`list_ui_${info.project.name}`);
+  await context.route('**/api/plaza/connections?*',async route=>{
+   const old=new URL(route.request().url()).searchParams.has('cursor');
+   await route.fulfill({json:{connections:[{id:old?'older':'newer',senderId:'a',recipientId:'b',person:old?'Conexión anterior':'Conexión reciente',note:'',status:'closed'}],nextCursor:old?null:'cursor-anterior'}});
+  });
+  const page=await context.newPage(); await page.goto('/#connections'); await expect(page.getByRole('heading',{name:'Conexión reciente'})).toBeVisible();
+  await page.getByRole('button',{name:'Ver conexiones anteriores'}).click(); await expect(page.getByRole('heading',{name:'Conexión anterior'})).toBeVisible();
+  await page.getByRole('button',{name:'Ver conexiones recientes'}).click(); await expect(page.getByRole('heading',{name:'Conexión reciente'})).toBeVisible();
+ } finally {await context.close();}
+});
+
+test('recorrer mensajes privados antiguos conserva el borrador', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use}); const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`hist_ui_a_${info.project.name}`); await register(b,`hist_ui_b_${info.project.name}`); const headers={Origin:'http://127.0.0.1:4190'};
+  const {post}=await (await b.request.post('/api/plaza/posts',{headers,data:{topic:'cultura',title:'Historial privado',body:'Hola'}})).json();
+  const {invitation}=await (await a.request.post('/api/plaza/invitations',{headers,data:{kind:'post',contentId:post.id,note:''}})).json();
+  expect((await b.request.post(`/api/plaza/invitations/${invitation.id}/decision`,{headers,data:{action:'accept'}})).status()).toBe(200);
+  for(let i=0;i<101;i++) expect((await b.request.post(`/api/plaza/connections/${invitation.id}/messages`,{headers,data:{clientId:`hist-ui-${String(i).padStart(4,'0')}`,body:`Historia ${i}`}})).status()).toBe(201);
+  const page=await a.newPage(); await page.goto('/#connections'); await page.getByRole('button',{name:'Abrir conversación'}).click();
+  await expect(page.getByText('Historia 100',{exact:true})).toBeVisible(); await page.getByLabel('Mensaje privado').fill('Borrador guardado');
+  await page.getByRole('button',{name:'Ver mensajes anteriores'}).click(); await expect(page.getByText('Historia 50',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Ver mensajes anteriores'}).click(); await expect(page.getByText('Historia 0',{exact:true})).toBeVisible();
+  await expect(page.getByLabel('Mensaje privado')).toHaveValue('Borrador guardado'); await page.getByRole('button',{name:'Ver mensajes recientes'}).click();
+  await expect(page.getByText('Historia 100',{exact:true})).toBeVisible(); await expect(page.getByLabel('Mensaje privado')).toHaveValue('Borrador guardado');
+ } finally {await a.close();await b.close();}
+});
+
 test("dos personas aceptan una solicitud antes de conversar en privado", async ({ browser }, info) => {
   const ana = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   const bea = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });

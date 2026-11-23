@@ -44,11 +44,23 @@ export class ConnectionsStore {
     });
     return { id, status: "pending" };
   }
-  list(actor: string) {
-    return this.storage.db.prepare(`SELECT c.id,c.sender_id AS senderId,c.recipient_id AS recipientId,c.note,c.origin_kind AS originKind,c.origin_id AS originId,c.status,c.created_at AS createdAt,a.id AS personId,a.alias AS person
+  list(actor: string, cursor?: string) {
+    let time = Number.MAX_SAFE_INTEGER, id = 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+    if (cursor) {
+      if (!/^[A-Za-z0-9_-]{1,120}$/.test(cursor)) throw Error('invalid_cursor');
+      let value: unknown;
+      try { value = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')); } catch { throw Error('invalid_cursor'); }
+      if (!Array.isArray(value) || value.length !== 2 || !Number.isSafeInteger(value[0]) || value[0] < 0 || typeof value[1] !== 'string' || !/^[a-f0-9-]{36}$/.test(value[1])) throw Error('invalid_cursor');
+      [time,id] = value;
+    }
+    const paginated = cursor !== undefined;
+    const rows = this.storage.db.prepare(`SELECT c.id,c.sender_id AS senderId,c.recipient_id AS recipientId,c.note,c.origin_kind AS originKind,c.origin_id AS originId,c.status,c.created_at AS createdAt,c.updated_at AS updatedAt,a.id AS personId,a.alias AS person
       FROM plaza_connections c JOIN accounts a ON a.id=CASE WHEN c.sender_id=? THEN c.recipient_id ELSE c.sender_id END
       WHERE (c.sender_id=? OR c.recipient_id=?) AND NOT EXISTS (SELECT 1 FROM connection_dismissals d WHERE d.user_id=? AND d.connection_id=c.id) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=c.sender_id AND b.blocked_id=c.recipient_id) OR (b.user_id=c.recipient_id AND b.blocked_id=c.sender_id))
-      ORDER BY c.updated_at DESC,c.id DESC LIMIT 100`).all(actor, actor, actor, actor);
+      ${paginated ? 'AND (c.updated_at<? OR (c.updated_at=? AND c.id<?))' : ''} ORDER BY c.updated_at DESC,c.id DESC LIMIT ${paginated ? 51 : 100}`).all(actor, actor, actor, actor, ...(paginated ? [time,time,id] : []));
+    const connections = paginated ? rows.slice(0,50) : rows;
+    const last = connections.at(-1);
+    return { connections, ...(paginated ? { nextCursor: rows.length > 50 && last ? Buffer.from(JSON.stringify([last.updatedAt,last.id])).toString('base64url') : null } : {}) };
   }
   dismiss(actor: string, id: string) {
     const row = this.visible(id,actor);
@@ -83,10 +95,16 @@ export class ConnectionsStore {
     if (!row || row.status !== "accepted") return null;
     return String(row.sender_id === actor ? row.recipient_id : row.sender_id);
   }
-  messages(actor: string, id: string) {
+  messages(actor: string, id: string, cursor?: string) {
     const connection = this.visible(id, actor);
     if (!connection || connection.status !== "accepted") return null;
-    return this.storage.db.prepare("SELECT m.id,m.sender_id AS senderId,m.body,m.sticker_id AS stickerId,CASE WHEN EXISTS (SELECT 1 FROM plaza_private_messages q WHERE q.id=m.reply_to AND q.connection_id=m.connection_id AND q.hidden=0) THEN m.reply_to ELSE NULL END AS replyTo,(SELECT id FROM plaza_images i WHERE i.message_id=m.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.message_id=m.id) AS imageDescription,m.created_at AS createdAt FROM plaza_private_messages m WHERE m.connection_id=? AND m.hidden=0 AND (m.body<>'' OR m.sticker_id IS NOT NULL OR EXISTS (SELECT 1 FROM plaza_images i WHERE i.message_id=m.id)) ORDER BY rowid DESC LIMIT 100").all(id).reverse();
+    if (cursor && (!/^[1-9][0-9]{0,15}$/.test(cursor) || !Number.isSafeInteger(Number(cursor)))) throw Error('invalid_cursor');
+    const paginated = cursor !== undefined;
+    const rows = this.storage.db.prepare(`SELECT m.rowid AS position,m.id,m.sender_id AS senderId,m.body,m.sticker_id AS stickerId,CASE WHEN EXISTS (SELECT 1 FROM plaza_private_messages q WHERE q.id=m.reply_to AND q.connection_id=m.connection_id AND q.hidden=0) THEN m.reply_to ELSE NULL END AS replyTo,(SELECT id FROM plaza_images i WHERE i.message_id=m.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.message_id=m.id) AS imageDescription,m.created_at AS createdAt FROM plaza_private_messages m WHERE m.connection_id=? AND m.hidden=0 AND (m.body<>'' OR m.sticker_id IS NOT NULL OR EXISTS (SELECT 1 FROM plaza_images i WHERE i.message_id=m.id)) ${paginated ? 'AND m.rowid<?' : ''} ORDER BY m.rowid DESC LIMIT ${paginated ? 51 : 100}`).all(id, ...(paginated ? [cursor ? Number(cursor) : Number.MAX_SAFE_INTEGER] : []));
+    const page = paginated ? rows.slice(0,50) : rows;
+    const nextCursor = paginated && rows.length > 50 ? String(page.at(-1)!.position) : null;
+    const messages = page.reverse().map(({position: _position, ...message}) => message);
+    return { messages, ...(paginated ? { nextCursor } : {}) };
   }
   remove(actor: string, connectionId: string, messageId: string) {
     const connection = this.visible(connectionId, actor);

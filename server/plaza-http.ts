@@ -70,9 +70,17 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
     else if (post) { const found=plaza.getPost(actor.id,post[1]); json(res,found?200:404,found?{post:found}:{error:'not_found'}); }
     else if (path === "/api/plaza/blocks") json(res, 200, { blocks: storage.blockedAccounts(actor.id) });
     else if (path === "/api/plaza/my-moderation") json(res, 200, { actions: moderation.myActions(actor.id) });
-    else if (path === "/api/plaza/connections") json(res, 200, { connections: connections.list(actor.id) });
+    else if (path === "/api/plaza/connections") {
+      const params = new URL(req.url || '', 'http://localhost').searchParams;
+      if ([...params.keys()].some(key => !['page','cursor'].includes(key)) || ['page','cursor'].some(key => params.getAll(key).length > 1) || (params.has('page') && params.get('page') !== '1') || (params.has('page') && params.has('cursor')) || (params.has('cursor') && !params.get('cursor'))) json(res,422,{error:'invalid_page'});
+      else { try { json(res,200,connections.list(actor.id,params.has('page') || params.has('cursor') ? params.get('cursor') || '' : undefined)); } catch { json(res,422,{error:'invalid_page'}); } }
+    }
     else if (connection) { const found=connections.get(actor.id,connection[1]); json(res,found?200:404,found?{connection:found}:{error:"not_found"}); }
-    else if (privateMessages) { const messages = connections.messages(actor.id, privateMessages[1]); json(res, messages ? 200 : 404, messages ? { messages } : { error: "not_found" }); }
+    else if (privateMessages) {
+      const params = new URL(req.url || '', 'http://localhost').searchParams;
+      if ([...params.keys()].some(key => !['page','cursor'].includes(key)) || ['page','cursor'].some(key => params.getAll(key).length > 1) || (params.has('page') && params.get('page') !== '1') || (params.has('page') && params.has('cursor')) || (params.has('cursor') && !params.get('cursor'))) json(res,422,{error:'invalid_page'});
+      else { try { const result = connections.messages(actor.id,privateMessages[1],params.has('page') || params.has('cursor') ? params.get('cursor') || '' : undefined); json(res,result?200:404,result || {error:'not_found'}); } catch { json(res,422,{error:'invalid_page'}); } }
+    }
     else if (path === "/api/plaza/moderation/appeals") json(res, 200, { appeals: moderation.appeals(actor.id) });
     else if (path === "/api/plaza/moderation/reports") json(res, 200, { reports: moderation.reports(actor.id) });
     else if (replies) {
