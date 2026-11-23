@@ -742,6 +742,7 @@ function App() {
               scheduled={realPlazaEnabled ? scheduledMeeting : undefined}
               profile={participationProfile}
               onProfile={() => prepareProfile("shared")}
+              onConnections={() => navigate("connections")}
             />
           )}
           {page === "discover" && realPlazaEnabled && <RealMeetings onEnter={(meeting) => { setScheduledMeeting(meeting); navigate("shared"); }} onAccess={() => setAccessOpen(true)} />}

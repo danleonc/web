@@ -24,9 +24,10 @@ import { ContinueAfterMeeting } from "../shared/RoomContinuity";
 export function SharedRoom({
   profile,
   onProfile,
+  onConnections,
   scheduled,
   ...stickerActions
-}: StickerActions & { profile: Profile | null; onProfile: () => void; scheduled?: Offering | null }) {
+}: StickerActions & { profile: Profile | null; onProfile: () => void; onConnections: () => void; scheduled?: Offering | null }) {
   const [report, setReport] = useState<{
     targetId: string;
     subject: string;
@@ -113,6 +114,7 @@ export function SharedRoom({
           state={account}
           active={active}
           onProfile={onProfile}
+          onConnections={onConnections}
           onLogout={() => setActive(false)}
         />
       )}
@@ -312,7 +314,7 @@ export function SharedRoom({
                       </>
                     )}
                   </p>
-                  {accountsEnabled && realPlazaEnabled && session.phase === 'closed' && session.sessionUntil > 0 && snapshot && <ContinueAfterMeeting key={snapshot.roomKey} roomId={snapshot.roomKey} people={session.participants.filter(person=>person.id!==snapshot.me).map(person=>({id:person.id,name:person.name}))} onProfile={onProfile} />}
+                  {accountsEnabled && realPlazaEnabled && session.phase === 'closed' && session.sessionUntil > 0 && snapshot && <ContinueAfterMeeting key={snapshot.roomKey} roomId={snapshot.roomKey} people={session.participants.filter(person=>person.id!==snapshot.me).map(person=>({id:person.id,name:person.name}))} onProfile={onProfile} onConnections={onConnections} />}
                 </div>
               ) : (
                 <GuidePanel

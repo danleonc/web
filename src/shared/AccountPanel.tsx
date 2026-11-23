@@ -21,6 +21,7 @@ export function AccountPanel({
   active,
   onLogout,
   onProfile,
+  onConnections,
   compact = false,
 }: {
   state: State;
@@ -28,6 +29,7 @@ export function AccountPanel({
   active: boolean;
   onLogout: () => void;
   onProfile?: () => void;
+  onConnections?: () => void;
 }) {
   const recoveryId = useId();
   const [mode, setMode] = useState<"login" | "register" | "recover">("login");
@@ -357,7 +359,7 @@ export function AccountPanel({
                     <button className="button text" onClick={() => void state.history(r.id)}>
                       Ver mensajes de {featuredActivities.find((a) => a.id === r.activityId)?.title || "encuentro"}
                     </button>
-                    {realPlazaEnabled && r.phase === 'closed' && onProfile && <HistoryContinuity roomId={r.id} onProfile={onProfile}/>}
+                    {realPlazaEnabled && r.phase === 'closed' && onProfile && onConnections && <HistoryContinuity roomId={r.id} onProfile={onProfile} onConnections={onConnections}/>}
                     {r.archived && <button className="button text" disabled={state.busy} onClick={() => {
                       if (window.confirm("¿Quitar este encuentro de tu historial? Las demás personas conservarán su historial, pero ya no podrán enviarte solicitudes desde este encuentro.")) void state.dismissHistory(r.id);
                     }}>Quitar de mi historial</button>}

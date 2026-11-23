@@ -643,6 +643,19 @@ test('al terminar un encuentro se puede solicitar una conexión', async ({browse
   await pages[2].getByLabel(/Acepto que nuestras fotos/).check();
   await pages[2].getByRole('button',{name:'Enviar solicitud'}).click();
   await expect(pages[2].getByText(/Solicitud enviada a/)).toBeVisible();
+  await pages[0].goto('/#shared');
+  await pages[0].getByText('Historial de mis salas',{exact:true}).click();
+  await pages[0].getByText('Seguir conversando con participantes',{exact:true}).click();
+  await pages[0].getByRole('button',{name:`Conectar con continuidad_${info.project.name}_2`}).click();
+  await pages[0].getByLabel(/Acepto que nuestras fotos/).check();
+  await pages[0].getByRole('button',{name:'Enviar solicitud'}).click();
+  await expect(pages[0].getByRole('alert')).toContainText('Ya tienes una solicitud de esta persona. Revísala en Conexiones.');
+  await pages[0].getByRole('button',{name:'Ir a Conexiones'}).click();
+  const incoming=pages[0].getByRole('article').filter({hasText:`continuidad_${info.project.name}_2`});
+  await expect(incoming.getByText('Solicitud recibida')).toBeVisible();
+  await incoming.getByLabel(/Acepto que nuestras fotos/).check();
+  await incoming.getByRole('button',{name:'Aceptar solicitud'}).click();
+  await expect(incoming.getByText('Conexión aceptada')).toBeVisible();
  } finally {await mod.close();for(const c of people) await c.close();}
 });
 

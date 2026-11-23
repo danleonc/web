@@ -48,6 +48,7 @@ test('invitación del encuentro respeta requisito de foto y acuerdo',async t=>{
   f.request('/api/plaza/room-invitations','POST',{...body,targetId:a.id,photoChallengeAccepted:true},b.cookie),
  ]);
  assert.equal([first,reverse].filter(r=>r.status===201).length,1);
+ assert.equal([first,reverse].find(r=>r.status!==201).body.error,'incoming_request_exists');
  const check=new DatabaseSync(f.path);
  assert.equal(check.prepare("SELECT COUNT(*) AS count FROM plaza_connections WHERE status='pending'").get().count,1);
  check.close();

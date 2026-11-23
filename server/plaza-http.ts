@@ -134,7 +134,12 @@ export async function handlePlaza(storage: Storage, now: () => number, validOrig
       if (typeof value.roomId !== 'string' || typeof value.targetId !== 'string' || typeof value.note !== 'string' || Object.keys(value).some(k => !['roomId','targetId','note','photoChallengeAccepted'].includes(k)) || (value.photoChallengeAccepted !== undefined && typeof value.photoChallengeAccepted !== 'boolean')) throw Error('invalid_body');
       if (requireConnectionPhoto && !storage.db.prepare('SELECT 1 FROM account_profile_photos WHERE user_id=? AND hidden=0').get(actor.id)) { json(res,403,{error:'profile_photo_required'}); return true; }
       if (requireConnectionPhoto && value.photoChallengeAccepted !== true) throw Error('challenge_agreement_required');
-      json(res,201,{invitation:connections.inviteFromRoom(actor.id,value.roomId,value.targetId,value.note,value.photoChallengeAccepted === true)});
+      try {
+        json(res,201,{invitation:connections.inviteFromRoom(actor.id,value.roomId,value.targetId,value.note,value.photoChallengeAccepted === true)});
+      } catch (error) {
+        if (error instanceof Error && error.message === 'incoming_request_exists') json(res,409,{error:'incoming_request_exists'});
+        else throw error;
+      }
     } else if (req.method === "POST" && path === "/api/plaza/invitations") {
       const value = await body(req);
       if (typeof value.kind !== "string" || typeof value.contentId !== "string" || typeof value.note !== "string" || Object.keys(value).some(k => !["kind","contentId","note","photoChallengeAccepted"].includes(k)) || (value.photoChallengeAccepted !== undefined && typeof value.photoChallengeAccepted !== "boolean")) throw Error("invalid_body");
