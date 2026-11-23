@@ -39,8 +39,9 @@ export function jumpToOriginal(from: HTMLElement, id: string) {
   original.scrollIntoView({ block: "center", behavior: "auto" });
 }
 
-export function ReplyQuote({ target }: { target?: ReplyTarget }) {
+export function ReplyQuote({ target, available = true }: { target?: ReplyTarget; available?: boolean }) {
   const descriptionId = useId();
+  if (target && !available) return <div className="reply-quote"><strong>{target.name}</strong><small>{target.summary}</small></div>;
   return target ? (
     <button type="button" className="reply-quote"
       aria-label={`Ver mensaje original de ${target.name}`}

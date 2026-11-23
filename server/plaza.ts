@@ -111,8 +111,10 @@ export class PlazaStore {
         (b.user_id=? AND b.blocked_id IN (p.author_id,r.author_id)) OR
         (b.blocked_id=? AND b.user_id IN (p.author_id,r.author_id)))
       ${paginated ? 'AND (r.created_at<? OR (r.created_at=? AND r.id<?)) ORDER BY r.created_at DESC,r.id DESC LIMIT 51' : 'ORDER BY r.created_at,r.id LIMIT 100'}`).all(userId, userId, postId, userId, userId, ...(paginated ? [beforeTime, beforeTime, beforeId] : []));
-    if (!paginated) return { replies: rows };
-    const page = rows.slice(0, 50), oldest = page.at(-1);
-    return { replies: page.reverse(), nextCursor: rows.length > 50 && oldest ? Buffer.from(JSON.stringify([oldest.createdAt, oldest.id])).toString('base64url') : null };
+    const page = paginated ? rows.slice(0, 50) : rows, oldest = page.at(-1);
+    const ids = [...new Set(page.map(row => row.replyTo).filter((id): id is string => typeof id === 'string'))];
+    const targets = ids.length ? this.storage.db.prepare(`SELECT q.id,q.body,q.sticker_id AS stickerId,a.alias AS author,EXISTS(SELECT 1 FROM plaza_images i WHERE i.reply_id=q.id) AS hasImage FROM plaza_replies q JOIN accounts a ON a.id=q.author_id WHERE q.post_id=? AND q.hidden=0 AND q.id IN (${ids.map(() => '?').join(',')}) AND NOT EXISTS (SELECT 1 FROM blocks b WHERE (b.user_id=? AND b.blocked_id=q.author_id) OR (b.blocked_id=? AND b.user_id=q.author_id))`).all(postId,...ids,userId,userId) : [];
+    const replies = (paginated ? page.reverse() : page).map(row => { const target=targets.find(item => item.id===row.replyTo); return {...row, quote: target ? {id:target.id,name:target.author,summary:String(target.body).slice(0,160) || (target.hasImage ? 'Imagen' : 'Sticker')} : null}; });
+    return { replies, ...(paginated ? {nextCursor: rows.length > 50 && oldest ? Buffer.from(JSON.stringify([oldest.createdAt, oldest.id])).toString('base64url') : null} : {}) };
   }
 }

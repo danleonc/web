@@ -126,11 +126,13 @@ test('una conversación extensa permite ver respuestas anteriores y volver a las
     const { post } = await (await context.request.post('/api/plaza/posts', { headers: { Origin: 'http://127.0.0.1:4190' }, data: { topic: 'cultura', title: `Historial largo ${info.project.name}`, body: 'Hola' } })).json();
     await context.route(`**/api/plaza/posts/${post.id}/replies?*`, async route => {
       const old = new URL(route.request().url()).searchParams.has('cursor');
-      await route.fulfill({ json: { replies: [{ id: old ? 'old' : 'new', postId: post.id, authorId: 'other', author: 'Alguien', body: old ? 'Una respuesta anterior' : 'La respuesta reciente' }], nextCursor: old ? null : 'cursor-anterior' } });
+      await route.fulfill({ json: { replies: [{ id: old ? 'old' : 'new', postId: post.id, authorId: 'other', author: 'Alguien', body: old ? 'Una respuesta anterior' : 'La respuesta reciente', ...(!old ? {replyTo:'old',quote:{id:'old',name:'Alguien',summary:'Una respuesta anterior'}} : {}) }], nextCursor: old ? null : 'cursor-anterior' } });
     });
     const page = await context.newPage(); await page.goto('/#plaza');
     await page.getByRole('article').filter({ hasText: `Historial largo ${info.project.name}` }).getByRole('button', { name: 'Ver conversación' }).click();
     await expect(page.getByText('La respuesta reciente')).toBeVisible();
+    await expect(page.locator('.reply-quote').getByText('Una respuesta anterior')).toBeVisible();
+    await expect(page.getByRole('button',{name:'Ver mensaje original de Alguien'})).toHaveCount(0);
     await page.getByLabel('Tu respuesta').fill('Un borrador');
     await page.getByRole('button', { name: 'Ver respuestas anteriores' }).click();
     await expect(page.getByText('Una respuesta anterior')).toBeVisible();
@@ -485,8 +487,12 @@ test('recorrer mensajes privados antiguos conserva el borrador', async ({browser
   await expect(page.getByText('Historia 100',{exact:true})).toBeVisible(); await page.getByLabel('Mensaje privado').fill('Borrador guardado');
   await page.getByRole('button',{name:'Ver mensajes anteriores'}).click(); await expect(page.getByText('Historia 50',{exact:true})).toBeVisible();
   await page.getByRole('button',{name:'Ver mensajes anteriores'}).click(); await expect(page.getByText('Historia 0',{exact:true})).toBeVisible();
-  await expect(page.getByLabel('Mensaje privado')).toHaveValue('Borrador guardado'); await page.getByRole('button',{name:'Ver mensajes recientes'}).click();
-  await expect(page.getByText('Historia 100',{exact:true})).toBeVisible(); await expect(page.getByLabel('Mensaje privado')).toHaveValue('Borrador guardado');
+  await expect(page.getByLabel('Mensaje privado')).toHaveValue('Borrador guardado');
+  await page.getByRole('article').filter({hasText:'Historia 0'}).getByRole('button',{name:'Responder a este mensaje'}).click();
+  await page.getByLabel('Mensaje privado').fill('Respuesta a historia antigua'); await page.getByRole('button',{name:'Enviar mensaje'}).click();
+  const answer=page.getByRole('article').filter({hasText:'Respuesta a historia antigua'});
+  await expect(answer.locator('.reply-quote').getByText('Historia 0',{exact:true})).toBeVisible();
+  await expect(answer.getByRole('button',{name:/Ver mensaje original/})).toHaveCount(0);
  } finally {await a.close();await b.close();}
 });
 

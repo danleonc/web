@@ -504,3 +504,7 @@ Las conversaciones extensas muestran las 50 respuestas más recientes y permiten
 ### Conexiones · historial y lista
 
 La lista de conexiones y el historial privado permiten consultar páginas anteriores y regresar a las recientes. Cada página contiene hasta 50 elementos; al navegar mensajes se conserva el borrador. Los mensajes recientes se actualizan automáticamente; al revisar páginas anteriores, la actualización del contenido se pausa mientras se sigue verificando si la conexión continúa activa. La API valida los cursores, la pertenencia y los bloqueos, y conserva los filtros de conexiones retiradas. Pruebas de servidor con 125 mensajes y 125 conexiones, cuentas ajenas y bloqueo; seis recorridos de navegador en escritorio y móvil simulado, con páginas de lista simuladas. Los cambios concurrentes pueden alterar las páginas: no constituyen una instantánea. No se ha probado en dispositivos físicos.
+
+### Citas entre páginas
+
+Las respuestas de La Plaza y los mensajes privados incluyen un resumen acotado de la cita visible aunque el original esté en otra página. El servidor solo lo entrega mientras el contenido original siga disponible y se respeten los bloqueos y permisos; cuando el original no está cargado, el resumen no se presenta como un botón que permita saltar a él. Pruebas de servidor de eliminación, bloqueo y aislamiento entre cuentas, más ocho recorridos de navegador en escritorio y móvil simulado. Cambio preparado localmente; consultar el estado del despliegue antes de afirmar que está publicado.

@@ -103,7 +103,9 @@ export class ConnectionsStore {
     const rows = this.storage.db.prepare(`SELECT m.rowid AS position,m.id,m.sender_id AS senderId,m.body,m.sticker_id AS stickerId,CASE WHEN EXISTS (SELECT 1 FROM plaza_private_messages q WHERE q.id=m.reply_to AND q.connection_id=m.connection_id AND q.hidden=0) THEN m.reply_to ELSE NULL END AS replyTo,(SELECT id FROM plaza_images i WHERE i.message_id=m.id) AS imageId,(SELECT description FROM plaza_images i WHERE i.message_id=m.id) AS imageDescription,m.created_at AS createdAt FROM plaza_private_messages m WHERE m.connection_id=? AND m.hidden=0 AND (m.body<>'' OR m.sticker_id IS NOT NULL OR EXISTS (SELECT 1 FROM plaza_images i WHERE i.message_id=m.id)) ${paginated ? 'AND m.rowid<?' : ''} ORDER BY m.rowid DESC LIMIT ${paginated ? 51 : 100}`).all(id, ...(paginated ? [cursor ? Number(cursor) : Number.MAX_SAFE_INTEGER] : []));
     const page = paginated ? rows.slice(0,50) : rows;
     const nextCursor = paginated && rows.length > 50 ? String(page.at(-1)!.position) : null;
-    const messages = page.reverse().map(({position: _position, ...message}) => message);
+    const ids = [...new Set(page.map(row => row.replyTo).filter((value): value is string => typeof value === 'string'))];
+    const targets = ids.length ? this.storage.db.prepare(`SELECT q.id,q.body,q.sender_id AS senderId,q.sticker_id AS stickerId,a.alias AS author,EXISTS(SELECT 1 FROM plaza_images i WHERE i.message_id=q.id) AS hasImage FROM plaza_private_messages q JOIN accounts a ON a.id=q.sender_id WHERE q.connection_id=? AND q.hidden=0 AND q.id IN (${ids.map(() => '?').join(',')})`).all(id,...ids) : [];
+    const messages = page.reverse().map(({position: _position, ...message}) => { const target=targets.find(item => item.id===message.replyTo); return {...message,quote:target ? {id:target.id,name:target.senderId===actor ? 'Tú' : target.author,summary:String(target.body).slice(0,160) || (target.hasImage ? 'Imagen' : 'Sticker')} : null}; });
     return { messages, ...(paginated ? { nextCursor } : {}) };
   }
   remove(actor: string, connectionId: string, messageId: string) {
