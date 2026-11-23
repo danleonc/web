@@ -475,6 +475,19 @@ test("dos personas aceptan una solicitud antes de conversar en privado", async (
   } finally { await ana.close(); await bea.close(); }
 });
 
+test("los encuentros explican por qué no aceptan reservas", async ({browser},info) => {
+  const user=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+  try {
+    await register(user,`disponibilidad_${info.project.name}`);
+    const page=await user.newPage();
+    const common={startsAt:'2099-01-01T12:00:00.000Z',minimum:3,maximum:4,mine:false,accessible:false,ended:false};
+    await page.route('**/api/activities*',route=>route.fulfill({json:{activities:[{...common,id:'full',title:'Encuentro completo',reserved:4,bookingOpen:true},{...common,id:'closed',title:'Encuentro cerrado',reserved:1,bookingOpen:false}],nextOffset:null}}));
+    await page.goto('/#discover');
+    await expect(page.getByRole('article').filter({hasText:'Encuentro completo'}).getByText('Cupos completos')).toBeVisible();
+    await expect(page.getByRole('article').filter({hasText:'Encuentro cerrado'}).getByText('Reservas cerradas')).toBeVisible();
+  } finally {await user.close();}
+});
+
 test("una reserva explica cuándo estará disponible el acceso", async ({browser},info) => {
   const user=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
   try {
