@@ -702,6 +702,7 @@ test('al terminar un encuentro se puede solicitar una conexión', async ({browse
   const dateText=new Intl.DateTimeFormat('es-CL',{dateStyle:'full',timeStyle:'short',timeZone:'America/Santiago'}).format(new Date(groupData.reunions[0].startsAt));
   const groupMeeting=pages[0].getByRole('article').filter({hasText:dateText}).filter({has:pages[0].getByRole('button',{name:'Entrar al encuentro'})});
   await expect(groupMeeting.getByText('Reencuentro privado: retirar tu participación cancela el encuentro para todo el grupo.')).toBeVisible();
+  await pages[0].routeWebSocket('**/api/rooms/**',ws=>{const server=ws.connectToServer();server.onClose(()=>{void ws.close();});});
   await groupMeeting.getByRole('button',{name:'Entrar al encuentro'}).click();
   await pages[0].getByLabel(/Entiendo que esta prueba comparte/).check();await pages[0].getByRole('button',{name:'Conectar con esta sala'}).click();
   await expect(pages[0].getByText('Conectado al servidor',{exact:true})).toBeVisible();
@@ -711,6 +712,7 @@ test('al terminar un encuentro se puede solicitar una conexión', async ({browse
   await expect(lastCard.getByRole('status')).toBeFocused();
   await expect(pages[2].getByText('Propuesta cancelada.')).toBeVisible();
   await expect(pages[0].getByText('Conectado al servidor',{exact:true})).not.toBeVisible();
+  await expect(pages[0].getByText('El reencuentro ya no está disponible.')).toBeVisible();
   await pages[0].goto('/#discover');await pages[0].reload();await expect(pages[0].getByText('Propuesta cancelada.')).toBeVisible();
   await expect.poll(async()=>{const r=await people[0].request.get('/api/plaza/notifications');return (await r.json()).items.some((n:{kind:string})=>n.kind==='group_cancelled');}).toBe(true);
  } finally {await mod.close();for(const c of people) await c.close();}

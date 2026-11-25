@@ -40,6 +40,7 @@ export function useSharedRoom(
       return;
     }
     let cancelled = false;
+    let reunionCancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let attempts = 0;
     let ws: WebSocket | undefined;
@@ -79,10 +80,17 @@ export function useSharedRoom(
           }
         };
         ws.onmessage = (event) => {
-          if (cancelled) return;
+          if (cancelled || reunionCancelled) return;
           try {
             const value = JSON.parse(event.data) as SharedEvent;
-            if (value.type === "snapshot") {
+            if (value.type === "reunion_cancelled") {
+              reunionCancelled = true;
+              roomKeyRef.current = null;
+              setSnapshot(null);
+              setPending([]);
+              setStatus("blocked");
+              setError("El reencuentro ya no está disponible.");
+            } else if (value.type === "snapshot") {
               if (roomKeyRef.current && roomKeyRef.current !== value.roomKey) {
                 setPending([]);
                 setError(
@@ -112,7 +120,7 @@ export function useSharedRoom(
             );
         };
         ws.onclose = (event) => {
-          if (cancelled) return;
+          if (cancelled || reunionCancelled) return;
           if (
             event.code === 4003 ||
             event.code === 4004 ||

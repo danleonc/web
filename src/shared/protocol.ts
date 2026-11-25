@@ -26,7 +26,8 @@ export type SharedSnapshot = {
 export type SharedEvent =
   | SharedSnapshot
   | { type: "error"; code: string; message: string }
-  | { type: "ack"; clientId: string };
+  | { type: "ack"; clientId: string }
+  | { type: "reunion_cancelled" };
 export type SharedCommand =
   | { type: "start" | "extend" | "next-question" | "leave" }
   | { type: "respond"; status: "ready" | "pass" | "listen" | "pending" }

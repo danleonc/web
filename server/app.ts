@@ -150,7 +150,10 @@ export function createRoomServer(options: Options = {}) {
   const closeCancelledPrivateRooms = () => {
     if (!storage) return;
     for (const c of connections) {
-      if (storage.db.prepare('SELECT 1 FROM private_meetings p JOIN scheduled_meetings m ON m.id=p.meeting_id WHERE p.meeting_id=? AND m.cancelled_at IS NOT NULL').get(c.room.activityId)) c.socket.close(4003,'El reencuentro ya no está disponible');
+      if (storage.db.prepare('SELECT 1 FROM private_meetings p JOIN scheduled_meetings m ON m.id=p.meeting_id WHERE p.meeting_id=? AND m.cancelled_at IS NOT NULL').get(c.room.activityId)) {
+        send(c,{type:'reunion_cancelled'});
+        c.socket.close(4003,'El reencuentro ya no está disponible');
+      }
     }
   };
   const activeRequests = new Map<string, number>();

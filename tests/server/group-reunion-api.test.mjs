@@ -35,9 +35,11 @@ test('API grupal interna protege origen, membresía, consentimiento y persistenc
  const health=await f.raw('/api/health',{}); const url=health.url.replace('http:','ws:').replace('/api/health',`/api/rooms/${id}`);
  const sockets=[a,c].map(person=>new WebSocket(url,{headers:{Origin:'http://localhost:4173',Cookie:person.cookie}}));
  await Promise.all(sockets.map(ws=>once(ws,'open')));
+ const received=sockets.map(()=>[]);sockets.forEach((ws,i)=>ws.on('message',raw=>received[i].push(JSON.parse(raw.toString()))));
  const closed=sockets.map(ws=>once(ws,'close'));
  assert.equal((await f.request(`${path}/${id}/decision`,'POST',{action:'withdraw'},b.cookie)).body.reunion.status,'cancelled');
  assert.deepEqual((await Promise.all(closed)).map(([code])=>code),[4003,4003]);
+ assert.ok(received.every(events=>events.some(event=>event.type==='reunion_cancelled')));
  assert.equal((await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body.items.some(n=>n.kind==='group_cancelled' && n.targetId===id),true);
  assert.equal((await f.request('/api/activities','GET',undefined,a.cookie)).body.activities.find(x=>x.id===id).cancelled,true);
 });
