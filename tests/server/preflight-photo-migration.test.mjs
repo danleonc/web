@@ -9,10 +9,27 @@ import { tmpdir } from 'node:os';
 import { Storage } from '../../server/storage.ts';
 import { preflightPhotoMigration } from '../../server/preflight-photo-migration.ts';
 
+test('ensaya v27 y conserva base original antes de crear permisos privados',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'nexafia-preflight-v27-')),path=join(dir,'data.sqlite');
+ try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);old.db.exec('DROP TABLE private_meeting_members; DROP TABLE private_meetings; PRAGMA user_version=27');old.close();
+  const result=await preflightPhotoMigration(path);assert.ok(result?.backup);
+  const source=new (await import('node:sqlite')).DatabaseSync(path,{readOnly:true});try{assert.equal(source.prepare('PRAGMA user_version').get().user_version,27);}finally{source.close();}
+  const migrated=new Storage(path);try{assert.equal(migrated.db.prepare('PRAGMA user_version').get().user_version,29);assert.equal(migrated.account('a').alias,'A');}finally{migrated.close();}
+ } finally {await rm(dir,{recursive:true,force:true});}
+});
+
+test('respalda y ensaya v26 antes de migrar reencuentros',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'nexafia-preflight-v26-')),path=join(dir,'data.sqlite');
+ try { const old=new Storage(path); old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1); old.db.exec('DROP TABLE group_reunion_members; DROP TABLE group_reunions; PRAGMA user_version=26'); old.close();
+  const result=await preflightPhotoMigration(path); assert.ok(result?.backup);
+  const live=new (await import('node:sqlite')).DatabaseSync(path,{readOnly:true}); try {assert.equal(live.prepare('PRAGMA user_version').get().user_version,26);assert.equal(live.prepare('SELECT alias FROM accounts WHERE id=?').get('a').alias,'A');} finally {live.close();}
+ } finally {await rm(dir,{recursive:true,force:true});}
+});
+
 test('antes de migrar crea copia verificada y ensaya v23 a v24 sin alterar la base activa', async () => {
  const dir=await mkdtemp(join(tmpdir(),'nexafia-preflight-')); const path=join(dir,'data.sqlite');
  try { const old=new Storage(path); old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1); old.db.exec('DROP TABLE connection_photo_challenges; PRAGMA user_version=23'); old.close();
-  const result=await preflightPhotoMigration(path); assert.ok(result.backup); assert.equal((await readdir(dir)).filter(x=>x.includes('pre-v26') && x.endsWith('.sqlite')).length,1);
+  const result=await preflightPhotoMigration(path); assert.ok(result.backup); assert.equal((await readdir(dir)).filter(x=>x.includes('pre-v29') && x.endsWith('.sqlite')).length,1);
   const backup=new (await import('node:sqlite')).DatabaseSync(result.backup,{readOnly:true}); try {assert.equal(backup.prepare('SELECT alias FROM accounts WHERE id=?').get('a').alias,'A'); assert.equal(backup.prepare('PRAGMA user_version').get().user_version,23);} finally {backup.close();}
   const before=new (await import('node:sqlite')).DatabaseSync(path,{readOnly:true}); try {assert.equal(before.prepare('PRAGMA user_version').get().user_version,23);} finally {before.close();}
   assert.equal((await readdir(dir)).some(x=>x.includes('rehearsal')),false);
@@ -25,7 +42,7 @@ test('si el ensayo falla, conserva el respaldo y deja intacta la base activa',as
  try {const db=new (await import('node:sqlite')).DatabaseSync(path);db.exec('CREATE TABLE unrelated(id INTEGER); PRAGMA user_version=23');db.close();
   await assert.rejects(preflightPhotoMigration(path));
   const original=new (await import('node:sqlite')).DatabaseSync(path,{readOnly:true});try{assert.equal(original.prepare('PRAGMA user_version').get().user_version,23);}finally{original.close();}
-  assert.equal((await readdir(dir)).filter(x=>x.includes('pre-v26') && x.endsWith('.sqlite')).length,1);
+  assert.equal((await readdir(dir)).filter(x=>x.includes('pre-v29') && x.endsWith('.sqlite')).length,1);
  }finally{await rm(dir,{recursive:true,force:true});}
 });
 
@@ -39,8 +56,8 @@ test('el arranque real ensaya y respalda antes de migrar una base v23',async()=>
   child=spawn(process.execPath,[resolve('server/pilot.ts')],{cwd:dir,env:{...process.env,ENTRE_PUBLIC_ORIGIN:`http://127.0.0.1:${port}`,ENTRE_DATABASE_PATH:path,ENTRE_STAGING_SHARED:'0',PORT:String(port),ENTRE_STAGING_PASSWORD:undefined}});
   let output='';child.stdout.on('data',x=>output+=x);child.stderr.on('data',x=>output+=x);
   const until=Date.now()+10000; let ok=false; while(Date.now()<until){try{const r=await fetch(`http://127.0.0.1:${port}/api/health`);if(r.ok){ok=true;break;}}catch{} await new Promise(resolve=>setTimeout(resolve,100));}
-  assert.equal(ok,true,output); const db=new (await import('node:sqlite')).DatabaseSync(path,{readOnly:true});try{assert.equal(db.prepare('PRAGMA user_version').get().user_version,26);assert.equal(db.prepare('SELECT alias FROM accounts WHERE id=?').get('a').alias,'A');}finally{db.close();}
-  assert.equal((await readdir(dir)).filter(x=>x.includes('pre-v26') && x.endsWith('.sqlite')).length,1);
+  assert.equal(ok,true,output); const db=new (await import('node:sqlite')).DatabaseSync(path,{readOnly:true});try{assert.equal(db.prepare('PRAGMA user_version').get().user_version,29);assert.equal(db.prepare('SELECT alias FROM accounts WHERE id=?').get('a').alias,'A');}finally{db.close();}
+  assert.equal((await readdir(dir)).filter(x=>x.includes('pre-v29') && x.endsWith('.sqlite')).length,1);
  }finally{if(child){child.kill();await new Promise(resolve=>child.once('exit',resolve));}await rm(dir,{recursive:true,force:true});}
 });
 test('el preensayo respalda y migra una copia de la base v24',async()=>{
@@ -53,6 +70,14 @@ test('ensaya la migración desde v25 antes de tocar la base activa',async()=>{
  const dir=await mkdtemp(join(tmpdir(),'nexafia-preflight-v25-')),path=join(dir,'data.sqlite');
  try { const old=new Storage(path); old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1); old.db.exec('DROP TABLE room_history_dismissals; DROP TABLE connection_dismissals; PRAGMA user_version=25'); old.close();
  const result=await preflightPhotoMigration(path); assert.ok(result?.backup); const live=new (await import('node:sqlite')).DatabaseSync(path,{readOnly:true}); try {assert.equal(live.prepare('PRAGMA user_version').get().user_version,25); assert.equal(live.prepare('SELECT alias FROM accounts WHERE id=?').get('a').alias,'A');} finally {live.close();}
- const migrated=new Storage(path); try {assert.equal(migrated.db.prepare('PRAGMA user_version').get().user_version,26); assert.equal(migrated.db.prepare('SELECT alias FROM accounts WHERE id=?').get('a').alias,'A');} finally {migrated.close();}
+ const migrated=new Storage(path); try {assert.equal(migrated.db.prepare('PRAGMA user_version').get().user_version,29); assert.equal(migrated.db.prepare('SELECT alias FROM accounts WHERE id=?').get('a').alias,'A');} finally {migrated.close();}
  } finally {await rm(dir,{recursive:true,force:true});}
+});
+
+test('preensayo v28 conserva la base activa y crea respaldo v29',async()=>{
+ const dir=await mkdtemp(join(tmpdir(),'nexafia-preflight-v28-')),path=join(dir,'data.sqlite');
+ try {const old=new Storage(path);old.createAccount({id:'a',username:'a',alias:'A',passwordHash:'x',recoveryHash:'x'},1);old.db.exec('DROP TABLE group_reunion_expirations; PRAGMA user_version=28');old.close();
+ const result=await preflightPhotoMigration(path);assert.ok(result?.backup);
+ const source=new (await import('node:sqlite')).DatabaseSync(path,{readOnly:true});try{assert.equal(source.prepare('PRAGMA user_version').get().user_version,28);assert.equal(source.prepare('SELECT alias FROM accounts WHERE id=?').get('a').alias,'A');}finally{source.close();}
+ }finally{await rm(dir,{recursive:true,force:true});}
 });

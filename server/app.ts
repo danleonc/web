@@ -30,6 +30,7 @@ import { EmailConfirmation } from "./email.ts";
 import type { SendVerificationEmail } from "./email.ts";
 import { handleFeatures } from "./features.ts";
 import { handlePlaza } from "./plaza-http.ts";
+import { handleGroupReunions } from './group-reunion-http.ts';
 import { meetingActivity, listMeetings } from "./meetings.ts";
 import { handleMeetingCreation } from "./meetings-http.ts";
 import { PushDelivery, handlePush } from "./push.ts";
@@ -73,6 +74,7 @@ type Options = {
   requireConnectionPhoto?: boolean;
   stagingPassword?: string;
   plazaEnabled?: boolean;
+  groupReunionsEnabled?: boolean;
   privacyErasureEnabled?: boolean;
   meetingsEnabled?: boolean;
   push?: PushConfig;
@@ -145,6 +147,12 @@ export function createRoomServer(options: Options = {}) {
   const identities = new Map<string, Identity>();
   const rooms = new Map<string, Room>();
   const connections = new Set<Connection>();
+  const closeCancelledPrivateRooms = () => {
+    if (!storage) return;
+    for (const c of connections) {
+      if (storage.db.prepare('SELECT 1 FROM private_meetings p JOIN scheduled_meetings m ON m.id=p.meeting_id WHERE p.meeting_id=? AND m.cancelled_at IS NOT NULL').get(c.room.activityId)) c.socket.close(4003,'El reencuentro ya no está disponible');
+    }
+  };
   const activeRequests = new Map<string, number>();
   const creationLimits = new Map<string, { count: number; until: number }>();
   if (storage) {
@@ -398,7 +406,7 @@ export function createRoomServer(options: Options = {}) {
     }
     const cancelMeetingPath = path.match(/^\/api\/meetings\/([a-f0-9-]+)\/cancel$/);
     if (options.meetingsEnabled && storage && moderation && cancelMeetingPath && req.method === "POST") {
-      await handleMeetingCreation(storage, moderation, now, validOrigin, req, res, identity, cancelMeetingPath[1]); return;
+      await handleMeetingCreation(storage, moderation, now, validOrigin, req, res, identity, cancelMeetingPath[1]); closeCancelledPrivateRooms(); return;
     }
     if (
       await handleFeatures(
@@ -423,10 +431,15 @@ export function createRoomServer(options: Options = {}) {
       )
     )
       return;
+    if (options.groupReunionsEnabled && options.plazaEnabled && storage && (path === '/api/group-reunions' || path.startsWith('/api/group-reunions/'))) {
+      if (identity && moderation?.restriction(identity.id)) { req.resume(); json(res,403,{error:'account_restricted'}); return; }
+      await handleGroupReunions(storage,now,validOrigin,req,res,path,identity); closeCancelledPrivateRooms(); return;
+    }
     if (options.plazaEnabled && storage && await handlePlaza(storage, now, validOrigin, req, res, path, identity,
       (target) => {
         if (!identity) throw Error("session_required");
-        storage.block(identity.id, target);
+        storage.block(identity.id, target,now());
+        closeCancelledPrivateRooms();
         identity.blocks.add(target);
         for (const peer of connections) if (peer.identity.id === identity.id) peer.socket.close(4003, "Bloqueo registrado; sales de esta sala");
       },
@@ -459,7 +472,7 @@ export function createRoomServer(options: Options = {}) {
           return {
             id: a.id, themeId: "themeId" in a ? a.themeId : a.id, title: a.title,
             startsAt: new Date(start).toISOString(), minimum: a.minimum, maximum: a.capacity,
-            reserved: storage.countReservations(a.id), mine, cancelled, cancellationReason: cancelled && mine && "cancellationReason" in a ? a.cancellationReason : null,
+            reserved: storage.countReservations(a.id), mine, cancelled, privateReunion: storage.privateMeetingAccess(a.id,identity.id) === true, cancellationReason: cancelled && mine && "cancellationReason" in a ? a.cancellationReason : null,
             accessible: !ended && (!enforceSchedule || (now() >= start - 300_000 && !entryClosed)),
             bookingOpen: !cancelled && now() < start,
             ended: ended || entryClosed,
@@ -494,7 +507,7 @@ export function createRoomServer(options: Options = {}) {
     if (storage && req.method === "DELETE" && /^\/api\/history\/[a-f0-9-]+$/.test(path)) {
       if (!validOrigin(req)) { req.resume(); json(res,403,{error:"origin_rejected"}); return; }
       if (!identity) { req.resume(); json(res,401,{error:"session_required"}); return; }
-      req.resume(); const result=storage.dismissHistory(identity.id,path.split("/").at(-1)!,now());
+      req.resume(); const result=storage.dismissHistory(identity.id,path.split("/").at(-1)!,now()); closeCancelledPrivateRooms();
       json(res,result === "ok" ? 200 : result === "active" ? 409 : 404,result === "ok" ? {ok:true} : {error:result}); return;
     }
     const reservation =
@@ -508,6 +521,7 @@ export function createRoomServer(options: Options = {}) {
         json(res, 401, { error: "session_required" });
         return;
       }
+      if (storage!.privateMeetingAccess(reservation[1],identity.id) === false) { req.resume(); json(res,404,{error:'not_found'}); return; }
       const activity = options.meetingsEnabled ? meetingActivity(storage!, reservation[1]) : featuredActivities.find((a) => a.id === reservation[1]);
       if (!activity) {
         json(res, 404, { error: "not_found" });
@@ -523,7 +537,8 @@ export function createRoomServer(options: Options = {}) {
           json(res, 409, { error: "leave_room_first" });
           return;
         }
-        storage!.cancel(identity.id, activity.id);
+        storage!.cancel(identity.id, activity.id,now());
+        closeCancelledPrivateRooms();
         json(res, 200, { ok: true });
         return;
       }
@@ -565,6 +580,7 @@ export function createRoomServer(options: Options = {}) {
               privacyErasureAvailable: !!(options.plazaEnabled && options.privacyErasureEnabled && !google && storage?.db.prepare("SELECT 1 FROM privacy_operators WHERE user_id=?").get(identity.id)),
               restriction: moderation?.restriction(identity.id) || null,
               imagesEnabled: moderation?.hasModerators() || false,
+              groupReunionsAvailable: !!(options.plazaEnabled && options.groupReunionsEnabled),
               ...(storage
                 ? {
                     email: storage.emailStatus(identity.id)?.email || "",
@@ -862,6 +878,7 @@ export function createRoomServer(options: Options = {}) {
     const match = new URL(req.url || "/", "http://localhost").pathname.match(
       /^\/api\/rooms\/([a-z0-9-]+)$/,
     );
+    if (match && storage?.privateMeetingAccess(match[1],identity.id) === false) { reject(socket,404); return; }
     const activity = match && (options.meetingsEnabled && storage ? meetingActivity(storage, match[1]) : featuredActivities.find((a) => a.id === match[1]));
     if (!activity) {
       reject(socket, 404);
@@ -999,6 +1016,7 @@ export function createRoomServer(options: Options = {}) {
       });
       ws.on("error", () => {});
       ws.on("message", (raw) => {
+        if (storage && storage.db.prepare('SELECT 1 FROM private_meetings p JOIN scheduled_meetings m ON m.id=p.meeting_id WHERE p.meeting_id=? AND m.cancelled_at IS NOT NULL').get(joined.activityId)) { ws.close(4003,'El reencuentro ya no está disponible'); return; }
         if (storage && !storage.canParticipate(identity.id)) {
           ws.close(4001, "Confirma tu correo");
           return;
@@ -1135,7 +1153,8 @@ export function createRoomServer(options: Options = {}) {
             return;
           }
           identity.blocks.add(value.participantId);
-          storage?.block(identity.id, value.participantId);
+          storage?.block(identity.id, value.participantId,now());
+          closeCancelledPrivateRooms();
           for (const peer of connections)
             if (peer.identity === identity)
               peer.socket.close(4003, "Bloqueo registrado; sales de esta sala");

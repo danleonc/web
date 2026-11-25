@@ -5,6 +5,7 @@ import { HeroPhoto } from "../HeroPhoto";
 import { encountersHeroPhoto } from "../heroPhotos";
 import { useAccount } from "../shared/accounts";
 import type { Offering } from "../shared/accounts";
+import { GroupReunionInbox } from '../shared/GroupReunions';
 import "./RealPlaza.css";
 
 const date = (value: string) => new Intl.DateTimeFormat("es-CL", { dateStyle: "full", timeStyle: "short", timeZone: "America/Santiago" }).format(new Date(value));
@@ -28,11 +29,13 @@ export function RealMeetings({ onEnter, onAccess }: { onEnter: (meeting: Offerin
         <label>Cupos<select value={capacity} onChange={(e) => setCapacity(Number(e.target.value))}>{[3, 4, 5, 6].map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
         <button className="button primary" disabled={account.busy}>Crear convocatoria</button></form>{notice && <p role="status">{notice}</p>}</details>}
       {account.error && <p role="alert">{account.error}</p>}
+      {account.account.groupReunionsAvailable && <GroupReunionInbox key={account.account.id} accountId={account.account.id} onChanged={account.refresh}/>}
       <section className="real-plaza-panel"><h2>Próximos encuentros</h2><p>Horarios de Santiago de Chile.</p>
         {account.activityPageLoading ? <p role="status">Cargando encuentros…</p> : account.activities.length === 0 ? <p>{account.activityOffset > 0 ? "No hay encuentros en esta página. Puedes volver a la anterior." : "Por ahora no hay convocatorias programadas."}</p> : account.activities.map((meeting) => <article className="real-plaza-post" key={meeting.id}><h3>{meeting.title}</h3><p>{date(meeting.startsAt)}</p><p>{meeting.reserved} de {meeting.maximum} plazas reservadas · mínimo {meeting.minimum} personas</p>
           {meeting.cancelled && <p role="status">Encuentro cancelado. {meeting.cancellationReason}</p>}
           {!meeting.mine && !meeting.cancelled && (!meeting.bookingOpen || meeting.reserved >= meeting.maximum) && <p>{!meeting.bookingOpen ? "Reservas cerradas" : "Cupos completos"}</p>}
-          <button className="button secondary" disabled={account.busy || (!meeting.mine && (!meeting.bookingOpen || meeting.reserved >= meeting.maximum))} onClick={() => void account.request(`/api/reservations/${meeting.id}`, meeting.mine ? "DELETE" : "POST")}>{meeting.cancelled ? "Quitar aviso" : meeting.mine ? "Cancelar reserva" : "Reservar encuentro"}</button>
+          {meeting.privateReunion && !meeting.cancelled && <p>Reencuentro privado: retirar tu participación cancela el encuentro para todo el grupo.</p>}
+          <button className="button secondary" disabled={account.busy || (!meeting.mine && (!meeting.bookingOpen || meeting.reserved >= meeting.maximum))} onClick={() => {if(meeting.privateReunion && meeting.mine && !meeting.cancelled && !window.confirm('¿Retirar tu participación? El reencuentro se cancelará para todo el grupo.')) return; void account.request(`/api/reservations/${meeting.id}`, meeting.mine ? "DELETE" : "POST");}}>{meeting.cancelled ? "Quitar aviso" : meeting.mine ? "Cancelar reserva" : "Reservar encuentro"}</button>
           {meeting.mine && !meeting.cancelled && <><p>Reserva confirmada</p>{!meeting.accessible && !meeting.ended && <p>La sala abre cinco minutos antes del inicio. Si el encuentro ya comenzó, el acceso podría estar cerrado.</p>}<button className="button primary" disabled={!meeting.accessible || meeting.ended} onClick={() => onEnter(meeting)}>Entrar al encuentro</button></>}
           {account.account?.moderator && !meeting.cancelled && !meeting.ended && <details><summary>Cancelar convocatoria</summary><form className="real-plaza-form" onSubmit={(e) => { e.preventDefault(); void account.request(`/api/meetings/${meeting.id}/cancel`, "POST", { reason: reasons[meeting.id] || "" }); }}><p>Las personas con reserva verán el aviso al entrar. Puedes cancelar hasta cinco minutos antes del comienzo.</p><label>Motivo de cancelación<textarea required minLength={5} maxLength={500} value={reasons[meeting.id] || ""} onChange={(e) => setReasons({ ...reasons, [meeting.id]: e.target.value })} /></label><button className="button secondary" disabled={account.busy}>Confirmar cancelación</button></form></details>}
         </article>)}

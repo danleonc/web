@@ -47,6 +47,7 @@ const app = createRoomServer({
   now: () => clockStart + (Date.now() - clockStart) * clockScale,
   ...(process.env.NEXAFIA_TEST_GATE === "1" ? { stagingPassword: "0123456789abcdef0123456789abcdef0123456789abcdef" } : {}),
   plazaEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
+  groupReunionsEnabled: process.env.NEXAFIA_TEST_GROUP_REUNIONS === "1",
   requireConnectionPhoto: process.env.NEXAFIA_TEST_PROFILE_PHOTOS === "1",
   privacyErasureEnabled: process.env.NEXAFIA_TEST_ERASURE === "1",
   meetingsEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",

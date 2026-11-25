@@ -603,7 +603,7 @@ test("una convocatoria programada se puede reservar y abrir como encuentro compa
 
 test('al terminar un encuentro se puede solicitar una conexión', async ({browser},info) => {
  test.skip(process.env.NEXAFIA_TEST_CLOCK_SPEED !== '300', 'Requiere el reloj acelerado del fixture aislado.');
- test.setTimeout(60000);
+ test.setTimeout(90000);
  const mod=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
  const people=await Promise.all(Array.from({length:3},()=>browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use})));
  try {
@@ -656,6 +656,63 @@ test('al terminar un encuentro se puede solicitar una conexión', async ({browse
   await incoming.getByLabel(/Acepto que nuestras fotos/).check();
   await incoming.getByRole('button',{name:'Aceptar solicitud'}).click();
   await expect(incoming.getByText('Conexión aceptada')).toBeVisible();
+  await pages[0].goto('/#shared');
+  await pages[0].getByText('Historial de mis salas',{exact:true}).click();
+  await pages[0].getByText('Seguir conversando con participantes',{exact:true}).click();
+  if(info.project.name==='mobile') await pages[0].setViewportSize({width:320,height:800});
+  const propose=pages[0].getByText('Proponer un reencuentro grupal',{exact:true});
+  await propose.focus();await pages[0].keyboard.press('Enter');
+  const firstChoice=pages[0].getByLabel(`continuidad_${info.project.name}_1`,{exact:true});
+  await pages[0].keyboard.press('Tab');await expect(firstChoice).toBeFocused();await pages[0].keyboard.press('Space');await expect(firstChoice).toBeChecked();
+  await pages[0].keyboard.press('Tab');await expect(pages[0].getByLabel(`continuidad_${info.project.name}_2`,{exact:true})).toBeFocused();await pages[0].keyboard.press('Space');
+  expect((await new AxeBuilder({page:pages[0]}).include('form.real-plaza-form:has(input[type="datetime-local"])').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+  expect(await pages[0].evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await pages[0].screenshot({path:info.outputPath('propuesta-grupal.png'),fullPage:true});
+  const when=new Date(Date.now()+48*3600000);const local=new Date(when.getTime()-when.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  await pages[0].getByLabel('Fecha y hora propuestas').fill(local);
+  await pages[0].route('**/api/group-reunions',async route=>{if(route.request().method()!=='POST'){await route.continue();return;}const response=await route.fetch();expect(response.status()).toBe(201);await route.abort('failed');},{times:1});
+  await pages[0].getByRole('button',{name:'Enviar propuesta'}).click();
+  await expect(pages[0].getByRole('alert')).toContainText('No pudimos conectar');
+  await pages[0].reload();
+  await pages[0].getByText('Historial de mis salas',{exact:true}).click();
+  await pages[0].getByText('Seguir conversando con participantes',{exact:true}).click();
+  await pages[0].getByText('Proponer un reencuentro grupal',{exact:true}).click();
+  await pages[0].getByLabel(`continuidad_${info.project.name}_1`,{exact:true}).check();
+  await pages[0].getByLabel(`continuidad_${info.project.name}_2`,{exact:true}).check();
+  await pages[0].getByLabel('Fecha y hora propuestas').fill(local);
+  await pages[0].getByRole('button',{name:'Enviar propuesta'}).click();
+  await expect(pages[0].getByText(/Solicitud enviada. El reencuentro se confirma/)).toBeVisible();
+  expect((await (await people[0].request.get('/api/group-reunions')).json()).reunions).toHaveLength(1);
+  await pages[1].goto('/#plaza');
+  await expect.poll(async()=>{const r=await people[1].request.get('/api/plaza/notifications');return (await r.json()).items.some((n:{kind:string})=>n.kind==='group_invitation');}).toBe(true);
+  await pages[1].getByRole('button',{name:/Notificaciones,/}).click();
+  await pages[1].getByRole('button',{name:/Propuesta grupal/}).click();
+  const pendingCard=pages[1].getByRole('region',{name:'Reencuentros grupales'}).getByRole('article').first();
+  const accept=pendingCard.getByRole('button',{name:'Aceptar reencuentro'});await accept.focus();await pages[1].keyboard.press('Enter');
+  await expect(pendingCard.getByRole('status')).toBeFocused();
+  await expect(pendingCard.getByRole('status')).toContainText('Ya aceptaste. Esperando la respuesta');
+  await expect(pendingCard.getByRole('status')).toHaveCSS('outline-color','rgb(164, 103, 67)');
+  await pages[2].goto('/#discover');const lastCard=pages[2].getByRole('region',{name:'Reencuentros grupales'}).getByRole('article').first();
+  await lastCard.getByRole('button',{name:'Aceptar reencuentro'}).focus();await pages[2].keyboard.press('Enter');
+  await expect(lastCard.getByRole('status')).toBeFocused();
+  await expect(pages[2].getByText('Reencuentro confirmado. Puedes entrar desde Próximos encuentros.')).toBeVisible();
+  expect((await new AxeBuilder({page:pages[2]}).include('[aria-label="Reencuentros grupales"]').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+  await pages[0].goto('/#discover');await expect(pages[0].getByText('Reencuentro confirmado. Puedes entrar desde Próximos encuentros.')).toBeVisible();
+  const groupData=await (await people[0].request.get('/api/group-reunions')).json();
+  const dateText=new Intl.DateTimeFormat('es-CL',{dateStyle:'full',timeStyle:'short',timeZone:'America/Santiago'}).format(new Date(groupData.reunions[0].startsAt));
+  const groupMeeting=pages[0].getByRole('article').filter({hasText:dateText}).filter({has:pages[0].getByRole('button',{name:'Entrar al encuentro'})});
+  await expect(groupMeeting.getByText('Reencuentro privado: retirar tu participación cancela el encuentro para todo el grupo.')).toBeVisible();
+  await groupMeeting.getByRole('button',{name:'Entrar al encuentro'}).click();
+  await pages[0].getByLabel(/Entiendo que esta prueba comparte/).check();await pages[0].getByRole('button',{name:'Conectar con esta sala'}).click();
+  await expect(pages[0].getByText('Conectado al servidor',{exact:true})).toBeVisible();
+  await pages[2].screenshot({path:info.outputPath('reencuentro-confirmado.png'),fullPage:true});
+  pages[2].once('dialog',dialog=>void dialog.accept());
+  await lastCard.getByRole('button',{name:'Retirar mi participación'}).focus();await pages[2].keyboard.press('Enter');
+  await expect(lastCard.getByRole('status')).toBeFocused();
+  await expect(pages[2].getByText('Propuesta cancelada.')).toBeVisible();
+  await expect(pages[0].getByText('Conectado al servidor',{exact:true})).not.toBeVisible();
+  await pages[0].goto('/#discover');await pages[0].reload();await expect(pages[0].getByText('Propuesta cancelada.')).toBeVisible();
+  await expect.poll(async()=>{const r=await people[0].request.get('/api/plaza/notifications');return (await r.json()).items.some((n:{kind:string})=>n.kind==='group_cancelled');}).toBe(true);
  } finally {await mod.close();for(const c of people) await c.close();}
 });
 

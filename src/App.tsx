@@ -935,7 +935,7 @@ function App() {
           requestAnimationFrame(() => mainRef.current?.focus({ preventScroll: true }));
         }} />
       )}
-      {noticesOpen && realPlazaEnabled && <RealNoticeCenter notices={realNotices} signedIn={!!account.account?.canParticipate} onClose={() => setNoticesOpen(false)} onAccess={() => { setNoticesOpen(false); setAccessOpen(true); }} onOpen={(kind, id) => { setNoticesOpen(false); setNoticeTarget({ kind, id, serial: Date.now() }); navigate(kind === "reply" ? "plaza" : "connections"); }}><DevicePush key={noticeOwner || "guest"} owner={noticeOwner} canParticipate={!!account.account?.canParticipate} /></RealNoticeCenter>}
+      {noticesOpen && realPlazaEnabled && <RealNoticeCenter notices={realNotices} signedIn={!!account.account?.canParticipate} onClose={() => setNoticesOpen(false)} onAccess={() => { setNoticesOpen(false); setAccessOpen(true); }} onOpen={(kind, id) => { setNoticesOpen(false); if (kind === 'group_invitation' || kind === 'group_confirmed' || kind === 'group_cancelled' || kind === 'group_expired') { setNoticeTarget(null); navigate('discover'); } else { setNoticeTarget({ kind, id, serial: Date.now() }); navigate(kind === "reply" ? "plaza" : "connections"); } }}><DevicePush key={noticeOwner || "guest"} owner={noticeOwner} canParticipate={!!account.account?.canParticipate} /></RealNoticeCenter>}
       {noticesOpen && !realPlazaEnabled && (
         <NoticeCenter key={noticeOwner || "guest"} notices={notices} signedIn={!!noticeOwner} activeRoom={page === "room" || account.activeRoom}
           onClose={() => setNoticesOpen(false)} onAccess={() => { setNoticesOpen(false); setAccessOpen(true); }}

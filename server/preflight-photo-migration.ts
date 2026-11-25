@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { backupDatabase } from '../scripts/backup-db.mjs';
 import { Storage } from './storage.ts';
 
-/** Make a consistent private backup and rehearse the v26 migration before changing live data. */
+/** Make a consistent private backup and rehearse the v29 migration before changing live data. */
 export async function preflightPhotoMigration(path: string): Promise<{backup:string} | null> {
   if (path === ':memory:') return null;
   try { await access(path); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error; }
@@ -14,20 +14,22 @@ export async function preflightPhotoMigration(path: string): Promise<{backup:str
   let version: number;
   try { version = Number(source.prepare('PRAGMA user_version').get()!.user_version); } finally { source.close(); }
   if (version > 0 && version < 23) throw Error("Automatic migration requires an explicitly rehearsed v23 database");
-  if (version !== 23 && version !== 24 && version !== 25) return null;
+  if (version !== 23 && version !== 24 && version !== 25 && version !== 26 && version !== 27 && version !== 28) return null;
   const suffix = `${Date.now()}-${randomUUID()}`;
-  const backup = `${path}.pre-v26-${suffix}.sqlite`, rehearsal = `${path}.rehearsal-${suffix}.sqlite`;
+  const backup = `${path}.pre-v29-${suffix}.sqlite`, rehearsal = `${path}.rehearsal-${suffix}.sqlite`;
   await backupDatabase(path,backup);
   try {
     await backupDatabase(backup,rehearsal);
     const test = new Storage(rehearsal);
     try {
       const ok=test.db.prepare('PRAGMA integrity_check').get();
-      if (ok?.integrity_check !== 'ok' || test.db.prepare('PRAGMA foreign_key_check').all().length || test.db.prepare('PRAGMA user_version').get()?.user_version !== 26) throw Error('Migration rehearsal failed');
+      if (ok?.integrity_check !== 'ok' || test.db.prepare('PRAGMA foreign_key_check').all().length || test.db.prepare('PRAGMA user_version').get()?.user_version !== 29) throw Error('Migration rehearsal failed');
       const original=new DatabaseSync(backup,{readOnly:true});
       try {
         for (const table of ['accounts','plaza_connections','profile_photo_shares','account_profile_photos']) { const sql=`SELECT count(*) AS n FROM ${table}`; if (original.prepare(sql).get()?.n !== test.db.prepare(sql).get()?.n) throw Error('Migration changed existing records'); }
-        if (version === 24 || version === 25) { const sql=`SELECT connection_id,sender_photo,recipient_photo,rounds,first_sender,unlocked${version === 25 ? ',requested_by' : ''} FROM connection_photo_challenges ORDER BY connection_id`; if (JSON.stringify(original.prepare(sql).all()) !== JSON.stringify(test.db.prepare(sql).all())) throw Error('Migration changed challenge progress'); }
+        if (version >= 24) { const sql=`SELECT connection_id,sender_photo,recipient_photo,rounds,first_sender,unlocked${version >= 25 ? ',requested_by' : ''} FROM connection_photo_challenges ORDER BY connection_id`; if (JSON.stringify(original.prepare(sql).all()) !== JSON.stringify(test.db.prepare(sql).all())) throw Error('Migration changed challenge progress'); }
+        if (version >= 27) for (const table of ['group_reunions','group_reunion_members']) {const sql=`SELECT count(*) AS n FROM ${table}`;if(original.prepare(sql).get()?.n!==test.db.prepare(sql).get()?.n) throw Error('Migration changed group records');}
+        if (version >= 28) for (const table of ['private_meetings','private_meeting_members']) {const sql=`SELECT count(*) AS n FROM ${table}`;if(original.prepare(sql).get()?.n!==test.db.prepare(sql).get()?.n) throw Error('Migration changed private meeting records');}
       }
       finally { original.close(); }
     } finally { test.close(); }

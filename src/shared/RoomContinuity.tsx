@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
+import { useAccount } from './accounts';
+import { ProposeGroupReunion } from './GroupReunions';
 
 export function ContinueAfterMeeting({ roomId, people, onProfile, onConnections }: {roomId:string; people:{id:string;name:string}[]; onProfile:()=>void; onConnections:()=>void}) {
+  const account=useAccount();
   const [target,setTarget] = useState<{id:string;name:string}|null>(null);
   const [agreement,setAgreement] = useState(false); const [busy,setBusy] = useState(false); const [notice,setNotice] = useState(''); const [error,setError] = useState('');
   async function send() {
@@ -17,6 +20,7 @@ export function ContinueAfterMeeting({ roomId, people, onProfile, onConnections 
     {people.length ? people.map(person=><button key={person.id} type="button" className="button secondary" disabled={busy} onClick={()=>{setTarget(person);setAgreement(false);setError('');setNotice('');}}>Conectar con {person.name}</button>) : <p>No hay otras personas disponibles en este encuentro.</p>}
     {target && <div><p>Enviar solicitud a {target.name}. La otra persona decide si acepta.</p><label className="checkbox-row"><input type="checkbox" checked={agreement} onChange={e=>setAgreement(e.target.checked)}/> Acepto que nuestras fotos se compartan automáticamente después de 10 vueltas de conversación.</label><button type="button" className="button primary" disabled={!agreement || busy} onClick={()=>void send()}>Enviar solicitud</button><button type="button" className="button text" disabled={busy} onClick={()=>setTarget(null)}>Cancelar</button></div>}
     {notice && <p role="status">{notice}</p>}{error && <p role="alert">{error}</p>}{error.startsWith('Agrega tu foto') && <button type="button" className="button text" onClick={onProfile}>Ir a mi perfil</button>}{error.startsWith('Ya tienes una solicitud') && <button type="button" className="button secondary" onClick={onConnections}>Ir a Conexiones</button>}
+    {account.account?.groupReunionsAvailable && <ProposeGroupReunion key={account.account.id} accountId={account.account.id} roomId={roomId} people={people}/>}
   </section>;
 }
 

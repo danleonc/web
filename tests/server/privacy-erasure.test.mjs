@@ -43,6 +43,12 @@ test('borrado limitado rechaza actividad o referencias compartidas sin modificar
  assert.equal((await f.request('/api/session','GET',undefined,person.cookie)).status,200);
  assert.equal((await f.request('/api/plaza/posts','GET',undefined,person.cookie)).body.posts[0].title,'Mi publicación');
 });
+test('borrado limitado requiere revisión cuando la cuenta pertenece a un encuentro privado',async t=>{
+ const {f,person,operator,version}=await setup(t); const db=new DatabaseSync(f.path);
+ try {db.prepare('INSERT INTO offerings VALUES(?,?)').run('private-test',Date.now()+86400000);db.prepare('INSERT INTO scheduled_meetings(id,theme_id,capacity,duration,created_at,created_by) VALUES(?,?,?,?,?,?)').run('private-test','cafe',3,40,Date.now(),operator.id);db.prepare('INSERT INTO private_meetings VALUES(?)').run('private-test');db.prepare('INSERT INTO private_meeting_members VALUES(?,?)').run('private-test',person.id);} finally {db.close();}
+ assert.equal((await f.request('/api/privacy/erase-empty','POST',{userId:person.id,version,confirmation:'BORRAR CUENTA'},operator.cookie)).status,409);
+ assert.equal((await f.request('/api/session','GET',undefined,person.cookie)).status,200);
+});
 test('borrado limitado rechaza disparadores desconocidos sin modificar datos',async t=>{
  const {f,person,operator,version}=await setup(t); const db=new DatabaseSync(f.path); db.exec("CREATE TRIGGER fail_erasure BEFORE DELETE ON accounts BEGIN SELECT RAISE(ABORT,'test failure'); END;"); db.close();
  const result=await f.request('/api/privacy/erase-empty','POST',{userId:person.id,version,confirmation:'BORRAR CUENTA'},operator.cookie); assert.equal(result.status,409);
@@ -121,4 +127,11 @@ test('borrado limitado espera si hay una operación autenticada en curso',async 
  assert.equal((await f.request('/api/privacy/erase-empty','POST',body,operator.cookie)).status,409);
  release(); await pending;
  assert.equal((await f.request('/api/privacy/erase-empty','POST',body,operator.cookie)).status,200);
+});
+
+test('un aviso de caducidad exige revisi�n antes del borrado limitado',async t=>{
+ const {f,person,operator,version}=await setup(t); const db=new DatabaseSync(f.path);
+ try {db.prepare('INSERT INTO group_reunion_expirations VALUES(?,?,?)').run('expired',person.id,Date.now());} finally {db.close();}
+ assert.equal((await f.request('/api/privacy/erase-empty','POST',{userId:person.id,version,confirmation:'BORRAR CUENTA'},operator.cookie)).status,409);
+ assert.equal((await f.request('/api/session','GET',undefined,person.cookie)).status,200);
 });

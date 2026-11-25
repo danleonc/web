@@ -3,9 +3,12 @@ import assert from 'node:assert/strict';
 import { pilotMode } from '../../server/pilot-mode.ts';
 
 test('el modo compartido requiere protección y una compilación compatible', () => {
-  assert.deepEqual(pilotMode({}, {mode:'accounts',realPlaza:false}), {plazaEnabled:false,meetingsEnabled:false});
+  assert.deepEqual(pilotMode({}, {mode:'accounts',realPlaza:false}), {plazaEnabled:false,meetingsEnabled:false,groupReunionsEnabled:false});
   const gate='0123456789abcdef0123456789abcdef';
-  assert.deepEqual(pilotMode({ENTRE_STAGING_SHARED:'1',ENTRE_STAGING_PASSWORD:gate},{mode:'accounts',realPlaza:true}), {plazaEnabled:true,meetingsEnabled:true});
+  assert.deepEqual(pilotMode({ENTRE_STAGING_SHARED:'1',ENTRE_STAGING_PASSWORD:gate},{mode:'accounts',realPlaza:true}), {plazaEnabled:true,meetingsEnabled:true,groupReunionsEnabled:false});
+  assert.equal(pilotMode({ENTRE_STAGING_SHARED:'1',ENTRE_STAGING_PASSWORD:gate,ENTRE_STAGING_GROUP_REUNIONS:'1'},{mode:'accounts',realPlaza:true}).groupReunionsEnabled,true);
+  assert.throws(()=>pilotMode({ENTRE_STAGING_GROUP_REUNIONS:'1'},{mode:'accounts',realPlaza:false}),/require shared/);
+  assert.throws(()=>pilotMode({ENTRE_STAGING_GROUP_REUNIONS:'true'},{mode:'accounts',realPlaza:false}),/invalid group/);
   assert.throws(()=>pilotMode({ENTRE_STAGING_SHARED:'1'},{mode:'accounts',realPlaza:true}),/requires staging protection/);
   assert.throws(()=>pilotMode({ENTRE_STAGING_SHARED:'1',ENTRE_STAGING_PASSWORD:gate},{mode:'accounts',realPlaza:false}),/build mismatch/);
   assert.throws(()=>pilotMode({ENTRE_STAGING_PASSWORD:gate},{mode:'accounts',realPlaza:true}),/build mismatch/);

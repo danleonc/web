@@ -26,6 +26,7 @@ export type AccountView = {
   privacyOperator?: boolean;
   privacyErasureAvailable?: boolean;
   imagesEnabled?: boolean;
+  groupReunionsAvailable?: boolean;
   restriction?: {
     kind: "suspend" | "ban";
     reason: string;
@@ -34,6 +35,7 @@ export type AccountView = {
   } | null;
 };
 export type Offering = {
+  privateReunion?: boolean;
   cancelled?: boolean;
   cancellationReason?: string | null;
   id: string;

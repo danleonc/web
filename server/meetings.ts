@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { featuredActivities } from "../src/data.ts";
 import type { Activity } from "../src/data.ts";
 import type { Storage } from "./storage.ts";
+import { Notifications } from './notifications.ts';
 
 export function meetingActivity(storage: Storage, id: string): (Activity & { themeId: string; cancelled: boolean; cancellationReason: string | null }) | undefined {
   const row = storage.db.prepare("SELECT m.id,m.theme_id AS themeId,m.capacity,m.duration,m.cancelled_at,m.cancellation_reason,o.starts_at AS startsAt FROM scheduled_meetings m JOIN offerings o ON o.activity_id=m.id WHERE m.id=?").get(id);
@@ -10,7 +11,7 @@ export function meetingActivity(storage: Storage, id: string): (Activity & { the
   return theme ? { ...theme, id: String(row.id), themeId: String(row.themeId), capacity: Number(row.capacity), duration: Number(row.duration), startsAt: new Date(Number(row.startsAt)).toISOString(), occupied: 0, people: [], cancelled: row.cancelled_at !== null, cancellationReason: row.cancellation_reason === null ? null : String(row.cancellation_reason) } : undefined;
 }
 export function listMeetings(storage: Storage, now: number, userId: string, offset = 0) {
-  const rows = storage.db.prepare("SELECT m.id FROM scheduled_meetings m JOIN offerings o ON o.activity_id=m.id WHERE (m.cancelled_at IS NULL AND o.starts_at + m.duration*60000 + 300000 > ?) OR (m.cancelled_at IS NOT NULL AND EXISTS (SELECT 1 FROM reservations r WHERE r.activity_id=m.id AND r.user_id=?)) ORDER BY o.starts_at,m.id LIMIT 201 OFFSET ?").all(now, userId, offset);
+  const rows = storage.db.prepare(`SELECT m.id FROM scheduled_meetings m JOIN offerings o ON o.activity_id=m.id WHERE ((m.cancelled_at IS NULL AND o.starts_at + m.duration*60000 + 300000 > ?) OR (m.cancelled_at IS NOT NULL AND EXISTS (SELECT 1 FROM reservations r WHERE r.activity_id=m.id AND r.user_id=?))) AND (NOT EXISTS (SELECT 1 FROM private_meetings p WHERE p.meeting_id=m.id) OR (EXISTS (SELECT 1 FROM private_meeting_members pm WHERE pm.meeting_id=m.id AND pm.user_id=?) AND NOT EXISTS (SELECT 1 FROM private_meeting_members other JOIN blocks b ON (b.user_id=? AND b.blocked_id=other.user_id) OR (b.blocked_id=? AND b.user_id=other.user_id) WHERE other.meeting_id=m.id))) ORDER BY o.starts_at,m.id LIMIT 201 OFFSET ?`).all(now,userId,userId,userId,userId,offset);
   return rows.flatMap((row) => { const meeting = meetingActivity(storage, String(row.id)); return meeting ? [meeting] : []; });
 }
 export function scheduleMeeting(storage: Storage, userId: string, value: Record<string, unknown>, now: number) {
@@ -30,6 +31,10 @@ export function cancelMeeting(storage: Storage, id: string, value: Record<string
   storage.transaction(() => {
     const result = storage.db.prepare("UPDATE scheduled_meetings SET cancelled_at=?, cancellation_reason=? WHERE id=? AND cancelled_at IS NULL AND (SELECT starts_at FROM offerings WHERE activity_id=?) > ?").run(now, reason, id, id, now + 300_000);
     if (!result.changes) throw Error("cannot_cancel");
+    if (storage.db.prepare('SELECT 1 FROM private_meetings WHERE meeting_id=?').get(id)) {
+      storage.db.prepare("UPDATE group_reunions SET status='cancelled' WHERE id=? AND status IN ('pending','confirmed')").run(id);
+      new Notifications(storage,()=>now).groupCancelled(id);
+    }
     storage.db.prepare("INSERT INTO push_queue(meeting_id,endpoint_hash,user_id,created_at,next_at) SELECT ?,s.endpoint_hash,s.user_id,?,? FROM push_subscriptions s JOIN reservations r ON r.user_id=s.user_id WHERE r.activity_id=?").run(id, now, now, id);
   });
 }

@@ -5,6 +5,8 @@ import { createHash } from "node:crypto";
 import type { Session } from "../src/room/engine.ts";
 import type { SharedMessage } from "../src/shared/protocol.ts";
 import type { RoomSafety } from "../src/safety/rules.ts";
+import { installGroupReunionSchema } from './group-reunion-store.ts';
+import { Notifications } from './notifications.ts';
 
 export const digest = (value: string) =>
   createHash("sha256").update(value).digest("hex");
@@ -64,7 +66,10 @@ export class Storage {
       version !== 23 &&
       version !== 24 &&
       version !== 25 &&
-      version !== 26
+      version !== 26 &&
+      version !== 27 &&
+      version !== 28 &&
+      version !== 29
     )
       throw new Error("Unsupported database version");
     if (version === 0)
@@ -229,6 +234,17 @@ export class Storage {
       CREATE TABLE IF NOT EXISTS connection_dismissals(user_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,connection_id TEXT NOT NULL REFERENCES plaza_connections(id) ON DELETE CASCADE,created_at INTEGER NOT NULL,PRIMARY KEY(user_id,connection_id));
       CREATE TABLE IF NOT EXISTS room_history_dismissals(user_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,room_id TEXT NOT NULL REFERENCES rooms(id) ON DELETE CASCADE,created_at INTEGER NOT NULL,PRIMARY KEY(user_id,room_id));
       PRAGMA user_version=26; COMMIT;`);
+    if (version < 27) this.transaction(() => {
+      installGroupReunionSchema(this.db);
+      this.db.exec('PRAGMA user_version=27');
+    });
+    if (version < 28) this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS private_meetings(meeting_id TEXT PRIMARY KEY REFERENCES scheduled_meetings(id) ON DELETE CASCADE);
+      CREATE TABLE IF NOT EXISTS private_meeting_members(meeting_id TEXT NOT NULL REFERENCES private_meetings(meeting_id) ON DELETE CASCADE,user_id TEXT NOT NULL REFERENCES accounts(id),PRIMARY KEY(meeting_id,user_id));
+      PRAGMA user_version=28; COMMIT;`);
+    if (version < 29) this.db.exec(`BEGIN IMMEDIATE;
+      CREATE TABLE IF NOT EXISTS group_reunion_expirations(reunion_id TEXT NOT NULL,recipient_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,expired_at INTEGER NOT NULL,PRIMARY KEY(reunion_id,recipient_id));
+      PRAGMA user_version=29; COMMIT;`);
     } catch (error) { this.db.close(); throw error; }
   }
   transaction<T>(work: () => T): T {
@@ -322,10 +338,14 @@ export class Storage {
       return this.takeLimit(key,maximum,duration,now);
     });
   }
-  block(userId: string, blockedId: string) {
+  block(userId: string, blockedId: string, now=Date.now()) {
     this.transaction(() => {
+      const affected=this.db.prepare(`SELECT id FROM group_reunions WHERE status IN ('pending','confirmed') AND id IN (SELECT reunion_id FROM group_reunion_members WHERE user_id=?) AND id IN (SELECT reunion_id FROM group_reunion_members WHERE user_id=?) UNION SELECT m.id FROM scheduled_meetings m JOIN private_meetings p ON p.meeting_id=m.id WHERE m.cancelled_at IS NULL AND m.id IN (SELECT meeting_id FROM private_meeting_members WHERE user_id=?) AND m.id IN (SELECT meeting_id FROM private_meeting_members WHERE user_id=?)`).all(userId,blockedId,userId,blockedId);
       this.db.prepare("INSERT OR IGNORE INTO blocks VALUES(?,?)").run(userId, blockedId);
       this.db.prepare("UPDATE plaza_connections SET status='closed' WHERE status IN ('pending','accepted') AND ((sender_id=? AND recipient_id=?) OR (sender_id=? AND recipient_id=?))").run(userId, blockedId, blockedId, userId);
+      this.db.prepare("UPDATE scheduled_meetings SET cancelled_at=?,cancellation_reason='El reencuentro ya no está disponible.' WHERE cancelled_at IS NULL AND id IN (SELECT meeting_id FROM private_meeting_members WHERE user_id=?) AND id IN (SELECT meeting_id FROM private_meeting_members WHERE user_id=?)").run(now,userId,blockedId);
+      this.db.prepare("UPDATE group_reunions SET status='cancelled' WHERE status IN ('pending','confirmed') AND id IN (SELECT reunion_id FROM group_reunion_members WHERE user_id=?) AND id IN (SELECT reunion_id FROM group_reunion_members WHERE user_id=?)").run(userId,blockedId);
+      for(const row of affected) new Notifications(this,()=>now).groupCancelled(String(row.id));
     });
   }
   unblock(userId: string, blockedId: string) {
@@ -404,6 +424,10 @@ export class Storage {
   reserved(userId: string, activityId: string) {
     return this.reservations(userId).includes(activityId);
   }
+  privateMeetingAccess(activityId:string,userId:string): boolean | null {
+    if (!this.db.prepare('SELECT 1 FROM private_meetings WHERE meeting_id=?').get(activityId)) return null;
+    return !!this.db.prepare(`SELECT 1 FROM private_meeting_members m WHERE m.meeting_id=? AND m.user_id=? AND NOT EXISTS (SELECT 1 FROM private_meeting_members other JOIN blocks b ON (b.user_id=? AND b.blocked_id=other.user_id) OR (b.blocked_id=? AND b.user_id=other.user_id) WHERE other.meeting_id=m.meeting_id)`).get(activityId,userId,userId,userId);
+  }
   countReservations(activityId: string) {
     return this.db
       .prepare("SELECT COUNT(*) AS count FROM reservations WHERE activity_id=?")
@@ -434,10 +458,16 @@ export class Storage {
       return "ok";
     });
   }
-  cancel(userId: string, activityId: string) {
-    this.db
-      .prepare("DELETE FROM reservations WHERE user_id=? AND activity_id=?")
-      .run(userId, activityId);
+  cancelPrivateMeeting(activityId:string, now:number) {
+    const changed=this.db.prepare("UPDATE scheduled_meetings SET cancelled_at=?,cancellation_reason=COALESCE(cancellation_reason,'El reencuentro ya no está disponible.') WHERE id=? AND cancelled_at IS NULL AND EXISTS (SELECT 1 FROM private_meetings WHERE meeting_id=?)").run(now,activityId,activityId);
+    this.db.prepare("UPDATE group_reunions SET status='cancelled' WHERE id=? AND status IN ('pending','confirmed')").run(activityId);
+    if(changed.changes) new Notifications(this,()=>now).groupCancelled(activityId);
+  }
+  cancel(userId: string, activityId: string, now=Date.now()) {
+    this.transaction(()=>{
+      if(this.privateMeetingAccess(activityId,userId)===true) this.cancelPrivateMeeting(activityId,now);
+      this.db.prepare("DELETE FROM reservations WHERE user_id=? AND activity_id=?").run(userId, activityId);
+    });
   }
   saveRoom(room: StoredRoom) {
     this.transaction(() => {
@@ -520,11 +550,19 @@ export class Storage {
       }));
   }
   dismissHistory(userId: string, roomId: string, now: number) {
-    const row=this.db.prepare("SELECT r.archived_at FROM rooms r JOIN memberships m ON m.room_id=r.id WHERE r.id=? AND m.user_id=?").get(roomId,userId);
-    if (!row) return "not_found";
-    if (row.archived_at === null) return "active";
-    this.db.prepare("INSERT OR IGNORE INTO room_history_dismissals(user_id,room_id,created_at) VALUES(?,?,?)").run(userId,roomId,now);
-    return "ok";
+    return this.transaction(() => {
+      const row=this.db.prepare("SELECT r.archived_at FROM rooms r JOIN memberships m ON m.room_id=r.id WHERE r.id=? AND m.user_id=?").get(roomId,userId);
+      if (!row) return "not_found";
+      if (row.archived_at === null) return "active";
+      const affected=this.db.prepare("SELECT r.id FROM group_reunions r JOIN group_reunion_members m ON m.reunion_id=r.id WHERE r.room_id=? AND m.user_id=? AND r.status IN ('pending','confirmed')").all(roomId,userId);
+      this.db.prepare("INSERT OR IGNORE INTO room_history_dismissals(user_id,room_id,created_at) VALUES(?,?,?)").run(userId,roomId,now);
+      this.db.prepare("DELETE FROM notifications WHERE kind IN ('group_expired','group_cancelled') AND recipient_id=? AND target_id IN (SELECT id FROM group_reunions WHERE room_id=?)").run(userId,roomId);
+      this.db.prepare("DELETE FROM group_reunion_expirations WHERE recipient_id=? AND reunion_id IN (SELECT id FROM group_reunions WHERE room_id=?)").run(userId,roomId);
+      this.db.prepare("UPDATE scheduled_meetings SET cancelled_at=COALESCE(cancelled_at,?),cancellation_reason=COALESCE(cancellation_reason,'El reencuentro ya no está disponible.') WHERE id IN (SELECT r.id FROM group_reunions r JOIN group_reunion_members m ON m.reunion_id=r.id WHERE r.room_id=? AND m.user_id=?)").run(now,roomId,userId);
+      this.db.prepare("UPDATE group_reunions SET status='cancelled' WHERE room_id=? AND status IN ('pending','confirmed') AND id IN (SELECT reunion_id FROM group_reunion_members WHERE user_id=?)").run(roomId,userId);
+      for(const affectedRow of affected) new Notifications(this,()=>now).groupCancelled(String(affectedRow.id));
+      return "ok";
+    });
   }
   historyVisible(userId: string, roomId: string) {
     return this.member(userId,roomId) && !this.db.prepare("SELECT 1 FROM room_history_dismissals WHERE user_id=? AND room_id=?").get(userId,roomId);
@@ -543,11 +581,15 @@ export class Storage {
         "UPDATE account_emails SET code_hash=NULL, code_until=0 WHERE code_until<=? AND code_hash IS NOT NULL",
       )
       .run(now);
-    this.db
-      .prepare(
-        "DELETE FROM rooms WHERE archived_at IS NOT NULL AND archived_at<?",
-      )
-      .run(now - 30 * 24 * 60 * 60_000);
+    this.transaction(()=>{
+      const cutoff=now-30*24*60*60_000;
+      const pending=this.db.prepare("SELECT g.id FROM group_reunions g JOIN rooms r ON r.id=g.room_id WHERE g.status='pending' AND ((r.archived_at IS NOT NULL AND r.archived_at<?) OR g.starts_at<=?)").all(cutoff,now+5*60_000);
+      const expired=this.db.prepare(`INSERT OR IGNORE INTO group_reunion_expirations(reunion_id,recipient_id,expired_at) SELECT g.id,m.user_id,? FROM group_reunions g JOIN group_reunion_members m ON m.reunion_id=g.id WHERE g.id=? AND EXISTS (SELECT 1 FROM memberships p WHERE p.room_id=g.room_id AND p.user_id=m.user_id) AND NOT EXISTS (SELECT 1 FROM room_history_dismissals d WHERE d.room_id=g.room_id AND d.user_id=m.user_id)`);
+      for(const row of pending){const id=String(row.id);expired.run(now,id);this.db.prepare("UPDATE group_reunions SET status='cancelled' WHERE id=? AND status='pending'").run(id);new Notifications(this,()=>now).groupExpired(id);}
+      this.db.prepare('DELETE FROM rooms WHERE archived_at IS NOT NULL AND archived_at<?').run(cutoff);
+      this.db.prepare("DELETE FROM notifications WHERE kind='group_expired' AND EXISTS (SELECT 1 FROM group_reunion_expirations e WHERE e.reunion_id=notifications.target_id AND e.recipient_id=notifications.recipient_id AND e.expired_at<?)").run(cutoff);
+      this.db.prepare('DELETE FROM group_reunion_expirations WHERE expired_at<?').run(cutoff);
+    });
   }
   close() {
     this.db.close();

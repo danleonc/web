@@ -55,7 +55,8 @@ button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 select:focus-visible,
-textarea:focus-visible {
+textarea:focus-visible,
+.real-plaza-post [role="status"]:focus-visible {
   outline: 3px solid #a46743;
   outline-offset: 4px;
 }
