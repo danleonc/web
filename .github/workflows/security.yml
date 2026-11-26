@@ -41,7 +41,7 @@ jobs:
       - name: Install Chromium for browser checks
         run: npx playwright install --with-deps chromium --only-shell
       - name: Exercise shared Plaza and connections
-        run: npx playwright test --config playwright.real-plaza.config.ts -g 'dos cuentas comparten publicaciones y respuestas tras recargar|dos personas aceptan una solicitud antes de conversar en privado'
+        run: npx playwright test --config playwright.real-plaza.config.ts -g 'dos cuentas comparten publicaciones y respuestas tras recargar|dos personas aceptan una solicitud antes de conversar en privado|recorrido integra Plaza, conexión y encuentro entre cuentas'
       - name: Exercise group continuity and reminders
         run: npx playwright test --config playwright.room-continuity.config.ts -g 'al terminar un encuentro se puede solicitar una conexión'
       - name: Scan changes for secrets

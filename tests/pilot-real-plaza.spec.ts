@@ -739,6 +739,57 @@ test('al terminar un encuentro se puede solicitar una conexión', async ({browse
  } finally {if(process.env.NEXAFIA_TEST_CLOCK_FILE) await rm(process.env.NEXAFIA_TEST_CLOCK_FILE,{force:true});await mod.close();for(const c of people) await c.close();}
 });
 
+test("recorrido integra Plaza, conexión y encuentro entre cuentas", async ({ browser }, info) => {
+  test.setTimeout(60000);
+  const mod = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
+  const people = await Promise.all(Array.from({ length: 3 }, () => browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use })));
+  try {
+    const headers = { Origin: "http://127.0.0.1:4190" };
+    expect((await mod.request.post('/api/auth/login', { headers, data: { username: 'moderator_fixture', password: 'Una clave exclusiva del fixture 123' } })).status()).toBe(200);
+    expect((await mod.request.post('/api/meetings', { headers, data: { themeId: 'crear', startsAt: Date.now() + 7200_000, capacity: 3 } })).status()).toBe(201);
+    for (let i=0; i<people.length; i++) await register(people[i], `recorrido_${info.project.name}_${i}`);
+    const [ana, bea, carla] = await Promise.all(people.map(context => context.newPage()));
+    const title = `Intereses compartidos ${info.project.name}`;
+    await bea.goto('/#plaza');
+    await bea.getByLabel('Título de la conversación').fill(title);
+    await bea.getByLabel('Tu publicación').fill('¿Qué te gusta crear?');
+    await bea.getByRole('button', { name: 'Publicar', exact: true }).click();
+    await ana.goto('/#plaza');
+    const post = ana.getByRole('article').filter({ hasText: title });
+    await post.getByRole('button', { name: 'Ver conversación', exact: true }).click();
+    await ana.getByLabel('Tu respuesta').fill('Me gustan las ideas en grupo');
+    await ana.getByRole('button', { name: 'Responder', exact: true }).click();
+    await ana.getByRole('button', { name: 'Volver a La Plaza' }).click();
+    await post.getByRole('button', { name: 'Seguir conversando' }).click();
+    await ana.getByLabel('Mensaje de invitación').fill('Me gustaría conversar contigo');
+    await ana.getByLabel(/Acepto que nuestras fotos se compartan automáticamente/).check();
+    await ana.getByRole('button', { name: 'Enviar solicitud' }).click();
+    await expect(ana.getByText(/Solicitud enviada/)).toBeVisible();
+    await bea.goto('/#connections');
+    await bea.getByLabel(/Acepto que nuestras fotos se compartan automáticamente/).check();
+    await bea.getByRole('button', { name: 'Aceptar solicitud' }).click();
+    await bea.getByRole('button', { name: 'Abrir conversación' }).click();
+    await bea.getByLabel('Mensaje privado').fill('Sigamos creando juntas');
+    await bea.getByRole('button', { name: 'Enviar mensaje' }).click();
+    await ana.goto('/#connections');
+    await ana.getByRole('button', { name: 'Abrir conversación' }).click();
+    await expect(ana.getByText('Sigamos creando juntas', { exact: true })).toBeVisible();
+    for (const page of [ana,bea,carla]) {
+      await page.goto('/#discover');
+      const meeting=page.getByRole('article').filter({hasText:'Ideas tan locas que podrían funcionar'}).last();
+      await meeting.getByRole('button',{name:'Reservar encuentro'}).click();
+      await meeting.getByRole('button',{name:'Entrar al encuentro'}).click();
+      await page.getByLabel(/Entiendo que esta prueba comparte/).check();
+      await page.getByRole('button',{name:'Conectar con esta sala'}).click();
+      await expect(page.getByText('Conectado al servidor',{exact:true})).toBeVisible();
+    }
+    await ana.getByRole('button',{name:'Iniciar encuentro compartido'}).click();
+    await ana.getByLabel('Tu mensaje de prueba').fill('Hola desde el encuentro');
+    await ana.getByRole('button',{name:'Enviar mensaje de prueba'}).click();
+    await expect(carla.getByText('Hola desde el encuentro',{exact:true})).toBeVisible();
+  } finally { await mod.close(); for (const context of people) await context.close(); }
+});
+
 test("tres cuentas comparten una convocatoria programada", async ({ browser }, info) => {
   const mod = await browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use });
   const people = await Promise.all(Array.from({ length: 3 }, () => browser.newContext({ baseURL: "http://127.0.0.1:4190", ...info.project.use })));
