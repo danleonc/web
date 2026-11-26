@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import AxeBuilder from "@axe-core/playwright";
 import sharp from 'sharp';
+import { confirmTestEmail } from './pilot-email';
 
 test('filtro de Plaza encuentra conversaciones antiguas y permite cargar más', async ({browser},info) => {
  const context=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
@@ -747,14 +748,29 @@ test("recorrido integra Plaza, conexión y encuentro entre cuentas", async ({ br
     const headers = { Origin: "http://127.0.0.1:4190" };
     expect((await mod.request.post('/api/auth/login', { headers, data: { username: 'moderator_fixture', password: 'Una clave exclusiva del fixture 123' } })).status()).toBe(200);
     expect((await mod.request.post('/api/meetings', { headers, data: { themeId: 'crear', startsAt: Date.now() + 7200_000, capacity: 3 } })).status()).toBe(201);
-    for (let i=0; i<people.length; i++) await register(people[i], `recorrido_${info.project.name}_${i}`);
+    for (let i=1; i<people.length; i++) await register(people[i], `recorrido_${info.project.name}_${i}`);
     const [ana, bea, carla] = await Promise.all(people.map(context => context.newPage()));
+    const username=`recorrido_${info.project.name}_0`;
+    await ana.goto('/#plaza');
+    await ana.getByRole('button',{name:'Entrar a mi cuenta',exact:true}).click();
+    const access=ana.getByRole('dialog',{name:'Tu cuenta en Nexafia'});
+    await access.getByRole('button',{name:'Crear cuenta',exact:true}).click();
+    await access.getByLabel('Usuario',{exact:true}).fill(username);
+    await access.getByLabel('Nombre en la sala',{exact:true}).fill(username);
+    await access.getByLabel('Contraseña',{exact:true}).fill('Una contraseña larga de prueba 123');
+    await access.getByRole('checkbox',{name:/Declaro que soy mayor de 18 años/}).check();
+    await access.getByRole('button',{name:'Guardar mi cuenta',exact:true}).click();
+    await expect(access.getByRole('heading',{name:'Confirma tu correo para participar.'})).toBeVisible();
+    await confirmTestEmail(ana,username);
+    await access.getByRole('button',{name:'Continuar en Nexafia',exact:true}).click();
+    await expect(access).toHaveCount(0);
     const title = `Intereses compartidos ${info.project.name}`;
     await bea.goto('/#plaza');
     await bea.getByLabel('Título de la conversación').fill(title);
     await bea.getByLabel('Tu publicación').fill('¿Qué te gusta crear?');
     await bea.getByRole('button', { name: 'Publicar', exact: true }).click();
     await ana.goto('/#plaza');
+    await ana.reload();
     const post = ana.getByRole('article').filter({ hasText: title });
     await post.getByRole('button', { name: 'Ver conversación', exact: true }).click();
     await ana.getByLabel('Tu respuesta').fill('Me gustan las ideas en grupo');
