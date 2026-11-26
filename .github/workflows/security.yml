@@ -30,12 +30,20 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Check known vulnerabilities
         run: npm audit --audit-level=moderate
+      - name: Exercise application rules
+        run: npm run test:rules
       - name: Exercise server protections
         run: npm run test:server
       - name: Build shared application
         run: npm run build:pilot
         env:
           VITE_ENTRE_PLAZA_REAL: '1'
+      - name: Install Chromium for browser checks
+        run: npx playwright install --with-deps chromium --only-shell
+      - name: Exercise shared Plaza and connections
+        run: npx playwright test --config playwright.real-plaza.config.ts -g 'dos cuentas comparten publicaciones y respuestas tras recargar|dos personas aceptan una solicitud antes de conversar en privado'
+      - name: Exercise group continuity and reminders
+        run: npx playwright test --config playwright.room-continuity.config.ts -g 'al terminar un encuentro se puede solicitar una conexión'
       - name: Scan changes for secrets
         uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3
         env:
