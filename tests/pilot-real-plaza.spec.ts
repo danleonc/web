@@ -36,6 +36,61 @@ test('filtro de Plaza encuentra conversaciones antiguas y permite cargar más', 
  } finally {await context.close();}
 });
 
+test('Plaza actualiza publicaciones nuevas y conserva el borrador', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`live_list_a_${info.project.name}`);await register(b,`live_list_b_${info.project.name}`);
+  const page=await a.newPage();await page.goto('/#plaza');await page.getByLabel('Filtrar conversaciones por tema').selectOption('anime');
+  await page.getByLabel('Título de la conversación').fill('Un borrador que quiero conservar');
+  const headers={Origin:'http://127.0.0.1:4190'};
+  expect((await b.request.post('/api/plaza/posts',{headers,data:{topic:'anime',title:`Publicación nueva ${info.project.name}`,body:'Hola'}})).status()).toBe(201);
+  await expect(page.getByRole('article').filter({hasText:`Publicación nueva ${info.project.name}`})).toBeVisible({timeout:12000});
+  await expect(page.getByLabel('Título de la conversación')).toHaveValue('Un borrador que quiero conservar');
+  await expect(page.getByLabel('Filtrar conversaciones por tema')).toHaveValue('anime');
+ } finally {await a.close();await b.close();}
+});
+
+test('Plaza descarta actualizaciones anteriores al cambiar el filtro', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`live_filter_${info.project.name}`);const headers={Origin:'http://127.0.0.1:4190'};
+  const oldTitle=`Anime anterior ${info.project.name}`,newTitle=`Cocina vigente ${info.project.name}`;
+  for(const [topic,title] of [['anime',oldTitle],['cocina',newTitle]]) expect((await a.request.post('/api/plaza/posts',{headers,data:{topic,title,body:'Hola'}})).status()).toBe(201);
+  const page=await a.newPage();await page.goto('/#plaza');await page.getByLabel('Filtrar conversaciones por tema').selectOption('anime');
+  await expect(page.getByRole('article').filter({hasText:oldTitle})).toBeVisible();
+  let release!:()=>void;const hold=new Promise<void>(resolve=>{release=resolve;});let completed!:()=>void;const delivered=new Promise<void>(resolve=>{completed=resolve;});let intercepted=false;
+  await page.route('**/api/plaza/posts?*',async route=>{const url=new URL(route.request().url());if(url.searchParams.get('topic')==='anime'){const response=await route.fetch();intercepted=true;await hold;await route.fulfill({response});completed();}else await route.continue();});
+  try {
+   await expect.poll(()=>intercepted,{timeout:10000}).toBe(true);
+   await page.getByLabel('Filtrar conversaciones por tema').selectOption('cocina');
+   await expect(page.getByRole('article').filter({hasText:newTitle})).toBeVisible();
+  } finally {release();}
+  await delivered;
+  await expect(page.getByRole('article').filter({hasText:oldTitle})).toHaveCount(0);
+  await expect(page.getByRole('article').filter({hasText:newTitle})).toBeVisible();
+ } finally {await a.close();}
+});
+
+test('Plaza avisa sin borrar las páginas antiguas que se están leyendo', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`live_pages_a_${info.project.name}`);await register(b,`live_pages_b_${info.project.name}`);const headers={Origin:'http://127.0.0.1:4190'};
+  for(let n=0;n<55;n++) expect((await a.request.post('/api/plaza/posts',{headers,data:{topic:'anime',title:`Lista antigua ${info.project.name} ${n}`,body:'Hola'}})).status()).toBe(201);
+  const page=await a.newPage();await page.goto('/#plaza');await page.getByLabel('Filtrar conversaciones por tema').selectOption('anime');
+  await page.getByRole('button',{name:'Cargar más conversaciones'}).click();
+  await expect(page.getByRole('article').filter({hasText:`Lista antigua ${info.project.name}`})).toHaveCount(55);
+  await page.getByLabel('Título de la conversación').fill('Borrador conservado');
+  expect((await b.request.post('/api/plaza/posts',{headers,data:{topic:'anime',title:`Llegó otra ${info.project.name}`,body:'Hola'}})).status()).toBe(201);
+  const update=page.getByRole('button',{name:'Actualizar conversaciones'});await expect(update).toBeVisible({timeout:12000});
+  await update.focus();await expect(update).toBeFocused();await update.screenshot({path:info.outputPath('actualizar-conversaciones.png')});
+  expect((await new AxeBuilder({page}).include('[aria-labelledby="conversations-title"]').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(page.getByRole('article').filter({hasText:`Lista antigua ${info.project.name}`})).toHaveCount(55);
+  await update.click();await expect(page.getByRole('article').filter({hasText:`Llegó otra ${info.project.name}`})).toBeVisible();
+  await expect(page.getByLabel('Título de la conversación')).toHaveValue('Borrador conservado');
+ } finally {await a.close();await b.close();}
+});
+
 test('los nuevos temas se pueden publicar y reconocen entre cuentas', async ({browser},info) => {
  const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use}); const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
  try {
@@ -770,7 +825,6 @@ test("recorrido integra Plaza, conexión y encuentro entre cuentas", async ({ br
     await bea.getByLabel('Tu publicación').fill('¿Qué te gusta crear?');
     await bea.getByRole('button', { name: 'Publicar', exact: true }).click();
     await ana.goto('/#plaza');
-    await ana.reload();
     const post = ana.getByRole('article').filter({ hasText: title });
     await post.getByRole('button', { name: 'Ver conversación', exact: true }).click();
     await ana.getByLabel('Tu respuesta').fill('Me gustan las ideas en grupo');

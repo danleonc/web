@@ -34,6 +34,8 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
   const [search, setSearch] = useState('');
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [expandedList, setExpandedList] = useState(false);
+  const [newPosts, setNewPosts] = useState(false);
   const listRequest = useRef(0);
   const [replies, setReplies] = useState<Reply[]>([]);
   const [replyCursor, setReplyCursor] = useState<string | null>(null);
@@ -80,19 +82,40 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
       if (current !== listRequest.current) return;
       setPosts(previous => active && !result.posts.some(p => p.id === active) ? [...result.posts, ...previous.filter(p => p.id === active)] : result.posts);
       setNextCursor(result.nextCursor);
+      setExpandedList(false); setNewPosts(false);
     } finally { if (current === listRequest.current) setLoading(false); }
   }, [topicFilter, search, active]);
   useEffect(() => {
     let cancelled = false; const current = ++listRequest.current;
+    setExpandedList(false); setNewPosts(false);
     if (!ready) { setPosts([]); setReplies([]); setNextCursor(null); return; }
     setLoading(true);
     request<{ posts: Post[]; nextCursor: string | null }>(`/api/plaza/posts?page=1&topic=${encodeURIComponent(topicFilter)}&q=${encodeURIComponent(search)}`).then((result) => { if (!cancelled && current === listRequest.current) { setPosts(result.posts); setNextCursor(result.nextCursor); } }).catch(() => { if (!cancelled && current === listRequest.current) setError("No pudimos cargar las conversaciones. Actualiza la página para intentar de nuevo."); }).finally(() => { if (!cancelled && current === listRequest.current) setLoading(false); });
     return () => { cancelled = true; };
   }, [ready, topicFilter, search]);
+  useEffect(() => {
+    if (!ready || active || busy || loading || loadingMore || editing) return;
+    let cancelled=false; let timer:ReturnType<typeof setTimeout>;
+    const update=async()=>{
+      if(document.visibilityState==='visible') {
+        const current=listRequest.current;
+        try {
+          const result=await request<{posts:Post[];nextCursor:string|null}>(`/api/plaza/posts?page=1&topic=${encodeURIComponent(topicFilter)}&q=${encodeURIComponent(search)}`);
+          if(!cancelled && current===listRequest.current) {
+            if(expandedList) setNewPosts(result.posts.some(post=>!posts.some(existing=>existing.id===post.id)));
+            else {setPosts(result.posts);setNextCursor(result.nextCursor);}
+          }
+        } catch { /* Preserve the current list and retry on the next interval. */ }
+      }
+      if(!cancelled) timer=setTimeout(update,4000);
+    };
+    timer=setTimeout(update,4000);
+    return()=>{cancelled=true;clearTimeout(timer);};
+  }, [ready,active,busy,loading,loadingMore,editing,topicFilter,search,expandedList,posts]);
   async function loadMore() {
     if (!nextCursor || loadingMore) return;
-    const current = listRequest.current; setLoadingMore(true); setError('');
-    try { const result=await request<{posts:Post[];nextCursor:string|null}>(`/api/plaza/posts?topic=${encodeURIComponent(topicFilter)}&q=${encodeURIComponent(search)}&cursor=${encodeURIComponent(nextCursor)}`); if (current !== listRequest.current) return; setPosts(previous => [...previous, ...result.posts.filter(p => !previous.some(existing => existing.id === p.id))]); setNextCursor(result.nextCursor); }
+    const current = ++listRequest.current; setLoadingMore(true); setError('');
+    try { const result=await request<{posts:Post[];nextCursor:string|null}>(`/api/plaza/posts?topic=${encodeURIComponent(topicFilter)}&q=${encodeURIComponent(search)}&cursor=${encodeURIComponent(nextCursor)}`); if (current !== listRequest.current) return; setPosts(previous => [...previous, ...result.posts.filter(p => !previous.some(existing => existing.id === p.id))]); setNextCursor(result.nextCursor); setExpandedList(true); }
     catch { if (current === listRequest.current) setError('No pudimos cargar más conversaciones. Inténtalo nuevamente.'); }
     finally { setLoadingMore(false); }
   }
@@ -246,6 +269,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
       <section className="real-plaza-panel" aria-labelledby="conversations-title"><h2 id="conversations-title">Conversaciones</h2>
         <form className="real-plaza-search" onSubmit={e => { e.preventDefault(); setSearch(searchDraft.trim()); }}><label className="field-label" htmlFor="real-plaza-search">Buscar conversaciones</label><input id="real-plaza-search" className="text-input" type="search" maxLength={100} value={searchDraft} onChange={e => setSearchDraft(e.target.value)} placeholder="Busca por título o contenido"/><button type="submit" className="button secondary">Buscar</button>{search && <button type="button" className="button text" onClick={() => { setSearchDraft(''); setSearch(''); }}>Limpiar búsqueda</button>}</form>
         <label className="field-label" htmlFor="real-plaza-topic-filter">Filtrar conversaciones por tema</label><select id="real-plaza-topic-filter" className="text-input" value={topicFilter} onChange={e => setTopicFilter(e.target.value)}><option value="todos">Todos los temas</option>{plazaTopics.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}</select>
+        {newPosts && <div><p role="status">Hay conversaciones nuevas. Al actualizar volverás a las más recientes.</p><button type="button" className="button secondary" disabled={loading || loadingMore || busy} onClick={() => {setLoading(true);void refresh().catch(()=>setError('No pudimos actualizar las conversaciones. Inténtalo nuevamente.'));}}>Actualizar conversaciones</button></div>}
         {loading ? <p role="status">Cargando conversaciones…</p> : filteredPosts.length === 0 ? <p>{search ? 'No encontramos conversaciones para esa búsqueda. Prueba con otras palabras.' : topicFilter === 'todos' ? 'Todavía no hay conversaciones. Puedes iniciar la primera.' : 'Aún no hay conversaciones de este tema. Prueba otro o inicia una.'}</p> : filteredPosts.map((post) => <article key={post.id} className="real-plaza-post">
           <p>{post.author} · {plazaTopics.find((t) => t.id === post.topic)?.short}</p><h3>{post.title}</h3><p>{post.body}</p>{post.stickerId && <StickerImage id={post.stickerId}/>}
           {post.imageId && <ImageView plaza image={{id:post.imageId,description:post.imageDescription || ""}} />}
