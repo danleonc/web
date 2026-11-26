@@ -2,12 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { join } from 'node:path';
+import { randomBytes } from 'node:crypto';
+import { access, readFile } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import { createRoomServer } from '../../server/app.ts';
 import { backupDatabase } from '../../scripts/backup-db.mjs';
+import { encryptedBackup, restoreEncryptedBackup } from '../../scripts/encrypted-backup.mjs';
 import { fixture } from './feature-fixture.mjs';
 
-test('una copia sintética recupera Plaza, conexión y reserva conservando aislamiento', async t => {
+for (const encrypted of [false,true]) test(`una copia sintética ${encrypted?'cifrada':'sin cifrar'} recupera Plaza, conexión y reserva conservando aislamiento`, async t => {
   const f=await fixture(t,{plazaEnabled:true,meetingsEnabled:true});
   const [mod,a,b,other]=await Promise.all(['restore_mod','restore_a','restore_b','restore_other'].map(name=>f.signup(name)));
   const db=new DatabaseSync(f.path);db.prepare('INSERT INTO moderators(user_id) VALUES(?)').run(mod.id);db.close();
@@ -22,7 +25,18 @@ test('una copia sintética recupera Plaza, conexión y reserva conservando aisla
   assert.equal((await f.request(`/api/reservations/${meeting}`,'POST',undefined,a.cookie)).status,200);
   assert.equal((await f.request(`/api/reservations/${meeting}/reminder`,'POST',{minutes:60},a.cookie)).status,200);
 
-  const copy=join(f.directory,'restored-synthetic.sqlite');await backupDatabase(f.path,copy);
+  const copy=join(f.directory,'restored-synthetic.sqlite');
+  if(encrypted) {
+    const archive=join(f.directory,'synthetic.enc'),wrong=join(f.directory,'wrong-key.sqlite');
+    const key=randomBytes(32),wrongKey=randomBytes(32);
+    try {
+      await encryptedBackup(f.path,archive,key);
+      assert.equal((await readFile(archive)).includes(Buffer.from('Mensaje privado sintético')),false);
+      await assert.rejects(restoreEncryptedBackup(archive,wrong,wrongKey));
+      await assert.rejects(access(wrong),error=>error.code==='ENOENT');
+      await restoreEncryptedBackup(archive,copy,key);
+    } finally {key.fill(0);wrongKey.fill(0);}
+  } else await backupDatabase(f.path,copy);
   const restored=createRoomServer({databasePath:copy,plazaEnabled:true,meetingsEnabled:true,allowedOrigins:['http://localhost:4173'],now:()=>f.startsAt-600000});
   restored.server.listen(0,'127.0.0.1');await once(restored.server,'listening');
   try {
