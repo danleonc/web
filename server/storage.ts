@@ -422,7 +422,7 @@ export class Storage {
     ).map((r) => r.id);
   }
   reserved(userId: string, activityId: string) {
-    return this.reservations(userId).includes(activityId);
+    return !!this.db.prepare("SELECT 1 FROM reservations WHERE user_id=? AND activity_id=?").get(userId,activityId);
   }
   privateMeetingAccess(activityId:string,userId:string): boolean | null {
     if (!this.db.prepare('SELECT 1 FROM private_meetings WHERE meeting_id=?').get(activityId)) return null;
