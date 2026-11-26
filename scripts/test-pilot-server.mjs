@@ -1,6 +1,7 @@
 import webpush from "web-push";
 // Isolated browser-test service: dates are bypassed only in this fixture.
 import { mkdir, writeFile, mkdtemp, rm } from "node:fs/promises";
+import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createHash, randomUUID } from "node:crypto";
@@ -43,8 +44,17 @@ new ModerationStore(setup, Date.now).role("moderator_fixture_second", true);
 setup.close();
 const clockStart = Date.now();
 const clockScale = process.env.NEXAFIA_TEST_CLOCK_SPEED === '300' ? 300 : 1;
+const testNow = () => {
+  if (clockScale === 300 && process.env.NEXAFIA_TEST_CLOCK_FILE) {
+    try {
+      const value = Number(readFileSync(process.env.NEXAFIA_TEST_CLOCK_FILE, 'utf8'));
+      if (Number.isSafeInteger(value) && value > 0) return value;
+    } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  }
+  return clockStart + (Date.now() - clockStart) * clockScale;
+};
 const app = createRoomServer({
-  now: () => clockStart + (Date.now() - clockStart) * clockScale,
+  now: testNow,
   ...(process.env.NEXAFIA_TEST_GATE === "1" ? { stagingPassword: "0123456789abcdef0123456789abcdef0123456789abcdef" } : {}),
   plazaEnabled: process.env.NEXAFIA_TEST_PLAZA === "1",
   groupReunionsEnabled: process.env.NEXAFIA_TEST_GROUP_REUNIONS === "1",

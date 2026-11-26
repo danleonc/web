@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import type { BrowserContext, Page } from "@playwright/test";
-import { readFile } from "node:fs/promises";
+import { readFile, writeFile, rm } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
@@ -614,7 +614,7 @@ test('al terminar un encuentro se puede solicitar una conexión', async ({browse
   const image=await sharp({create:{width:40,height:40,channels:3,background:'#285d4c'}}).png().toBuffer();
   for(const person of people.slice(0,2)) expect((await person.request.post('/api/account/profile/photo',{headers:{...headers,'Content-Type':'image/png','X-Photo-Declaration':'yes'},data:image})).status()).toBe(201);
   const pages=await Promise.all(people.map(c=>c.newPage()));
-  for(const page of pages){await page.goto('/#discover');const card=page.getByRole('article').filter({hasText:'Ideas tan locas que podrían funcionar'}).last();await card.getByRole('button',{name:'Reservar encuentro'}).click();await card.getByRole('button',{name:'Entrar al encuentro'}).click();await page.getByLabel(/Entiendo que esta prueba comparte/).check();await page.getByRole('button',{name:'Conectar con esta sala'}).click();await expect(page.getByText('Conectado al servidor',{exact:true})).toBeVisible();}
+  for(const page of pages){await page.goto('/#discover');const card=page.getByRole('article').filter({hasText:'Ideas tan locas que podrían funcionar'}).last();await card.getByRole('button',{name:'Reservar encuentro'}).click();if(page===pages[0]){const control=card.getByLabel(/Recordatorio de/);await expect(control).toHaveValue('0');await control.selectOption('60');await expect(control).toHaveValue('60');await page.reload();await expect(control).toHaveValue('60');await control.selectOption('0');await expect(control).toHaveValue('0');}await card.getByRole('button',{name:'Entrar al encuentro'}).click();await page.getByLabel(/Entiendo que esta prueba comparte/).check();await page.getByRole('button',{name:'Conectar con esta sala'}).click();await expect(page.getByText('Conectado al servidor',{exact:true})).toBeVisible();}
   await pages[0].getByRole('button',{name:'Iniciar encuentro compartido'}).click();
   await expect(pages[0].getByRole('heading',{name:'¿Seguimos conversando?'})).toBeVisible({timeout:30000});
   await pages[0].getByRole('button',{name:`Conectar con continuidad_${info.project.name}_1`}).click();
@@ -702,6 +702,27 @@ test('al terminar un encuentro se puede solicitar una conexión', async ({browse
   const dateText=new Intl.DateTimeFormat('es-CL',{dateStyle:'full',timeStyle:'short',timeZone:'America/Santiago'}).format(new Date(groupData.reunions[0].startsAt));
   const groupMeeting=pages[0].getByRole('article').filter({hasText:dateText}).filter({has:pages[0].getByRole('button',{name:'Entrar al encuentro'})});
   await expect(groupMeeting.getByText('Reencuentro privado: retirar tu participación cancela el encuentro para todo el grupo.')).toBeVisible();
+  const reminder=groupMeeting.getByLabel(/Recordatorio de/);await expect(reminder).toHaveValue('0');await reminder.selectOption('60');await expect(reminder).toHaveValue('60');
+  await pages[0].reload();await expect(reminder).toHaveValue('60');
+  await groupMeeting.screenshot({path:info.outputPath('recordatorio.png')});
+  expect((await new AxeBuilder({page:pages[0]}).include('article:has(select[aria-label^="Recordatorio de"])').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+  expect(await pages[0].evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  await reminder.selectOption('0');await expect(reminder).toHaveValue('0');
+  await reminder.selectOption('60');await expect(reminder).toHaveValue('60');
+  expect((await (await people[0].request.get('/api/plaza/notifications')).json()).items.some((n:{kind:string})=>n.kind==='meeting_reminder')).toBe(false);
+  const clockFile=process.env.NEXAFIA_TEST_CLOCK_FILE;if(!clockFile) throw Error('Falta el reloj del fixture');
+  await writeFile(clockFile,String(groupData.reunions[0].startsAt-30*60_000));
+  for(let i=0;i<people.length;i++) expect((await people[i].request.post('/api/auth/login',{headers,data:{username:`continuidad_${info.project.name}_${i}`,password:'Una contraseña larga de prueba 123'}})).status()).toBe(200);
+  expect((await (await people[0].request.get('/api/plaza/notifications')).json()).items.some((n:{kind:string})=>n.kind==='meeting_reminder')).toBe(true);
+  expect((await (await people[1].request.get('/api/plaza/notifications')).json()).items.some((n:{kind:string})=>n.kind==='meeting_reminder')).toBe(false);
+  await pages[0].goto('/#plaza');await pages[0].reload();
+  await pages[0].getByRole('button',{name:/Notificaciones,/}).click();
+  const notice=pages[0].getByRole('button',{name:/Recordatorio de encuentro/});
+  await expect(notice).toContainText('Tu encuentro comienza pronto.');
+  await notice.click();await expect(pages[0]).toHaveURL(/#discover/);
+  const delivered=(await (await people[0].request.get('/api/plaza/notifications')).json()).items.find((n:{kind:string})=>n.kind==='meeting_reminder');
+  expect(delivered.readAt).not.toBeNull();
+  await rm(clockFile,{force:true});
   await pages[0].routeWebSocket('**/api/rooms/**',ws=>{const server=ws.connectToServer();server.onClose(()=>{void ws.close();});});
   await groupMeeting.getByRole('button',{name:'Entrar al encuentro'}).click();
   await pages[0].getByLabel(/Entiendo que esta prueba comparte/).check();await pages[0].getByRole('button',{name:'Conectar con esta sala'}).click();
@@ -715,7 +736,7 @@ test('al terminar un encuentro se puede solicitar una conexión', async ({browse
   await expect(pages[0].getByText('El reencuentro ya no está disponible.')).toBeVisible();
   await pages[0].goto('/#discover');await pages[0].reload();await expect(pages[0].getByText('Propuesta cancelada.')).toBeVisible();
   await expect.poll(async()=>{const r=await people[0].request.get('/api/plaza/notifications');return (await r.json()).items.some((n:{kind:string})=>n.kind==='group_cancelled');}).toBe(true);
- } finally {await mod.close();for(const c of people) await c.close();}
+ } finally {if(process.env.NEXAFIA_TEST_CLOCK_FILE) await rm(process.env.NEXAFIA_TEST_CLOCK_FILE,{force:true});await mod.close();for(const c of people) await c.close();}
 });
 
 test("tres cuentas comparten una convocatoria programada", async ({ browser }, info) => {

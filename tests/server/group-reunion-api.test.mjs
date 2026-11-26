@@ -93,3 +93,35 @@ test('retirar historial confirmado revoca sala y oculta el aviso propio',async t
  assert.equal((await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body.items.some(n=>n.targetId===id&&n.kind==='group_cancelled'),true);
  assert.equal((await f.request(`/api/group-reunions/${id}`,'GET',undefined,b.cookie)).status,404);
 });
+
+test('recordatorio de reencuentro es optativo, privado y respeta la cancelacion',async t=>{
+ const f=await fixture(t,{plazaEnabled:true,groupReunionsEnabled:true,meetingsEnabled:true});
+ const [a,b,c,d]=await Promise.all(['reminder_a','reminder_b','reminder_c','reminder_d'].map(n=>f.signup(n)));
+ const room='90000000-0000-4000-8000-000000000031',db=new DatabaseSync(f.path);const activity=db.prepare('SELECT activity_id FROM offerings LIMIT 1').get().activity_id;
+ db.prepare('INSERT INTO rooms(id,activity_id,session_json,revision,idle_at,archived_at,safety_json) VALUES(?,?,?,?,?,?,?)').run(room,activity,JSON.stringify({phase:'closed',sessionUntil:123}),1,Date.now(),Date.now(),'{}');for(const user of [a,b,c])db.prepare('INSERT INTO memberships VALUES(?,?)').run(room,user.id);db.close();
+ const made=await f.request('/api/group-reunions','POST',{roomId:room,invitees:[b.id,c.id],startsAt:Date.now()+7200000},a.cookie);assert.equal(made.status,201);const id=made.body.reunion.id;
+ await f.request(`/api/group-reunions/${id}/decision`,'POST',{action:'accept'},b.cookie);await f.request(`/api/group-reunions/${id}/decision`,'POST',{action:'accept'},c.cookie);
+ const path=`/api/group-reunions/${id}/reminder`;
+ assert.equal((await f.request(path,'POST',{minutes:60},d.cookie)).status,404);
+ assert.equal((await f.request(path,'POST',{minutes:17},a.cookie)).status,422);
+ assert.equal((await f.request(path,'POST',{minutes:60},a.cookie,'https://ajeno.example')).status,403);
+ assert.equal((await f.request(path,'POST',{minutes:60},a.cookie)).status,200);
+ assert.equal((await f.request(path,'POST',{minutes:15},b.cookie)).status,200);
+ await f.restart();
+ assert.equal((await f.request('/api/activities','GET',undefined,a.cookie)).body.activities.find(x=>x.id===id).reminderMinutes,60);
+ assert.equal((await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body.items.some(x=>x.kind==='meeting_reminder'),false);
+ await f.request('/api/plaza/notifications/read-all','POST',{},a.cookie);
+ f.advance(3610000);
+ const notices=(await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body;
+ const notice=notices.items.find(x=>x.kind==='meeting_reminder'&&x.targetId===id);assert.equal(notice?.readAt,null);
+ assert.equal((await f.request(path,'POST',{minutes:15},a.cookie)).status,200);
+ assert.equal((await f.request('/api/plaza/notifications/read','POST',{id:notice.id},a.cookie)).status,404);
+ assert.equal((await f.request('/api/plaza/notifications','GET',undefined,b.cookie)).body.items.some(x=>x.kind==='meeting_reminder'),false);
+ assert.equal((await f.request(path,'POST',{minutes:0},a.cookie)).status,200);
+ assert.equal((await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body.items.some(x=>x.kind==='meeting_reminder'),false);
+ assert.equal((await f.request('/api/activities','GET',undefined,b.cookie)).body.activities.find(x=>x.id===id).reminderMinutes,15);
+ assert.equal((await f.request(path,'POST',{minutes:15},a.cookie)).status,200);
+ await f.request(`/api/group-reunions/${id}/decision`,'POST',{action:'withdraw'},b.cookie);
+ f.advance(3600000);
+ assert.equal((await f.request('/api/plaza/notifications','GET',undefined,a.cookie)).body.items.some(x=>x.kind==='meeting_reminder'),false);
+});

@@ -467,6 +467,7 @@ export class Storage {
     this.transaction(()=>{
       if(this.privateMeetingAccess(activityId,userId)===true) this.cancelPrivateMeeting(activityId,now);
       this.db.prepare("DELETE FROM reservations WHERE user_id=? AND activity_id=?").run(userId, activityId);
+      this.db.prepare("DELETE FROM notifications WHERE recipient_id=? AND kind='meeting_reminder' AND target_id=?").run(userId,activityId);
     });
   }
   saveRoom(room: StoredRoom) {
@@ -589,6 +590,7 @@ export class Storage {
       this.db.prepare('DELETE FROM rooms WHERE archived_at IS NOT NULL AND archived_at<?').run(cutoff);
       this.db.prepare("DELETE FROM notifications WHERE kind='group_expired' AND EXISTS (SELECT 1 FROM group_reunion_expirations e WHERE e.reunion_id=notifications.target_id AND e.recipient_id=notifications.recipient_id AND e.expired_at<?)").run(cutoff);
       this.db.prepare('DELETE FROM group_reunion_expirations WHERE expired_at<?').run(cutoff);
+      this.db.prepare("DELETE FROM notifications WHERE kind='meeting_reminder' AND NOT EXISTS (SELECT 1 FROM scheduled_meetings m JOIN offerings o ON o.activity_id=m.id JOIN reservations r ON r.activity_id=m.id AND r.user_id=notifications.recipient_id WHERE m.id=notifications.target_id AND m.cancelled_at IS NULL AND o.starts_at>?)").run(now);
     });
   }
   close() {

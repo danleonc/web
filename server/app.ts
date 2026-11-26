@@ -31,6 +31,7 @@ import type { SendVerificationEmail } from "./email.ts";
 import { handleFeatures } from "./features.ts";
 import { handlePlaza } from "./plaza-http.ts";
 import { handleGroupReunions } from './group-reunion-http.ts';
+import { Notifications } from './notifications.ts';
 import { meetingActivity, listMeetings } from "./meetings.ts";
 import { handleMeetingCreation } from "./meetings-http.ts";
 import { PushDelivery, handlePush } from "./push.ts";
@@ -438,6 +439,10 @@ export function createRoomServer(options: Options = {}) {
       if (identity && moderation?.restriction(identity.id)) { req.resume(); json(res,403,{error:'account_restricted'}); return; }
       await handleGroupReunions(storage,now,validOrigin,req,res,path,identity); closeCancelledPrivateRooms(); return;
     }
+    if (options.meetingsEnabled && options.plazaEnabled && storage && /^\/api\/reservations\/[a-f0-9-]{36}\/reminder$/.test(path)) {
+      if (identity && moderation?.restriction(identity.id)) { req.resume(); json(res,403,{error:'account_restricted'}); return; }
+      await handleGroupReunions(storage,now,validOrigin,req,res,path.replace('/api/reservations/','/api/group-reunions/'),identity); return;
+    }
     if (options.plazaEnabled && storage && await handlePlaza(storage, now, validOrigin, req, res, path, identity,
       (target) => {
         if (!identity) throw Error("session_required");
@@ -475,7 +480,7 @@ export function createRoomServer(options: Options = {}) {
           return {
             id: a.id, themeId: "themeId" in a ? a.themeId : a.id, title: a.title,
             startsAt: new Date(start).toISOString(), minimum: a.minimum, maximum: a.capacity,
-            reserved: storage.countReservations(a.id), mine, cancelled, privateReunion: storage.privateMeetingAccess(a.id,identity.id) === true, cancellationReason: cancelled && mine && "cancellationReason" in a ? a.cancellationReason : null,
+            reserved: storage.countReservations(a.id), mine, cancelled, privateReunion: storage.privateMeetingAccess(a.id,identity.id) === true, reminderAvailable: !!(options.meetingsEnabled && options.plazaEnabled), reminderMinutes: mine && options.meetingsEnabled && options.plazaEnabled ? new Notifications(storage,now).reunionReminder(identity.id,a.id,start) : 0, cancellationReason: cancelled && mine && "cancellationReason" in a ? a.cancellationReason : null,
             accessible: !ended && (!enforceSchedule || (now() >= start - 300_000 && !entryClosed)),
             bookingOpen: !cancelled && now() < start,
             ended: ended || entryClosed,

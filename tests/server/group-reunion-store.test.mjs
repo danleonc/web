@@ -208,3 +208,15 @@ test('retirar el historial de un encuentro confirmado no vuelve a mostrar avisos
   assert.equal(new Notifications(storage,()=>10000).list('b').items.some(n=>n.targetId===id),false);
  }finally{storage.close();}
 });
+
+test('recordatorio privado conserva permisos tras caducar la sala original',()=>{
+ const {storage,store}=setup();try {
+  const id=store.create('a','room',['b','c'],1000000);store.decide(id,'b','accept');store.decide(id,'c','accept');
+  storage.db.prepare('DELETE FROM rooms WHERE id=?').run('room');
+  const early=new Notifications(storage,()=>10000);assert.equal(early.setReunionReminder('a',id,15),'ok');assert.equal(early.setReunionReminder('d',id,15),'not_found');
+  early.readAll('a');assert.equal(early.list('a').items.some(n=>n.kind==='meeting_reminder'),false);
+  const due=new Notifications(storage,()=>100001);assert.equal(due.list('a').items.some(n=>n.kind==='meeting_reminder'&&n.readAt===null),true);
+  storage.block('a','b',100002);assert.equal(due.list('a').items.some(n=>n.kind==='meeting_reminder'),false);
+  storage.prune(100003);assert.equal(storage.db.prepare("SELECT count(*) AS n FROM notifications WHERE kind='meeting_reminder' AND target_id=?").get(id).n,0);
+ }finally{storage.close();}
+});

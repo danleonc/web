@@ -36,6 +36,8 @@ export type AccountView = {
 };
 export type Offering = {
   privateReunion?: boolean;
+  reminderAvailable?: boolean;
+  reminderMinutes?: 0 | 15 | 60;
   cancelled?: boolean;
   cancellationReason?: string | null;
   id: string;
