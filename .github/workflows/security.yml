@@ -44,6 +44,8 @@ jobs:
         run: npx playwright test --config playwright.real-plaza.config.ts -g 'dos cuentas comparten publicaciones y respuestas tras recargar|dos personas aceptan una solicitud antes de conversar en privado|recorrido integra Plaza, conexión y encuentro entre cuentas'
       - name: Exercise live Plaza listing
         run: npx playwright test --config playwright.real-plaza.config.ts -g 'Plaza actualiza publicaciones nuevas|Plaza avisa sin borrar|Plaza descarta actualizaciones anteriores|Plaza se recupera de un fallo inicial'
+      - name: Exercise Plaza connection interruption
+        run: npx playwright test --config playwright.real-plaza.config.ts -g 'Plaza informa y recupera una interrupción'
       - name: Exercise group continuity and reminders
         run: npx playwright test --config playwright.room-continuity.config.ts -g 'al terminar un encuentro se puede solicitar una conexión'
       - name: Scan changes for secrets

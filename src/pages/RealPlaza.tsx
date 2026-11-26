@@ -108,7 +108,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
             if(expandedList) setNewPosts(result.posts.some(post=>!posts.some(existing=>existing.id===post.id)));
             else {setPosts(result.posts);setNextCursor(result.nextCursor);}
           }
-        } catch { /* Preserve the current list and retry on the next interval. */ }
+        } catch { if(!cancelled && current===listRequest.current) setListError('No pudimos actualizar las conversaciones. Intentaremos de nuevo.'); }
       }
       if(!cancelled) timer=setTimeout(update,4000);
     };

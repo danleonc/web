@@ -65,6 +65,27 @@ test('Plaza se recupera de un fallo inicial sin perder el borrador', async ({bro
  } finally {await a.close();}
 });
 
+test('Plaza informa y recupera una interrupción al actualizar', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});const b=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`retry_update_a_${info.project.name}`);await register(b,`retry_update_b_${info.project.name}`);
+  const headers={Origin:'http://127.0.0.1:4190'},page=await a.newPage();
+  expect((await b.request.post('/api/plaza/posts',{headers,data:{topic:'cultura',title:`Antes del corte ${info.project.name}`,body:'Hola'}})).status()).toBe(201);
+  await page.goto('/#plaza');await expect(page.getByRole('article').filter({hasText:`Antes del corte ${info.project.name}`})).toBeVisible();
+  await page.getByLabel('Título de la conversación').fill('Borrador durante la interrupción');
+  await page.route('**/api/plaza/posts?*',route=>route.fulfill({status:503,json:{error:'temporary'}}),{times:1});
+  expect((await b.request.post('/api/plaza/posts',{headers,data:{topic:'cultura',title:`Después del corte ${info.project.name}`,body:'Hola'}})).status()).toBe(201);
+  await expect(page.getByRole('alert')).toContainText('No pudimos actualizar las conversaciones',{timeout:10000});
+  await page.getByRole('alert').screenshot({path:info.outputPath('aviso-interrupcion.png')});
+  expect((await new AxeBuilder({page}).include('p[role="alert"]').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(page.getByRole('article').filter({hasText:`Antes del corte ${info.project.name}`})).toBeVisible();
+  await expect(page.getByRole('article').filter({hasText:`Después del corte ${info.project.name}`})).toBeVisible({timeout:12000});
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByLabel('Título de la conversación')).toHaveValue('Borrador durante la interrupción');
+ } finally {await a.close();await b.close();}
+});
+
 test('Plaza descarta actualizaciones anteriores al cambiar el filtro', async ({browser},info) => {
  const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
  try {
