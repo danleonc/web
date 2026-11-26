@@ -50,6 +50,21 @@ test('Plaza actualiza publicaciones nuevas y conserva el borrador', async ({brow
  } finally {await a.close();await b.close();}
 });
 
+test('Plaza se recupera de un fallo inicial sin perder el borrador', async ({browser},info) => {
+ const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
+ try {
+  await register(a,`retry_list_${info.project.name}`);const headers={Origin:'http://127.0.0.1:4190'};
+  expect((await a.request.post('/api/plaza/posts',{headers,data:{topic:'cultura',title:`Vuelve la lista ${info.project.name}`,body:'Hola'}})).status()).toBe(201);
+  const page=await a.newPage();await page.route('**/api/plaza/posts?*',route=>route.fulfill({status:503,json:{error:'temporary'}}),{times:1});
+  await page.goto('/#plaza');
+  await expect(page.getByRole('alert')).toContainText('No pudimos cargar las conversaciones');
+  await page.getByLabel('Título de la conversación').fill('Borrador durante la falla');
+  await expect(page.getByRole('article').filter({hasText:`Vuelve la lista ${info.project.name}`})).toBeVisible({timeout:12000});
+  await expect(page.getByRole('alert')).toHaveCount(0);
+  await expect(page.getByLabel('Título de la conversación')).toHaveValue('Borrador durante la falla');
+ } finally {await a.close();}
+});
+
 test('Plaza descarta actualizaciones anteriores al cambiar el filtro', async ({browser},info) => {
  const a=await browser.newContext({baseURL:'http://127.0.0.1:4190',...info.project.use});
  try {

@@ -63,6 +63,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
   const [loading, setLoading] = useState(false);
   const [threadLoading, setThreadLoading] = useState(false);
   const [error, setError] = useState("");
+  const [listError, setListError] = useState("");
   const [blocks, setBlocks] = useState<BlockedPerson[]>([]);
   const [blocksLoading, setBlocksLoading] = useState(false);
   const [report, setReport] = useState<{ kind: "post" | "reply"; id: string; author: string } | null>(null);
@@ -82,15 +83,16 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
       if (current !== listRequest.current) return;
       setPosts(previous => active && !result.posts.some(p => p.id === active) ? [...result.posts, ...previous.filter(p => p.id === active)] : result.posts);
       setNextCursor(result.nextCursor);
+      setListError("");
       setExpandedList(false); setNewPosts(false);
     } finally { if (current === listRequest.current) setLoading(false); }
   }, [topicFilter, search, active]);
   useEffect(() => {
     let cancelled = false; const current = ++listRequest.current;
-    setExpandedList(false); setNewPosts(false);
+    setExpandedList(false); setNewPosts(false); setListError("");
     if (!ready) { setPosts([]); setReplies([]); setNextCursor(null); return; }
     setLoading(true);
-    request<{ posts: Post[]; nextCursor: string | null }>(`/api/plaza/posts?page=1&topic=${encodeURIComponent(topicFilter)}&q=${encodeURIComponent(search)}`).then((result) => { if (!cancelled && current === listRequest.current) { setPosts(result.posts); setNextCursor(result.nextCursor); } }).catch(() => { if (!cancelled && current === listRequest.current) setError("No pudimos cargar las conversaciones. Actualiza la página para intentar de nuevo."); }).finally(() => { if (!cancelled && current === listRequest.current) setLoading(false); });
+    request<{ posts: Post[]; nextCursor: string | null }>(`/api/plaza/posts?page=1&topic=${encodeURIComponent(topicFilter)}&q=${encodeURIComponent(search)}`).then((result) => { if (!cancelled && current === listRequest.current) { setPosts(result.posts); setNextCursor(result.nextCursor); setListError(""); } }).catch(() => { if (!cancelled && current === listRequest.current) setListError("No pudimos cargar las conversaciones. Intentaremos de nuevo."); }).finally(() => { if (!cancelled && current === listRequest.current) setLoading(false); });
     return () => { cancelled = true; };
   }, [ready, topicFilter, search]);
   useEffect(() => {
@@ -102,6 +104,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
         try {
           const result=await request<{posts:Post[];nextCursor:string|null}>(`/api/plaza/posts?page=1&topic=${encodeURIComponent(topicFilter)}&q=${encodeURIComponent(search)}`);
           if(!cancelled && current===listRequest.current) {
+            setListError("");
             if(expandedList) setNewPosts(result.posts.some(post=>!posts.some(existing=>existing.id===post.id)));
             else {setPosts(result.posts);setNextCursor(result.nextCursor);}
           }
@@ -245,6 +248,7 @@ export function RealPlaza({ account, loaded, onAccess, onProfile, noticeTarget, 
     </section>}
     {!loaded ? <p role="status">Cargando tu sesión…</p> : !ready ? <section className="real-plaza-panel"><h2>Entra a La Plaza</h2><p>Inicia sesión y confirma tu correo para participar.</p><button className="button primary" onClick={onAccess}>Entrar a mi cuenta</button></section> : <>
       {error && <p role="alert">{error}</p>}
+      {listError && <p role="alert">{listError}</p>}
       {notice && <p role="status">{notice}</p>}
       <div className="real-plaza-list" hidden={!!active}>
       <section className="real-plaza-panel" aria-labelledby="compose-title"><h2 id="compose-title">Comparte una conversación</h2>
