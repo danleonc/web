@@ -11,9 +11,13 @@ import { encryptedBackup, restoreEncryptedBackup } from '../../scripts/encrypted
 import { fixture } from './feature-fixture.mjs';
 
 for (const encrypted of [false,true]) test(`una copia sintética ${encrypted?'cifrada':'sin cifrar'} recupera Plaza, conexión y reserva conservando aislamiento`, async t => {
-  const f=await fixture(t,{plazaEnabled:true,meetingsEnabled:true});
-  const [mod,a,b,other]=await Promise.all(['restore_mod','restore_a','restore_b','restore_other'].map(name=>f.signup(name)));
-  const db=new DatabaseSync(f.path);db.prepare('INSERT INTO moderators(user_id) VALUES(?)').run(mod.id);db.close();
+  const f=await fixture(t,{plazaEnabled:true,meetingsEnabled:true,groupReunionsEnabled:true});
+  const [mod,a,b,c]=await Promise.all(['restore_mod','restore_a','restore_b','restore_c'].map(name=>f.signup(name)));
+  const other=await f.signup('restore_other');
+  const db=new DatabaseSync(f.path);db.prepare('INSERT INTO moderators(user_id) VALUES(?)').run(mod.id);
+  const room='90000000-0000-4000-8000-000000000050', activity=db.prepare('SELECT activity_id FROM offerings LIMIT 1').get().activity_id;
+  db.prepare('INSERT INTO rooms(id,activity_id,session_json,revision,idle_at,archived_at,safety_json) VALUES(?,?,?,?,?,?,?)').run(room,activity,JSON.stringify({phase:'closed',sessionUntil:123}),1,f.startsAt-600000,f.startsAt-600000,'{}');
+  for(const person of [a,b,c]) db.prepare('INSERT INTO memberships VALUES(?,?)').run(room,person.id);db.close();
   const createdPost=await f.request('/api/plaza/posts','POST',{topic:'crear',title:'Plan compartido',body:'Una idea'},b.cookie);
   assert.equal(createdPost.status,201);const post=createdPost.body.post;
   const invitation=await f.request('/api/plaza/invitations','POST',{kind:'post',contentId:post.id,note:'Sigamos conversando'},a.cookie);
@@ -24,6 +28,11 @@ for (const encrypted of [false,true]) test(`una copia sintética ${encrypted?'ci
   assert.equal(createdMeeting.status,201);const meeting=createdMeeting.body.meeting.id;
   assert.equal((await f.request(`/api/reservations/${meeting}`,'POST',undefined,a.cookie)).status,200);
   assert.equal((await f.request(`/api/reservations/${meeting}/reminder`,'POST',{minutes:60},a.cookie)).status,200);
+  const proposal=await f.request('/api/group-reunions','POST',{roomId:room,invitees:[b.id,c.id],startsAt:f.startsAt+14400_000},a.cookie);
+  assert.equal(proposal.status,201);const reunion=proposal.body.reunion.id;
+  assert.equal((await f.request(`/api/group-reunions/${reunion}/decision`,'POST',{action:'accept'},b.cookie)).body.reunion.status,'pending');
+  assert.equal((await f.request(`/api/group-reunions/${reunion}/decision`,'POST',{action:'accept'},c.cookie)).body.reunion.status,'confirmed');
+  assert.equal((await f.request(`/api/group-reunions/${reunion}/reminder`,'POST',{minutes:60},a.cookie)).status,200);
 
   const copy=join(f.directory,'restored-synthetic.sqlite');
   if(encrypted) {
@@ -37,7 +46,7 @@ for (const encrypted of [false,true]) test(`una copia sintética ${encrypted?'ci
       await restoreEncryptedBackup(archive,copy,key);
     } finally {key.fill(0);wrongKey.fill(0);}
   } else await backupDatabase(f.path,copy);
-  const restored=createRoomServer({databasePath:copy,plazaEnabled:true,meetingsEnabled:true,allowedOrigins:['http://localhost:4173'],now:()=>f.startsAt-600000});
+  const restored=createRoomServer({databasePath:copy,plazaEnabled:true,meetingsEnabled:true,groupReunionsEnabled:true,allowedOrigins:['http://localhost:4173'],now:()=>f.startsAt-600000});
   restored.server.listen(0,'127.0.0.1');await once(restored.server,'listening');
   try {
     const base=`http://127.0.0.1:${restored.server.address().port}`;
@@ -47,6 +56,17 @@ for (const encrypted of [false,true]) test(`una copia sintética ${encrypted?'ci
     assert.equal((await get(`/api/plaza/connections/${connection}/messages`,other.cookie)).status,404);
     const activities=await get('/api/activities',a.cookie);const item=activities.body.activities.find(x=>x.id===meeting);assert.equal(item.mine,true);assert.equal(item.reminderMinutes,60);
     const foreign=await get('/api/activities',other.cookie);assert.equal(foreign.body.activities.find(x=>x.id===meeting).mine,false);
+    const group=await get(`/api/group-reunions/${reunion}`,a.cookie);assert.equal(group.status,200);assert.equal(group.body.reunion.status,'confirmed');
+    assert.deepEqual([a,b,c].map(person=>group.body.reunion.responses[person.id]),['accepted','accepted','accepted']);
+    for(const person of [a,b,c]) assert.equal((await get('/api/activities',person.cookie)).body.activities.find(x=>x.id===reunion).mine,true);
+    assert.equal(activities.body.activities.find(x=>x.id===reunion).reminderMinutes,60);
+    assert.equal(foreign.body.activities.some(x=>x.id===reunion),false);
+    assert.equal((await get(`/api/group-reunions/${reunion}`,other.cookie)).status,404);
+    assert.equal((await fetch(base+`/api/reservations/${reunion}`,{method:'POST',headers:{Origin:'http://localhost:4173',Cookie:other.cookie}})).status,404);
+    const withdrawal=await fetch(base+`/api/group-reunions/${reunion}/decision`,{method:'POST',headers:{Origin:'http://localhost:4173',Cookie:c.cookie,'Content-Type':'application/json'},body:JSON.stringify({action:'withdraw'})});
+    assert.equal(withdrawal.status,200);assert.equal((await withdrawal.json()).reunion.status,'cancelled');
+    assert.equal((await get('/api/activities',a.cookie)).body.activities.find(x=>x.id===reunion).cancelled,true);
+    assert.equal((await f.request(`/api/group-reunions/${reunion}`,'GET',undefined,a.cookie)).body.reunion.status,'confirmed');
     const changed=await fetch(base+`/api/reservations/${meeting}`,{method:'DELETE',headers:{Origin:'http://localhost:4173',Cookie:a.cookie}});assert.equal(changed.status,200);
     assert.equal((await get('/api/activities',a.cookie)).body.activities.find(x=>x.id===meeting).mine,false);
     assert.equal((await f.request('/api/activities','GET',undefined,a.cookie)).body.activities.find(x=>x.id===meeting).mine,true);
