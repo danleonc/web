@@ -841,6 +841,7 @@ test("recorrido integra Plaza, conexión y encuentro entre cuentas", async ({ br
     expect((await mod.request.post('/api/meetings', { headers, data: { themeId: 'crear', startsAt: Date.now() + 7200_000, capacity: 3 } })).status()).toBe(201);
     for (let i=1; i<people.length; i++) await register(people[i], `recorrido_${info.project.name}_${i}`);
     const [ana, bea, carla] = await Promise.all(people.map(context => context.newPage()));
+    if(info.project.name==='mobile') await ana.setViewportSize({width:320,height:800});
     const username=`recorrido_${info.project.name}_0`;
     await ana.goto('/#plaza');
     await ana.getByRole('button',{name:'Entrar a mi cuenta',exact:true}).click();
@@ -852,6 +853,7 @@ test("recorrido integra Plaza, conexión y encuentro entre cuentas", async ({ br
     await access.getByRole('checkbox',{name:/Declaro que soy mayor de 18 años/}).check();
     await access.getByRole('button',{name:'Guardar mi cuenta',exact:true}).click();
     await expect(access.getByRole('heading',{name:'Confirma tu correo para participar.'})).toBeVisible();
+    expect((await new AxeBuilder({page:ana}).include('[aria-label="Cuenta y reservas"]').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
     await confirmTestEmail(ana,username);
     await access.getByRole('button',{name:'Continuar en Nexafia',exact:true}).click();
     await expect(access).toHaveCount(0);
@@ -862,7 +864,10 @@ test("recorrido integra Plaza, conexión y encuentro entre cuentas", async ({ br
     await bea.getByRole('button', { name: 'Publicar', exact: true }).click();
     await ana.goto('/#plaza');
     const post = ana.getByRole('article').filter({ hasText: title });
-    await post.getByRole('button', { name: 'Ver conversación', exact: true }).click();
+    await expect(post).toBeVisible({timeout:12000});
+    expect((await new AxeBuilder({page:ana}).include('.real-plaza').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+    expect(await ana.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await post.getByRole('button', { name: 'Ver conversación', exact: true }).focus();await ana.keyboard.press('Enter');
     await ana.getByLabel('Tu respuesta').fill('Me gustan las ideas en grupo');
     await ana.getByRole('button', { name: 'Responder', exact: true }).click();
     await ana.getByRole('button', { name: 'Volver a La Plaza' }).click();
@@ -880,6 +885,8 @@ test("recorrido integra Plaza, conexión y encuentro entre cuentas", async ({ br
     await ana.goto('/#connections');
     await ana.getByRole('button', { name: 'Abrir conversación' }).click();
     await expect(ana.getByText('Sigamos creando juntas', { exact: true })).toBeVisible();
+    expect((await new AxeBuilder({page:ana}).include('.real-plaza').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+    expect(await ana.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     for (const page of [ana,bea,carla]) {
       await page.goto('/#discover');
       const meeting=page.getByRole('article').filter({hasText:'Ideas tan locas que podrían funcionar'}).last();
@@ -893,6 +900,11 @@ test("recorrido integra Plaza, conexión y encuentro entre cuentas", async ({ br
     await ana.getByLabel('Tu mensaje de prueba').fill('Hola desde el encuentro');
     await ana.getByRole('button',{name:'Enviar mensaje de prueba'}).click();
     await expect(carla.getByText('Hola desde el encuentro',{exact:true})).toBeVisible();
+    await expect(ana.locator('.shared-connect p').filter({hasText:'Ideas tan locas que podrían funcionar'})).toBeVisible();
+    await expect(ana.locator('.shared-connect')).not.toContainText('Reserva primero.');
+    expect((await new AxeBuilder({page:ana}).include('.shared-lab').withTags(['wcag2a','wcag2aa']).analyze()).violations).toEqual([]);
+    expect(await ana.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await ana.locator('.shared-connect').screenshot({path:info.outputPath('encuentro-accesibilidad.png')});
   } finally { await mod.close(); for (const context of people) await context.close(); }
 });
 

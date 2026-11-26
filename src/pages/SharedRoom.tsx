@@ -150,6 +150,7 @@ export function SharedRoom({
               </option>
             ))}
           </select>
+          {scheduled && <p>{scheduled.title}</p>}
           {!active && (
             <label className="checkbox-row">
               <input
@@ -211,7 +212,7 @@ export function SharedRoom({
           </div>
           <p className="small-text muted">
             {accountsEnabled ? (
-              "Reserva primero. La recepción abre cinco minutos antes del horario y puede esperar hasta cinco minutos después para reunir el mínimo. Varias pestañas de tu cuenta cuentan como una sola persona."
+              `${active ? "" : "Reserva primero. "}La recepción abre cinco minutos antes del horario y puede esperar hasta cinco minutos después para reunir el mínimo. Varias pestañas de tu cuenta cuentan como una sola persona.`
             ) : (
               <>
                 Para representar personas distintas, usa perfiles de navegador o
