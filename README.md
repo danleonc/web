@@ -147,6 +147,8 @@ Playwright usa el Chromium disponible en `/usr/bin/chromium` en este entorno. En
 
 El runner ejecuta primero las pruebas del motor y las pruebas de integración de servidor con Node, y después los tests de navegador. Playwright arranca Vite en 4173 y la API local en 8787 si no hay instancias existentes. La prueba compartida usa tres contextos independientes; los recorridos de maqueta se ejecutan en escritorio y móvil: reserva, perfil, chat, guion, evaluación, reencuentro, bloqueo, búsquedas, cancelación, exportación, borrado, almacenamiento inválido, acceso directo a sala y foco de diálogos. También realizan comprobaciones automáticas WCAG A/AA con axe en las pantallas principales. No sustituyen la evaluación manual con tecnologías de asistencia ni acreditan cumplimiento completo de accesibilidad.
 
+Si el puerto 4173 está ocupado, `NEXAFIA_TEST_PORT` permite elegir otro puerto local para la batería general de Playwright, por ejemplo `$env:NEXAFIA_TEST_PORT='4183'` en PowerShell antes de `npm test`. La API del laboratorio sigue usando 8787 y acepta el origen alternativo exacto de loopback; la configuración normal de producción no utiliza esta opción.
+
 ## Organización
 
 - `src/App.tsx`: navegación, estado global y acciones de usuario.

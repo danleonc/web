@@ -1,4 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
+const port = process.env.NEXAFIA_TEST_PORT || '4173';
+if (!/^[1-9]\d{0,4}$/.test(port) || Number(port)>65535) throw Error('Puerto de pruebas inválido');
+const baseURL = `http://127.0.0.1:${port}`;
 export default defineConfig({
   testDir: "./tests",
   testMatch: "**/*.spec.ts",
@@ -6,7 +9,7 @@ export default defineConfig({
   fullyParallel: true,
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:4173",
+    baseURL,
     launchOptions: {
       executablePath: process.env.PLAYWRIGHT_BUNDLED_BROWSER
         ? undefined
@@ -25,8 +28,8 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: "npm run dev -- --port 4173 --strictPort",
-      url: "http://127.0.0.1:4173",
+      command: `npx vite --host 127.0.0.1 --port ${port} --strictPort`,
+      url: baseURL,
       reuseExistingServer: !process.env.CI,
     },
     {

@@ -2,6 +2,14 @@ import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
+test("el laboratorio rechaza solicitudes de otro origen", async ({ request, baseURL }) => {
+  const otherPort = new URL(baseURL!).port === '65535' ? '65534' : '65535';
+  for (const origin of ['http://otro-origen.example', `http://127.0.0.1:${otherPort}`]) {
+    const response = await request.post('/api/session', { headers: { Origin: origin }, data: {} });
+    expect(response.status()).toBe(403);
+  }
+});
+
 async function enter(page: Page, alias?: string, topic?: string) {
   await page.goto("/");
   if (alias)
@@ -39,12 +47,12 @@ async function enter(page: Page, alias?: string, topic?: string) {
 }
 
 test("tres navegadores comparten quórum, texto, stickers, decisiones y desconexión", async ({
-  browser,
+  browser, baseURL,
 }) => {
   test.setTimeout(60_000);
   const contexts = await Promise.all(
     ["Luz", "Sol", "Mar"].map(() =>
-      browser.newContext({ baseURL: "http://127.0.0.1:4173" }),
+      browser.newContext({ baseURL }),
     ),
   );
   const [a, b, c] = await Promise.all(
@@ -251,12 +259,12 @@ test("tres navegadores comparten quórum, texto, stickers, decisiones y desconex
 });
 
 test("silenciar no afecta al grupo y los mensajes nuevos no interrumpen la lectura del historial", async ({
-  browser,
+  browser, baseURL,
 }) => {
   test.setTimeout(90_000);
   const contexts = await Promise.all(
     [0, 1, 2].map(() =>
-      browser.newContext({ baseURL: "http://127.0.0.1:4173" }),
+      browser.newContext({ baseURL }),
     ),
   );
   const [a, b, c] = await Promise.all(
